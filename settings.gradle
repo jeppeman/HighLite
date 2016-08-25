@@ -1,0 +1,2 @@
+rootProject.name = "sqliteprocessor-parent"
+include ':app', ':sqliteprocessor-annotations', ':sqliteprocessor'
