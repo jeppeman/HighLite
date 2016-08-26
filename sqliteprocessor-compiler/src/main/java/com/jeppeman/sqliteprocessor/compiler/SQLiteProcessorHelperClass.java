@@ -63,7 +63,7 @@ final class SQLiteProcessorHelperClass extends JavaWritableClass {
         }
 
         return CodeBlock.builder()
-                .addStatement(getCreateStatement(element, table))
+                .add(getCreateBlock(element, table))
                 .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", null)",
                 ClassName.bestGuess("android.database.Cursor"), cursorVarName, table.tableName())
                 .add("\n")

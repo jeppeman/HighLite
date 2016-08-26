@@ -13,7 +13,6 @@ import com.squareup.javapoet.JavaFile;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -26,11 +25,11 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-
-import javafx.util.Pair;
 
 /**
  * Created by jesper on 2016-08-25.
@@ -55,45 +54,42 @@ public class SQLiteProcessor extends AbstractProcessor {
 
         for (final Element element
                 : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseHelper.class)) {
-            final SQLiteDatabaseHelper anno = element.getAnnotation(SQLiteDatabaseHelper.class);
+            final SQLiteDatabaseHelper dbAnno = element.getAnnotation(SQLiteDatabaseHelper.class);
 
-            final JavaFile helperFile = new SQLiteProcessorHelperClass(anno.name(),
+            final JavaFile helperFile = new SQLiteProcessorHelperClass(dbAnno.name(),
                     getTableElementMappingForHelper(roundEnv, element),
-                    entry.getValue().getKey(),
-                    mElementUtils).writeJava();
+                    dbAnno.version(), mElementUtils).writeJava();
 
             try {
                 helperFile.writeTo(mFiler);
             } catch (IOException e) {
-//                error(tableElementEntry.getValue(),
-//                        "Unable to write helper file for %s: %s",
-//                        tableElementEntry.getValue().asType().toString(),
-//                        e.getMessage());
+                error(element, "Unable to write helper file for %s: %s",
+                        element.asType().toString(), e.getMessage());
             }
         }
-        for (final Map.Entry<String, Pair<Integer, Map<SQLiteTable, Element>>> entry :
-                getTablesWithElements(roundEnv).entrySet()) {
 
+        for (final Element element : roundEnv.getElementsAnnotatedWith(SQLiteTable.class)) {
+            final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
 
+            TypeMirror mirror = null;
+            try {
+                tableAnno.sqLiteHelper();
+            } catch (MirroredTypeException e) {
+                mirror = e.getTypeMirror();
+            }
 
-            for (final Map.Entry<SQLiteTable, Element> tableElementEntry :
-                    entry.getValue().getValue().entrySet()) {
-                final JavaFile daoFile = new SQLiteDAOClass(entry.getKey(),
-                        tableElementEntry.getKey(),
-                        tableElementEntry.getValue(),
-                        entry.getValue().getKey(),
-                        mElementUtils).writeJava();
+            final JavaFile daoFile = new SQLiteDAOClass(ClassName.bestGuess(mirror.toString()),
+                    tableAnno,
+                    element, mElementUtils).writeJava();
 
-                try {
-                    daoFile.writeTo(mFiler);
-                } catch (IOException e) {
-                    error(tableElementEntry.getValue(),
-                            "Unable to write helper file for %s: %s",
-                            tableElementEntry.getValue().asType().toString(),
-                            e.getMessage());
-                }
+            try {
+                daoFile.writeTo(mFiler);
+            } catch (IOException e) {
+                error(element, "Unable to write helper file for %s: %s",
+                        element.asType().toString(), e.getMessage());
             }
         }
+
 
         return true;
     }
@@ -105,7 +101,14 @@ public class SQLiteProcessor extends AbstractProcessor {
 
         for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
             final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
-            if (!tableAnno.sqLiteHelper().getName().equals(helperElement.asType().toString())) {
+
+            TypeMirror mirror = null;
+            try {
+                tableAnno.sqLiteHelper();
+            } catch (MirroredTypeException e) {
+                mirror = e.getTypeMirror();
+            }
+            if (mTypeUtils.isSameType(mirror, helperElement.asType())) {
                 ret.put(tableAnno, element);
             }
         }
@@ -134,31 +137,6 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteDatabaseHelper.class);
 
         return annotations;
-    }
-
-    private Map<String, Pair<Integer, Map<SQLiteTable, Element>>> getTablesWithElements(
-            final RoundEnvironment roundEnv) {
-        final Map<String, Pair<Integer, Map<SQLiteTable, Element>>> tables = new HashMap<>();
-        for (final Element element : roundEnv.getElementsAnnotatedWith(SQLiteTable.class)) {
-            final SQLiteTable table = element.getAnnotation(SQLiteTable.class);
-            final Pair<Integer, Map<SQLiteTable, Element>> elementEntry =
-                    tables.get(table.databaseName());
-            if (elementEntry == null) {
-                Map<SQLiteTable, Element> map = new HashMap<>();
-                map.put(table, element);
-                tables.put(table.databaseName(), new Pair<>(table.version(), map));
-            } else if (table.version() > elementEntry.getKey()) {
-                Map<SQLiteTable, Element> map = elementEntry.getValue();
-                map.put(table, element);
-                tables.put(table.databaseName(), new Pair<>(table.version(), map));
-            } else {
-                Map<SQLiteTable, Element> map = elementEntry.getValue();
-                map.put(table, element);
-                tables.put(table.databaseName(), new Pair<>(elementEntry.getKey(), map));
-            }
-        }
-
-        return tables;
     }
 
     private void error(Element element, String message, Object... args) {

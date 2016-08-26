@@ -24,21 +24,18 @@ import javax.lang.model.util.Elements;
  */
 final class SQLiteDAOClass extends JavaWritableClass {
 
-    private final String mDatabaseName;
+    private final TypeName mHelperClassName;
     private final SQLiteTable mTable;
     private final Element mElement;
-    private final Elements mElementUtils;
-    private final int mVersion;
+    private final Elements mElementUtils;;
 
-    SQLiteDAOClass(final String databaseName,
+    SQLiteDAOClass(final TypeName helperClassName,
                    final SQLiteTable table,
                    final Element element,
-                   final int version,
                    final Elements elementUtils) {
-        mDatabaseName = databaseName;
+        mHelperClassName = helperClassName;
         mTable = table;
         mElement = element;
-        mVersion = version;
         mElementUtils = elementUtils;
     }
 
@@ -104,9 +101,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .toString(),
                 className = getClassName((TypeElement) mElement, packageName);
         final ClassName cn = ClassName.get((TypeElement) mElement),
-                helperClassName = ClassName.get(packageName,
-                        String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
-                                + mDatabaseName.substring(1) + "Helper");
+                helperClassName = ClassName.bestGuess(mHelperClassName + "_Generated");
 
         final FieldSpec targetField = FieldSpec.builder(cn, "mTarget", Modifier.PRIVATE,
                 Modifier.FINAL)
