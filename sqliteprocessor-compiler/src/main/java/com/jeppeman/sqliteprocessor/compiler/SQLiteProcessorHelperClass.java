@@ -23,17 +23,17 @@ import javax.lang.model.util.Elements;
 /**
  * Created by jesper on 2016-08-26.
  */
-final class SQLiteOpenHelperClass extends JavaWritableClass {
-    
+final class SQLiteProcessorHelperClass extends JavaWritableClass {
+
     private final String mDatabaseName;
     private final Map<SQLiteTable, Element> mTableElementMap;
     private final Elements mElementUtils;
     private final int mVersion;
-    
-    SQLiteOpenHelperClass(final String databaseName,
-                          final Map<SQLiteTable, Element> tableElementMap,
-                          final int version,
-                          final Elements elementUtils) {
+
+    SQLiteProcessorHelperClass(final String databaseName,
+                               final Map<SQLiteTable, Element> tableElementMap,
+                               final int version,
+                               final Elements elementUtils) {
         mDatabaseName = databaseName;
         mTableElementMap = tableElementMap;
         mVersion = version;
@@ -62,10 +62,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .add("\n");
         }
 
-        return CodeBlock.builder().addStatement(
-                "final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", null)",
-                ClassName.bestGuess("android.database.Cursor"), cursorVarName,
-                table.tableName())
+        return CodeBlock.builder()
+                .addStatement(getCreateStatement(element, table))
+                .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", null)",
+                ClassName.bestGuess("android.database.Cursor"), cursorVarName, table.tableName())
                 .add("\n")
                 .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
                 .add("\n")
@@ -94,7 +94,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
     }
 
     private String getCreateStatement(final Element element, final SQLiteTable table) {
-        final StringBuilder builder = new StringBuilder("CREATE TABLE " + table.tableName() + "(");
+        final StringBuilder builder = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
+                .append(table.tableName())
+                .append(" (");
 
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
@@ -116,7 +118,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         return builder.substring(0, builder.length() - 2) + ");";
     }
-    
+
     @Override
     public JavaFile writeJava() {
         final String className = String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
@@ -159,7 +161,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         .toString();
             }
 
-
             codeBlockOnCreate.add(getCreateBlock(element, table));
             codeBlockOnUpgrade.add(getUpgradeBlock(element, table));
         }
@@ -184,7 +185,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final TypeSpec typeSpec = TypeSpec.classBuilder(
                 className + "Helper")
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .superclass(SQLITE_OPEN_HELPER)
+                .addSuperinterface(SQLITE_HELPER_CALLBACKS)
                 .addFields(Arrays.asList(colNameIndex, dbVersion, dbName))
                 .addMethods(Arrays.asList(ctor, onCreateMethod, onUpgradeMethod))
                 .build();

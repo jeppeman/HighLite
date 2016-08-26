@@ -22,7 +22,7 @@ import javax.lang.model.util.Elements;
 /**
  * Created by jesper on 2016-08-25.
  */
-final class DAOClass extends JavaWritableClass {
+final class SQLiteDAOClass extends JavaWritableClass {
 
     private final String mDatabaseName;
     private final SQLiteTable mTable;
@@ -30,11 +30,11 @@ final class DAOClass extends JavaWritableClass {
     private final Elements mElementUtils;
     private final int mVersion;
 
-    DAOClass(final String databaseName,
-             final SQLiteTable table,
-             final Element element,
-             final int version,
-             final Elements elementUtils) {
+    SQLiteDAOClass(final String databaseName,
+                   final SQLiteTable table,
+                   final Element element,
+                   final int version,
+                   final Elements elementUtils) {
         mDatabaseName = databaseName;
         mTable = table;
         mElement = element;

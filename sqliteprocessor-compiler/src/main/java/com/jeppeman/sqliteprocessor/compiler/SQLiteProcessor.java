@@ -3,15 +3,18 @@ package com.jeppeman.sqliteprocessor.compiler;
 import com.google.auto.service.AutoService;
 import com.jeppeman.sqliteprocessor.AutoIncrement;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
+import com.jeppeman.sqliteprocessor.SQLiteDatabaseHelper;
 import com.jeppeman.sqliteprocessor.SQLiteField;
 import com.jeppeman.sqliteprocessor.SQLiteGetter;
 import com.jeppeman.sqliteprocessor.SQLiteSetter;
 import com.jeppeman.sqliteprocessor.SQLiteTable;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -50,11 +53,12 @@ public class SQLiteProcessor extends AbstractProcessor {
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
 
-        for (final Map.Entry<String, Pair<Integer, Map<SQLiteTable, Element>>> entry :
-                getTablesWithElements(roundEnv).entrySet()) {
+        for (final Element element
+                : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseHelper.class)) {
+            final SQLiteDatabaseHelper anno = element.getAnnotation(SQLiteDatabaseHelper.class);
 
-            final JavaFile helperFile = new SQLiteOpenHelperClass(entry.getKey(),
-                    entry.getValue().getValue(),
+            final JavaFile helperFile = new SQLiteProcessorHelperClass(anno.name(),
+                    getTableElementMappingForHelper(roundEnv, element),
                     entry.getValue().getKey(),
                     mElementUtils).writeJava();
 
@@ -66,10 +70,15 @@ public class SQLiteProcessor extends AbstractProcessor {
 //                        tableElementEntry.getValue().asType().toString(),
 //                        e.getMessage());
             }
+        }
+        for (final Map.Entry<String, Pair<Integer, Map<SQLiteTable, Element>>> entry :
+                getTablesWithElements(roundEnv).entrySet()) {
+
+
 
             for (final Map.Entry<SQLiteTable, Element> tableElementEntry :
                     entry.getValue().getValue().entrySet()) {
-                final JavaFile daoFile = new DAOClass(entry.getKey(),
+                final JavaFile daoFile = new SQLiteDAOClass(entry.getKey(),
                         tableElementEntry.getKey(),
                         tableElementEntry.getValue(),
                         entry.getValue().getKey(),
@@ -87,6 +96,21 @@ public class SQLiteProcessor extends AbstractProcessor {
         }
 
         return true;
+    }
+
+    private Map<SQLiteTable, Element> getTableElementMappingForHelper(
+            final RoundEnvironment roundEnvironment,
+            final Element helperElement) {
+        final Map<SQLiteTable, Element> ret = new LinkedHashMap<>();
+
+        for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
+            final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
+            if (!tableAnno.sqLiteHelper().getName().equals(helperElement.asType().toString())) {
+                ret.put(tableAnno, element);
+            }
+        }
+
+        return ret;
     }
 
     @Override
@@ -107,6 +131,7 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteGetter.class);
         annotations.add(SQLiteSetter.class);
         annotations.add(SQLiteTable.class);
+        annotations.add(SQLiteDatabaseHelper.class);
 
         return annotations;
     }

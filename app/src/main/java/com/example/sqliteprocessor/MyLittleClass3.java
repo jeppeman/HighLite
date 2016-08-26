@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Created by jesper on 2016-08-25.
  */
-@SQLiteTable(tableName = "myLittleTable2", databaseName = "myLittleDatabase2", version = 17)
+@SQLiteTable(tableName = "myLittleTable2", sqLiteHelper = DBHelper.class)
 public class MyLittleClass3 extends SQLiteObject {
 
     @SQLiteField

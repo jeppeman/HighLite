@@ -34,6 +34,8 @@ abstract class JavaWritableClass {
             "ContentValues");
     protected static final ClassName SQLITE_DAO = ClassName.get("com.jeppeman.sqliteprocessor",
             "SQLiteDAO");
+    protected static final ClassName SQLITE_HELPER_CALLBACKS = ClassName.get(
+            "com.jeppeman.sqliteprocessor", "SQLiteOpenHelperCallbacks");
     protected static final ClassName SQLITE_DATABASE = ClassName.get("android.database.sqlite",
             "SQLiteDatabase");
     protected static final ClassName SQLITE_OPEN_HELPER = ClassName.get("android.database.sqlite",
