@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.CLASS)
 public @interface SQLiteTable {
-    String value();
+    String tableName();
     String databaseName();
     int version();
 }

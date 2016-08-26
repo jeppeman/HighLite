@@ -20,6 +20,10 @@ android {
 
 dependencies {
     compile 'com.android.support:appcompat-v7:24.+'
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile project(':sqliteprocessor-annotations')
+
     testCompile 'junit:junit:4.12'
+
+    compile 'io.reactivex:rxandroid:1.2.1'
+    compile 'io.reactivex:rxjava:1.1.6'
 }
