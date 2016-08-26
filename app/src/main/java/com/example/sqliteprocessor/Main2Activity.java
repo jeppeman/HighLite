@@ -1,11 +1,8 @@
 package com.example.sqliteprocessor;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 
-import com.jeppeman.sqliteprocessor.SQLiteTable;
-
-@SQLiteTable(databaseName = "DB", tableName = "TABLE", version = 0)
 public class Main2Activity extends AppCompatActivity {
 
     @Override
