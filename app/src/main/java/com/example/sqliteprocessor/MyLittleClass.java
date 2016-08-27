@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Created by jesper on 2016-08-25.
  */
-@SQLiteTable(tableName = "myLittleTable", sqLiteHelper = DBHelper.class)
+@SQLiteTable(tableName = "myLittleTable")
 public class MyLittleClass extends SQLiteObject {
 
     @SQLiteField
@@ -26,6 +26,6 @@ public class MyLittleClass extends SQLiteObject {
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
     short shortz;
 
-    @SQLiteField
+    @SQLiteField("someOtherName")
     List<String> nameList;
 }

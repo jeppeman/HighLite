@@ -29,6 +29,19 @@ ext {
 
 def androidToolsVersion = '25.1.2'
 
+ext.deps = [
+        android           : 'com.google.android:android:2.1.2',
+        supportv4         : 'com.android.support:support-v4:24.1.0',
+        supportAnnotations: 'com.android.support:support-annotations:24.1.0',
+        javapoet          : 'com.squareup:javapoet:1.7.0',
+        junit             : 'junit:junit:4.12',
+        autoservice       : 'com.google.auto.service:auto-service:1.0-rc2',
+        autocommon        : 'com.google.auto:auto-common:0.6',
+        rxandroid         : 'io.reactivex:rxandroid:1.2.1',
+        rxjava            : 'io.reactivex:rxjava:1.1.6',
+        appcompat         : 'com.android.support:appcompat-v7:24.2.0'
+]
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

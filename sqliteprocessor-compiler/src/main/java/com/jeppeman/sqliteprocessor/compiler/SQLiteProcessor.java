@@ -3,29 +3,31 @@ package com.jeppeman.sqliteprocessor.compiler;
 import com.google.auto.service.AutoService;
 import com.jeppeman.sqliteprocessor.AutoIncrement;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
-import com.jeppeman.sqliteprocessor.SQLiteDatabaseHelper;
+import com.jeppeman.sqliteprocessor.SQLiteDatabaseDescriptor;
+import com.jeppeman.sqliteprocessor.SQLiteDatabaseHolder;
 import com.jeppeman.sqliteprocessor.SQLiteField;
 import com.jeppeman.sqliteprocessor.SQLiteGetter;
 import com.jeppeman.sqliteprocessor.SQLiteSetter;
 import com.jeppeman.sqliteprocessor.SQLiteTable;
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.MirroredTypesException;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -37,6 +39,7 @@ import javax.tools.Diagnostic;
 @AutoService(Processor.class)
 public class SQLiteProcessor extends AbstractProcessor {
 
+    private Messager mMessager;
     private Elements mElementUtils;
     private Types mTypeUtils;
     private Filer mFiler;
@@ -46,6 +49,7 @@ public class SQLiteProcessor extends AbstractProcessor {
         mElementUtils = processingEnv.getElementUtils();
         mTypeUtils = processingEnv.getTypeUtils();
         mFiler = processingEnv.getFiler();
+        mMessager = processingEnv.getMessager();
     }
 
     @Override
@@ -53,63 +57,71 @@ public class SQLiteProcessor extends AbstractProcessor {
                            final RoundEnvironment roundEnv) {
 
         for (final Element element
-                : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseHelper.class)) {
-            final SQLiteDatabaseHelper dbAnno = element.getAnnotation(SQLiteDatabaseHelper.class);
+                : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseHolder.class)) {
 
-            final JavaFile helperFile = new SQLiteProcessorHelperClass(dbAnno.name(),
-                    getTableElementMappingForHelper(roundEnv, element),
-                    dbAnno.version(), mElementUtils).writeJava();
+            final SQLiteDatabaseHolder dbAnno = element.getAnnotation(SQLiteDatabaseHolder.class);
 
-            try {
-                helperFile.writeTo(mFiler);
-            } catch (IOException e) {
-                error(element, "Unable to write helper file for %s: %s",
-                        element.asType().toString(), e.getMessage());
+            for (final SQLiteDatabaseDescriptor descriptor : dbAnno.databases()) {
+                List<? extends TypeMirror> mirrors = null;
+                try {
+                    descriptor.tables();
+                } catch (MirroredTypesException e) {
+                    mirrors = e.getTypeMirrors();
+                }
+
+                for (final TypeMirror typeMirror : mirrors) {
+                    final Element mirrorElem = mTypeUtils.asElement(typeMirror);
+                    if (mirrorElem.getAnnotation(SQLiteTable.class) == null) {
+                        error(element, typeMirror.toString()
+                                + " must be annotated with " + SQLiteTable.class.getName());
+                        return true;
+                    }
+                }
+
+                final Map<SQLiteTable, Element> tablesForDatabase =
+                        getTableElementMappingForDatabase(roundEnv, mirrors);
+
+                final JavaFile helperFile = new SQLiteOpenHelperClass(descriptor.dbName(),
+                        tablesForDatabase,
+                        descriptor.dbVersion(), mElementUtils).writeJava();
+
+                try {
+                    helperFile.writeTo(mFiler);
+                } catch (IOException e) {
+                    error(element, "Unable to write helper file for %s: %s",
+                            element.asType().toString(), e.getMessage());
+                }
+
+                for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
+                    final JavaFile daoFile = new SQLiteDAOClass(descriptor.dbName(), entry.getKey(),
+                            entry.getValue(), mElementUtils).writeJava();
+
+                    try {
+                        daoFile.writeTo(mFiler);
+                    } catch (IOException e) {
+                        error(element, "Unable to write helper file for %s: %s",
+                                element.asType().toString(), e.getMessage());
+                    }
+                }
             }
         }
-
-        for (final Element element : roundEnv.getElementsAnnotatedWith(SQLiteTable.class)) {
-            final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
-
-            TypeMirror mirror = null;
-            try {
-                tableAnno.sqLiteHelper();
-            } catch (MirroredTypeException e) {
-                mirror = e.getTypeMirror();
-            }
-
-            final JavaFile daoFile = new SQLiteDAOClass(ClassName.bestGuess(mirror.toString()),
-                    tableAnno,
-                    element, mElementUtils).writeJava();
-
-            try {
-                daoFile.writeTo(mFiler);
-            } catch (IOException e) {
-                error(element, "Unable to write helper file for %s: %s",
-                        element.asType().toString(), e.getMessage());
-            }
-        }
-
 
         return true;
     }
 
-    private Map<SQLiteTable, Element> getTableElementMappingForHelper(
+    private Map<SQLiteTable, Element> getTableElementMappingForDatabase(
             final RoundEnvironment roundEnvironment,
-            final Element helperElement) {
+            final List<? extends TypeMirror> tableMirrors) {
         final Map<SQLiteTable, Element> ret = new LinkedHashMap<>();
 
         for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
             final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
 
-            TypeMirror mirror = null;
-            try {
-                tableAnno.sqLiteHelper();
-            } catch (MirroredTypeException e) {
-                mirror = e.getTypeMirror();
-            }
-            if (mTypeUtils.isSameType(mirror, helperElement.asType())) {
+            for (final TypeMirror mirror : tableMirrors) {
+                if (!mTypeUtils.isSameType(mirror, element.asType())) continue;
+
                 ret.put(tableAnno, element);
+                break;
             }
         }
 
@@ -134,7 +146,8 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteGetter.class);
         annotations.add(SQLiteSetter.class);
         annotations.add(SQLiteTable.class);
-        annotations.add(SQLiteDatabaseHelper.class);
+        annotations.add(SQLiteDatabaseHolder.class);
+        annotations.add(SQLiteDatabaseDescriptor.class);
 
         return annotations;
     }
@@ -147,11 +160,12 @@ public class SQLiteProcessor extends AbstractProcessor {
         printMessage(Diagnostic.Kind.NOTE, element, message, args);
     }
 
-    private void printMessage(Diagnostic.Kind kind, Element element, String message, Object[] args) {
+    private void printMessage(
+            Diagnostic.Kind kind, Element element, String message, Object[] args) {
         if (args.length > 0) {
             message = String.format(message, args);
         }
 
-        processingEnv.getMessager().printMessage(kind, message, element);
+        mMessager.printMessage(kind, message, element);
     }
 }

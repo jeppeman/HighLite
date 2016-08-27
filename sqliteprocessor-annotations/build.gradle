@@ -4,5 +4,5 @@ sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
 targetCompatibility = rootProject.ext.targetCompatibilityVersion
 
 dependencies {
-    compile 'com.google.android:android:2.1.2'
+
 }
