@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Created by jesper on 2016-08-27.
  */
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 public @interface SQLiteDatabaseDescriptor {
     String dbName();
     int dbVersion();

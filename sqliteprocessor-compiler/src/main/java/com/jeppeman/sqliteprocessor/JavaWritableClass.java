@@ -75,7 +75,7 @@ abstract class JavaWritableClass {
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
     }
 
-    protected String getFieldName(final Element element, final SQLiteField field) {
+    protected String getDBFieldName(final Element element, final SQLiteField field) {
         return field.value() == null || field.value().length() == 0
                 ? element.getSimpleName().toString()
                 : field.value();

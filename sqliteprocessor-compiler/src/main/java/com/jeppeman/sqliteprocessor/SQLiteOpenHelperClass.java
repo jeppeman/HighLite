@@ -56,7 +56,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 if (field == null) continue;
 
                 addColumnStatements.beginControlFlow("if (!$L.contains($S))", dbColsVarName,
-                        getFieldName(enclosed, field))
+                        getDBFieldName(enclosed, field))
                         .addStatement("database.execSQL($S)", getAddColumnStatement(enclosed, field,
                                 table))
                         .endControlFlow()
@@ -72,7 +72,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
                 if (field == null) continue;
 
-                columnsToSaveWithTypes.append(getFieldName(enclosed, field));
+                columnsToSaveWithTypes.append(getDBFieldName(enclosed, field));
                 columnsToSaveWithTypes.append(" ");
                 columnsToSaveWithTypes.append(getFieldType(enclosed, field));
 
@@ -87,7 +87,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
                 columnsToSaveWithTypes.append(", ");
 
-                columnsToSave.append(getFieldName(enclosed, field));
+                columnsToSave.append(getDBFieldName(enclosed, field));
                 columnsToSave.append(",");
             }
             dropColumnStatements.add(
@@ -132,7 +132,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return "ALTER TABLE `"
                 + table.tableName()
                 + "` ADD COLUMN `"
-                + getFieldName(element, field)
+                + getDBFieldName(element, field)
                 + "` "
                 + getFieldType(element, field)
                 + builder.toString()
@@ -168,7 +168,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            builder.append(getFieldName(enclosed, field));
+            builder.append(getDBFieldName(enclosed, field));
             builder.append(" ");
             builder.append(getFieldType(enclosed, field));
 

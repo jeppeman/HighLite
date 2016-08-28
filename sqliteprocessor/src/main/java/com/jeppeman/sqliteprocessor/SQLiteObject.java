@@ -67,12 +67,12 @@ public abstract class SQLiteObject {
     }
 
     public static <T extends SQLiteObject> Observable<T> getSingle(final @NonNull Context context,
-                                                                   final @NonNull Object id,
-                                                                   final @NonNull Class<T> cls) {
+                                                                   final @NonNull Class<T> cls,
+                                                                   final @NonNull Object id) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                final T instance = getSingleBlocking(context, id, cls);
+                final T instance = getSingleBlocking(context, cls, id);
                 subscriber.onNext(instance);
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -80,8 +80,8 @@ public abstract class SQLiteObject {
     }
 
     public static <T extends SQLiteObject> T getSingleBlocking(final @NonNull Context context,
-                                                               final @NonNull Object id,
-                                                               final @NonNull Class<T> cls) {
+                                                               final @NonNull Class<T> cls,
+                                                               final @NonNull Object id) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
         final T instance = generated.getSingle(context, id);
         if (instance != null) {
@@ -92,13 +92,13 @@ public abstract class SQLiteObject {
 
     public static <T extends SQLiteObject> Observable<List<T>> getCustom(
             final @NonNull Context context,
-            final @Nullable String customWhere,
-            final @NonNull Class<T> cls) {
+            final @NonNull Class<T> cls,
+            final @Nullable SQLiteQuery query) {
 
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
             public void call(Subscriber<? super List<T>> subscriber) {
-                final List<T> instanceList = getCustomBlocking(context, customWhere, cls);
+                final List<T> instanceList = getCustomBlocking(context, cls, query);
                 subscriber.onNext(instanceList);
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -107,10 +107,27 @@ public abstract class SQLiteObject {
 
     public static <T extends SQLiteObject> List<T> getCustomBlocking(
             final @NonNull Context context,
-            final @Nullable String customWhere,
-            final @NonNull Class<T> cls) {
+            final @NonNull Class<T> cls,
+            final @Nullable SQLiteQuery query) {
+        final List<T> instanceList;
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final List<T> instanceList = generated.getCustom(context, customWhere);
+        if (query == null) {
+            instanceList = generated.getCustom(context, null, null, null, null, null);
+        } else {
+            final String[] whereArgsAsStringArray;
+            if (query.mWhereArgs != null) {
+                whereArgsAsStringArray = new String[query.mWhereArgs.length];
+                for (int i = 0; i < query.mWhereArgs.length; i++) {
+                    whereArgsAsStringArray[i] = String.valueOf(query.mWhereArgs[i]);
+                }
+            } else {
+                whereArgsAsStringArray = null;
+            }
+            instanceList = generated.getCustom(context, query.mWhereClause, whereArgsAsStringArray,
+                    query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
+        }
+
+
         for (final T instance : instanceList) {
             instance.mObjectState = ObjectState.EXISTING;
         }
@@ -136,7 +153,7 @@ public abstract class SQLiteObject {
             final @NonNull Context context,
             final @NonNull Class<T> cls) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final List<T> instanceList = generated.getCustom(context, null);
+        final List<T> instanceList = generated.getCustom(context, null, null, null, null, null);
         for (final T instance : instanceList) {
             instance.mObjectState = ObjectState.EXISTING;
         }

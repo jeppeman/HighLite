@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 /**
  * Created by jesper on 2016-08-24.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.CLASS)
 @Target({ElementType.FIELD, ElementType.METHOD})
 public @interface AutoIncrement {
 }

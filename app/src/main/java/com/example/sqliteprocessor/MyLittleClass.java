@@ -10,7 +10,7 @@ import com.jeppeman.sqliteprocessor.SQLiteTable;
 import java.util.List;
 
 /**
- * @az
+ * @author jesper
  */
 @SQLiteTable(tableName = "myLittleTable", autoDeleteColumns = true)
 public class MyLittleClass extends SQLiteObject {

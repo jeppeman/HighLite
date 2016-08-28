@@ -82,7 +82,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             }
 
             final String fieldType = getFieldType(enclosed, field),
-                    fieldName = getFieldName(enclosed, field);
+                    fieldName = getDBFieldName(enclosed, field);
 
             final CodeBlock.Builder putStatement = CodeBlock.builder();
             if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
@@ -130,7 +130,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
             arrayValues.add(i < mElement.getEnclosedElements().size() - 1
                     ? "$S, "
-                    : "$S", getFieldName(enclosed, field));
+                    : "$S", getDBFieldName(enclosed, field));
         }
 
         arrayValues.add(" }");
@@ -230,7 +230,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = getFieldName(primaryKeyElement,
+        final String pkFieldName = getDBFieldName(primaryKeyElement,
                 primaryKeyElement.getAnnotation(SQLiteField.class));
         return MethodSpec.methodBuilder("update")
                 .addAnnotation(Override.class)
@@ -253,7 +253,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = getFieldName(primaryKeyElement,
+        final String pkFieldName = getDBFieldName(primaryKeyElement,
                 primaryKeyElement.getAnnotation(SQLiteField.class));
 
         return MethodSpec.methodBuilder("delete")
@@ -267,24 +267,47 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildQueryMethod() {
-        return MethodSpec.methodBuilder("query")
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(CONTEXT, "context", Modifier.FINAL)
-                .build();
-    }
+    private MethodSpec buildGetSingleByIdMethod() {
+        final Element primaryKeyElement = getPrimaryKeyField();
 
-    private MethodSpec buildGetSingleMethod() {
-        final String cursorVarName = "cursor";
+        if (primaryKeyElement == null) {
+            throw new ProcessingException(mElement,
+                    String.format("%s must contain a field annotated with %s",
+                            mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
+        }
+
+        final String pkFieldName = getDBFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class));
+
         return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(getClassNameOfElement())
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
+                .addStatement("return getSingle($L, $S, "
+                                + "new $T[] { $T.valueOf(mTarget.$L) }, null, null, null)",
+                        "context", pkFieldName + " = ?", STRING, STRING,
+                        primaryKeyElement.getSimpleName())
+                .build();
+    }
+
+    private MethodSpec buildGetSingleMethod() {
+        final String cursorVarName = "cursor";
+
+        return MethodSpec.methodBuilder("getSingle")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(getClassNameOfElement())
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(STRING, "whereClause", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
+                .addParameter(STRING, "groupBy", Modifier.FINAL)
+                .addParameter(STRING, "having", Modifier.FINAL)
+                .addParameter(STRING, "orderBy", Modifier.FINAL)
                 .addStatement("final $T $L = getWritableDatabase($L)"
-                                + ".query($S, COLUMNS, null, null, null, null, null)",
+                                + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
+                                + "orderBy)",
                         CURSOR, cursorVarName, "context", mTable.tableName())
                 .addStatement("if (!$L.moveToFirst()) return null", cursorVarName)
                 .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
@@ -300,11 +323,15 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addModifiers(Modifier.PUBLIC)
                 .returns(ParameterizedTypeName.get(LIST, getClassNameOfElement()))
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
-                .addParameter(STRING, "customWhere", Modifier.FINAL)
+                .addParameter(STRING, "whereClause", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
+                .addParameter(STRING, "groupBy", Modifier.FINAL)
+                .addParameter(STRING, "having", Modifier.FINAL)
+                .addParameter(STRING, "orderBy", Modifier.FINAL)
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
                 .addStatement("final $T $L = getWritableDatabase($L)"
-                                + ".query($S, COLUMNS, customWhere, null, null, null, null)",
+                                + ".query($S, COLUMNS, whereClause, whereArgs, null, null, null)",
                         CURSOR, cursorVarName, "context", mTable.tableName())
                 .addStatement("if (!$L.moveToFirst()) return ret", cursorVarName)
                 .beginControlFlow("do")
@@ -405,8 +432,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         buildInsertMethod(),
                         buildUpdateMethod(),
                         buildDeleteMethod(),
-                        buildQueryMethod(),
                         buildGetSingleMethod(),
+                        buildGetSingleByIdMethod(),
                         buildGetCustomMethod()
                 ))
                 .build();

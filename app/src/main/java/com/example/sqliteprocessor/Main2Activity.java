@@ -36,7 +36,7 @@ public class Main2Activity extends AppCompatActivity {
                     }
                 });
 
-        SQLiteObject.getSingle(this, 1, MyLittleClass.class)
+        SQLiteObject.getSingle(this, MyLittleClass.class, 1)
                 .subscribe(new Subscriber<MyLittleClass>() {
                     @Override
                     public void onCompleted() {
