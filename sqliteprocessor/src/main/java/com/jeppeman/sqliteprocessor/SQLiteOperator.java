@@ -21,17 +21,15 @@ import rx.schedulers.Schedulers;
  * @author jesper
  */
 @SuppressWarnings({"unchecked", "unused"})
-public abstract class SQLiteObject {
+public final class SQLiteOperator {
 
     private static final Map<Class<?>, Constructor> CTOR_CACHE = new LinkedHashMap<>();
 
-    protected transient ObjectState mObjectState;
+    private SQLiteOperator() {
 
-    protected SQLiteObject() {
-        mObjectState = ObjectState.NEW;
     }
 
-    static <T extends SQLiteObject> SQLiteDAO<T> getGeneratedObject(
+    static <T> SQLiteDAO<T> getGeneratedObject(
             final @NonNull Class<T> cls,
             final @Nullable T generator) {
         Constructor<SQLiteDAO<T>> generatedCtor = null;
@@ -66,9 +64,46 @@ public abstract class SQLiteObject {
         }
     }
 
-    public static <T extends SQLiteObject> Observable<T> getSingle(final @NonNull Context context,
-                                                                   final @NonNull Class<T> cls,
-                                                                   final @NonNull Object id) {
+    public static <T> T getSingleBlocking(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull SQLiteQuery query) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        final String[] whereArgsAsStringArray;
+        if (query.mWhereArgs != null) {
+            whereArgsAsStringArray = new String[query.mWhereArgs.length];
+            for (int i = 0; i < query.mWhereArgs.length; i++) {
+                whereArgsAsStringArray[i] = String.valueOf(query.mWhereArgs[i]);
+            }
+        } else {
+            whereArgsAsStringArray = null;
+        }
+        return generated.getSingle(context, query.mWhereClause, whereArgsAsStringArray,
+                query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
+    }
+
+    public static <T> Observable<T> getSingle(final @NonNull Context context,
+                                  final @NonNull Class<T> cls,
+                                  final @NonNull SQLiteQuery query) {
+        return Observable.create(new Observable.OnSubscribe<T>() {
+            @Override
+            public void call(Subscriber<? super T> subscriber) {
+                final T instance = getSingleBlocking(context, cls, query);
+                subscriber.onNext(instance);
+            }
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.newThread());
+    }
+
+    public static <T> T getSingleBlocking(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull Object id) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        return generated.getSingle(context, id);
+    }
+
+    public static <T> Observable<T> getSingle(final @NonNull Context context,
+                                              final @NonNull Class<T> cls,
+                                              final @NonNull Object id) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
@@ -79,33 +114,7 @@ public abstract class SQLiteObject {
                 .subscribeOn(Schedulers.newThread());
     }
 
-    public static <T extends SQLiteObject> T getSingleBlocking(final @NonNull Context context,
-                                                               final @NonNull Class<T> cls,
-                                                               final @NonNull Object id) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final T instance = generated.getSingle(context, id);
-        if (instance != null) {
-            instance.mObjectState = ObjectState.EXISTING;
-        }
-        return instance;
-    }
-
-    public static <T extends SQLiteObject> Observable<List<T>> getCustom(
-            final @NonNull Context context,
-            final @NonNull Class<T> cls,
-            final @Nullable SQLiteQuery query) {
-
-        return Observable.create(new Observable.OnSubscribe<List<T>>() {
-            @Override
-            public void call(Subscriber<? super List<T>> subscriber) {
-                final List<T> instanceList = getCustomBlocking(context, cls, query);
-                subscriber.onNext(instanceList);
-            }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
-    }
-
-    public static <T extends SQLiteObject> List<T> getCustomBlocking(
+    public static <T> List<T> getCustomBlocking(
             final @NonNull Context context,
             final @NonNull Class<T> cls,
             final @Nullable SQLiteQuery query) {
@@ -127,15 +136,32 @@ public abstract class SQLiteObject {
                     query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
         }
 
-
-        for (final T instance : instanceList) {
-            instance.mObjectState = ObjectState.EXISTING;
-        }
-
         return instanceList;
     }
 
-    public static <T extends SQLiteObject> Observable<List<T>> getAll(
+    public static <T> Observable<List<T>> getCustom(
+            final @NonNull Context context,
+            final @NonNull Class<T> cls,
+            final @Nullable SQLiteQuery query) {
+
+        return Observable.create(new Observable.OnSubscribe<List<T>>() {
+            @Override
+            public void call(Subscriber<? super List<T>> subscriber) {
+                final List<T> instanceList = getCustomBlocking(context, cls, query);
+                subscriber.onNext(instanceList);
+            }
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.newThread());
+    }
+
+    public static <T> List<T> getAllBlocking(
+            final @NonNull Context context,
+            final @NonNull Class<T> cls) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        return generated.getCustom(context, null, null, null, null, null);
+    }
+
+    public static <T> Observable<List<T>> getAll(
             final @NonNull Context context,
             final @NonNull Class<T> cls) {
 
@@ -149,92 +175,61 @@ public abstract class SQLiteObject {
                 .subscribeOn(Schedulers.newThread());
     }
 
-    public static <T extends SQLiteObject> List<T> getAllBlocking(
-            final @NonNull Context context,
-            final @NonNull Class<T> cls) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final List<T> instanceList = generated.getCustom(context, null, null, null, null, null);
-        for (final T instance : instanceList) {
-            instance.mObjectState = ObjectState.EXISTING;
-        }
-
-        return instanceList;
-    }
-
-    <T extends SQLiteObject> void dbInsertBlocking(final @NonNull Context context) {
+    public static <T> void insertBlocking(final @NonNull Context context,
+                                          final @NonNull T objectToInsert) {
         final SQLiteDAO<T> generated = getGeneratedObject(
-                (Class<T>) getClass(), (T) this);
+                (Class<T>) objectToInsert.getClass(), objectToInsert);
         generated.insert(context);
-        mObjectState = ObjectState.EXISTING;
     }
 
-    <T extends SQLiteObject> void dbUpdateBlocking(final @NonNull Context context) {
-        final SQLiteDAO<T> generated = getGeneratedObject(
-                (Class<T>) SQLiteObject.this.getClass(), (T) SQLiteObject.this);
+    public static <T> Observable<T> insert(final @NonNull Context context,
+                                           final @NonNull T objectToInsert) {
+        return Observable.create(new Observable.OnSubscribe<T>() {
+            @Override
+            public void call(Subscriber<? super T> subscriber) {
+                insertBlocking(context, objectToInsert);
+                subscriber.onNext(objectToInsert);
+            }
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.newThread());
+    }
+
+    public static <T> void updateBlocking(final @NonNull Context context,
+                                          final @NonNull T objectToUpdate) {
+        final SQLiteDAO<T> generated = getGeneratedObject((Class<T>) objectToUpdate.getClass(),
+                objectToUpdate);
         generated.update(context);
     }
 
-    private <T extends SQLiteObject> Observable<T> dbInsert(final @NonNull Context context) {
+    private <T> Observable<T> update(final @NonNull Context context,
+                                     final @NonNull T objectToUpdate) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                dbInsertBlocking(context);
-                subscriber.onNext((T) SQLiteObject.this);
+                updateBlocking(context, objectToUpdate);
+                subscriber.onNext(objectToUpdate);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
     }
 
-    private <T extends SQLiteObject> Observable<T> dbUpdate(final @NonNull Context context) {
-        return Observable.create(new Observable.OnSubscribe<T>() {
-            @Override
-            public void call(Subscriber<? super T> subscriber) {
-                dbUpdateBlocking(context);
-                subscriber.onNext((T) SQLiteObject.this);
-            }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+    public static <T> void deleteBlocking(
+            final @NonNull Context context,
+            final @NonNull T objectToDelete) {
+        final SQLiteDAO<T> generated = getGeneratedObject(
+                (Class<T>) objectToDelete.getClass(), objectToDelete);
+        generated.delete(context);
     }
 
-    public <T extends SQLiteObject> Observable<T> save(final @NonNull Context context) {
-        switch (mObjectState) {
-            case NEW:
-                return dbInsert(context);
-            case EXISTING:
-                return dbUpdate(context);
-            default:
-                return null;
-        }
-    }
-
-    public void saveBlocking(final @NonNull Context context) {
-        switch (mObjectState) {
-            case NEW:
-                dbInsertBlocking(context);
-            default:
-                dbUpdateBlocking(context);
-        }
-    }
-
-    public Observable delete(final @NonNull Context context) {
+    public static <T> Observable delete(final @NonNull Context context,
+                                        final @NonNull T objectToDelete) {
         return Observable.create(new Observable.OnSubscribe<Void>() {
             @Override
             public void call(Subscriber<? super Void> subscriber) {
-                deleteBlocking(context);
+                deleteBlocking(context, objectToDelete);
                 subscriber.onNext(null);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
-    }
-
-    public <T extends SQLiteObject> void deleteBlocking(final @NonNull Context context) {
-        final SQLiteDAO<T> generated = getGeneratedObject(
-                (Class<T>) SQLiteObject.this.getClass(), (T) SQLiteObject.this);
-        generated.delete(context);
-    }
-
-    protected enum ObjectState {
-        NEW,
-        EXISTING
     }
 }

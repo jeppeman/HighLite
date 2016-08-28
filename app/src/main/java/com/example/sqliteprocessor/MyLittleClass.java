@@ -4,7 +4,6 @@ import com.jeppeman.sqliteprocessor.AutoIncrement;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
 import com.jeppeman.sqliteprocessor.SQLiteField;
 import com.jeppeman.sqliteprocessor.SQLiteFieldType;
-import com.jeppeman.sqliteprocessor.SQLiteObject;
 import com.jeppeman.sqliteprocessor.SQLiteTable;
 
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.List;
  * @author jesper
  */
 @SQLiteTable(tableName = "myLittleTable", autoDeleteColumns = true)
-public class MyLittleClass extends SQLiteObject {
+public class MyLittleClass {
 
     @SQLiteField
     @PrimaryKey
