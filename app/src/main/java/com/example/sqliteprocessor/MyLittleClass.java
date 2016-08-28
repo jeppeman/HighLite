@@ -24,13 +24,13 @@ public class MyLittleClass extends SQLiteObject {
     String name;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
-    short shortz;
+    Short shortz;
 
     @SQLiteField("someOtherNameeps")
     List<String> nameList;
 
     @SQLiteField
-    boolean yo;
+    Boolean yo;
 
 //    @SQLiteGetter
 //    @PrimaryKey

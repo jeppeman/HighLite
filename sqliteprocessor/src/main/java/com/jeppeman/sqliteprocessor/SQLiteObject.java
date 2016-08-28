@@ -3,7 +3,6 @@ package com.jeppeman.sqliteprocessor;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -21,6 +20,7 @@ import rx.schedulers.Schedulers;
  *
  * @author jesper
  */
+@SuppressWarnings({"unchecked", "unused"})
 public abstract class SQLiteObject {
 
     private static final Map<Class<?>, Constructor> CTOR_CACHE = new LinkedHashMap<>();
@@ -31,8 +31,6 @@ public abstract class SQLiteObject {
         mObjectState = ObjectState.NEW;
     }
 
-    @SuppressWarnings("unchecked")
-    @WorkerThread
     static <T extends SQLiteObject> SQLiteDAO<T> getGeneratedObject(
             final @NonNull Class<T> cls,
             final @Nullable T generator) {
@@ -146,7 +144,6 @@ public abstract class SQLiteObject {
         return instanceList;
     }
 
-    @SuppressWarnings("unchecked")
     <T extends SQLiteObject> void dbInsertBlocking(final @NonNull Context context) {
         final SQLiteDAO<T> generated = getGeneratedObject(
                 (Class<T>) getClass(), (T) this);
@@ -154,14 +151,12 @@ public abstract class SQLiteObject {
         mObjectState = ObjectState.EXISTING;
     }
 
-    @SuppressWarnings("unchecked")
     <T extends SQLiteObject> void dbUpdateBlocking(final @NonNull Context context) {
         final SQLiteDAO<T> generated = getGeneratedObject(
                 (Class<T>) SQLiteObject.this.getClass(), (T) SQLiteObject.this);
         generated.update(context);
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends SQLiteObject> Observable<T> dbInsert(final @NonNull Context context) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
@@ -173,7 +168,6 @@ public abstract class SQLiteObject {
                 .subscribeOn(Schedulers.newThread());
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends SQLiteObject> Observable<T> dbUpdate(final @NonNull Context context) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
@@ -191,21 +185,20 @@ public abstract class SQLiteObject {
                 return dbInsert(context);
             case EXISTING:
                 return dbUpdate(context);
+            default:
+                return null;
         }
-
-        return null;
     }
 
     public void saveBlocking(final @NonNull Context context) {
         switch (mObjectState) {
             case NEW:
                 dbInsertBlocking(context);
-            case EXISTING:
+            default:
                 dbUpdateBlocking(context);
         }
     }
 
-    @SuppressWarnings("unchecked")
     public Observable delete(final @NonNull Context context) {
         return Observable.create(new Observable.OnSubscribe<Void>() {
             @Override
@@ -217,7 +210,6 @@ public abstract class SQLiteObject {
                 .subscribeOn(Schedulers.newThread());
     }
 
-    @SuppressWarnings("unchecked")
     public <T extends SQLiteObject> void deleteBlocking(final @NonNull Context context) {
         final SQLiteDAO<T> generated = getGeneratedObject(
                 (Class<T>) SQLiteObject.this.getClass(), (T) SQLiteObject.this);

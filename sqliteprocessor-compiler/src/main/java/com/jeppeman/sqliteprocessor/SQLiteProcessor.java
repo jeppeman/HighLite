@@ -27,7 +27,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
 /**
- * Created by jesper on 2016-08-25.
+ * @author jesper
  */
 @AutoService(Processor.class)
 public class SQLiteProcessor extends AbstractProcessor {
@@ -74,26 +74,33 @@ public class SQLiteProcessor extends AbstractProcessor {
                 final Map<SQLiteTable, Element> tablesForDatabase =
                         getTableElementMappingForDatabase(roundEnv, mirrors);
 
-                final JavaFile helperFile = new SQLiteOpenHelperClass(descriptor.dbName(),
-                        tablesForDatabase,
-                        descriptor.dbVersion(), mElementUtils).writeJava();
-
                 try {
+                    final JavaFile helperFile = new SQLiteOpenHelperClass(descriptor.dbName(),
+                            tablesForDatabase, descriptor.dbVersion(), mElementUtils).writeJava();
                     helperFile.writeTo(mFiler);
                 } catch (IOException e) {
-                    error(element, "Unable to write helper file for %s: %s",
+                    error(element, "Unable to generate helper file for %s: %s",
                             element.asType().toString(), e.getMessage());
+                    return true;
+                } catch (ProcessingException e) {
+                    error(e.getElement(), "Unable to generate helper file for %s: %s",
+                            e.getElement().asType().toString(), e.getMessage());
+                    return true;
                 }
 
                 for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
-                    final JavaFile daoFile = new SQLiteDAOClass(descriptor.dbName(), entry.getKey(),
-                            entry.getValue(), mElementUtils).writeJava();
-
                     try {
+                        final JavaFile daoFile = new SQLiteDAOClass(descriptor.dbName(),
+                                entry.getKey(), entry.getValue(), mElementUtils).writeJava();
                         daoFile.writeTo(mFiler);
                     } catch (IOException e) {
-                        error(element, "Unable to write helper file for %s: %s",
+                        error(element, "Unable to generate DAO file for %s: %s",
                                 element.asType().toString(), e.getMessage());
+                        return true;
+                    } catch (ProcessingException e) {
+                        error(e.getElement(), "Unable to generate DAO file for %s: %s",
+                                e.getElement().asType().toString(), e.getMessage());
+                        return true;
                     }
                 }
             }
@@ -149,6 +156,7 @@ public class SQLiteProcessor extends AbstractProcessor {
         printMessage(Diagnostic.Kind.ERROR, element, message, args);
     }
 
+    @SuppressWarnings("unused")
     private void note(Element element, String message, Object... args) {
         printMessage(Diagnostic.Kind.NOTE, element, message, args);
     }

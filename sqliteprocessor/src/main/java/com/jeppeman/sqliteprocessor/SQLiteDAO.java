@@ -5,7 +5,7 @@ import android.content.Context;
 import java.util.List;
 
 /**
- * Created by jesper on 2016-08-25.
+ * @author jesper
  */
 public interface SQLiteDAO<T extends SQLiteObject> {
     void insert(Context context);

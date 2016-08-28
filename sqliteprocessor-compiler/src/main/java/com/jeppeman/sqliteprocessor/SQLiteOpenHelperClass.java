@@ -79,8 +79,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
                 if (primaryKey != null) {
                     columnsToSaveWithTypes.append(" PRIMARY KEY");
-                    columnsToSaveWithTypes.append(enclosed.getAnnotation(AutoIncrement.class) != null
-                            ? " AUTOINCREMENT" : "");
+                    columnsToSaveWithTypes.append(
+                            enclosed.getAnnotation(AutoIncrement.class) != null
+                                    ? " AUTOINCREMENT"
+                                    : "");
                 }
 
                 columnsToSaveWithTypes.append(", ");
@@ -91,7 +93,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             dropColumnStatements.add(
                     getRecreateTableStatement("database", table.tableName(),
                             columnsToSave.substring(0, columnsToSave.length() - 1),
-                            columnsToSaveWithTypes.substring(0, columnsToSaveWithTypes.length() - 2)));
+                            columnsToSaveWithTypes.substring(0,
+                                    columnsToSaveWithTypes.length() - 2)));
         }
 
         return CodeBlock.builder()
@@ -211,8 +214,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final CodeBlock.Builder codeBlockOnCreate = CodeBlock.builder(),
                 codeBlockOnUpgrade = CodeBlock.builder();
 
-        for (final Map.Entry<SQLiteTable, Element> tableElementEntry :
-                mTableElementMap.entrySet()) {
+        for (final Map.Entry<SQLiteTable, Element> tableElementEntry
+                : mTableElementMap.entrySet()) {
 
             final SQLiteTable table = tableElementEntry.getKey();
             final Element element = tableElementEntry.getValue();

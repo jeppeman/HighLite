@@ -2,6 +2,26 @@ subprojects { ->
     group = GROUP
     version = VERSION_NAME
 
+    apply plugin: 'checkstyle'
+
+    task checkstyle(type: Checkstyle) {
+        configFile rootProject.file('checkstyle.xml')
+        source 'src/main/java'
+        ignoreFailures false
+        showViolations true
+        include '**/*.java'
+        classpath = files()
+    }
+
+    afterEvaluate {
+        if (project.getPlugins().hasPlugin('com.android.application') ||
+                project.getPlugins().hasPlugin('com.android.library')) {
+            preBuild.dependsOn('checkstyle')
+        } else {
+            compileJava.dependsOn('checkstyle')
+        }
+    }
+
     repositories {
         mavenCentral()
     }
@@ -39,7 +59,8 @@ ext.deps = [
         autocommon        : 'com.google.auto:auto-common:0.6',
         rxandroid         : 'io.reactivex:rxandroid:1.2.1',
         rxjava            : 'io.reactivex:rxjava:1.1.6',
-        appcompat         : 'com.android.support:appcompat-v7:24.2.0'
+        appcompat         : 'com.android.support:appcompat-v7:24.2.0',
+        compiletesting    : 'com.google.testing.compile:compile-testing:0.9'
 ]
 
 task clean(type: Delete) {

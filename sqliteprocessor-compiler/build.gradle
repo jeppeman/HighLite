@@ -9,6 +9,9 @@ dependencies {
     compile deps.autoservice
     compile deps.autocommon
     compile deps.javapoet
+
+    testCompile deps.junit
+    testCompile deps.compiletesting
 }
 
 apply from: rootProject.file('gradle/maven-publish-local.gradle')
