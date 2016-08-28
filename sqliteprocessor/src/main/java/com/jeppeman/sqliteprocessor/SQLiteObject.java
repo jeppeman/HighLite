@@ -39,7 +39,7 @@ public abstract class SQLiteObject {
         Constructor<SQLiteDAO<T>> generatedCtor = null;
         try {
             generatedCtor = CTOR_CACHE.get(cls);
-            if (generatedCtor != null) return generatedCtor.newInstance();
+            if (generatedCtor != null) return generatedCtor.newInstance(generator);
 
             final Class<SQLiteDAO<T>> clazz = (Class<SQLiteDAO<T>>)
                     Class.forName(cls.getCanonicalName() + "_DAO");
@@ -86,8 +86,9 @@ public abstract class SQLiteObject {
                                                                final @NonNull Class<T> cls) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
         final T instance = generated.getSingle(context, id);
-        instance.mObjectState = ObjectState.EXISTING;
-
+        if (instance != null) {
+            instance.mObjectState = ObjectState.EXISTING;
+        }
         return instance;
     }
 

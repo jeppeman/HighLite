@@ -10,7 +10,7 @@ import com.jeppeman.sqliteprocessor.SQLiteTable;
 import java.util.List;
 
 /**
- * Created by jesper on 2016-08-25.
+ * @az
  */
 @SQLiteTable(tableName = "myLittleTable", autoDeleteColumns = true)
 public class MyLittleClass extends SQLiteObject {
@@ -31,4 +31,18 @@ public class MyLittleClass extends SQLiteObject {
 
     @SQLiteField
     boolean yo;
+
+//    @SQLiteGetter
+//    @PrimaryKey
+//    @AutoIncrement
+//    public int getId() {
+//        return id;
+//    }
+//
+//    @SQLiteSetter
+//    @PrimaryKey
+//    @AutoIncrement
+//    public void setId(final int id) {
+//        this.id = id;
+//    }
 }
