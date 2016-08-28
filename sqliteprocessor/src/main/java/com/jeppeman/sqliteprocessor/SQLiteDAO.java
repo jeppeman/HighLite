@@ -13,13 +13,13 @@ public interface SQLiteDAO<T> {
     void delete(Context context);
     T getSingle(Context context, Object id);
     T getSingle(Context context,
-                String selectionClause,
+                String whereClause,
                 String[] whereArgs,
                 String groupBy,
                 String having,
                 String orderBy);
     List<T> getCustom(Context context,
-                      String selectionClause,
+                      String whereClause,
                       String[] whereArgs,
                       String groupBy,
                       String having,

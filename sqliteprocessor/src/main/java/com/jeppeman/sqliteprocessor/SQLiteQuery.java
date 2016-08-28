@@ -23,36 +23,36 @@ public class SQLiteQuery {
 
     }
 
-    public static SQLiteQueryBuilder builder() {
-        return new SQLiteQueryBuilder(new SQLiteQuery());
+    public static Builder builder() {
+        return new Builder(new SQLiteQuery());
     }
 
-    public static class SQLiteQueryBuilder {
+    public static class Builder {
 
         private SQLiteQuery mQuery;
 
-        SQLiteQueryBuilder(final @NonNull SQLiteQuery query) {
+        Builder(final @NonNull SQLiteQuery query) {
             mQuery = query;
         }
 
-        public SQLiteQueryBuilder where(final @NonNull String whereClause,
-                                        final @Nullable Object... whereArgs) {
+        public Builder where(final @NonNull String whereClause,
+                             final @Nullable Object... whereArgs) {
             mQuery.mWhereClause = whereClause;
             mQuery.mWhereArgs = whereArgs;
             return this;
         }
 
-        public SQLiteQueryBuilder orderBy(final @NonNull String orderByClause) {
+        public Builder orderBy(final @NonNull String orderByClause) {
             mQuery.mOrderByClause = orderByClause;
             return this;
         }
 
-        public SQLiteQueryBuilder groupBy(final @NonNull String groupByClause) {
+        public Builder groupBy(final @NonNull String groupByClause) {
             mQuery.mGroupByClause = groupByClause;
             return this;
         }
 
-        public SQLiteQueryBuilder having(final @NonNull String havingClause) {
+        public Builder having(final @NonNull String havingClause) {
             mQuery.mHavingClause = havingClause;
             return this;
         }

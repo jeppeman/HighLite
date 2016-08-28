@@ -16,7 +16,8 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 /**
- * Delegates calls to the generated DAO and returns {@link Observable}s
+ * Performs database operations by delegating calls to the generated DAO. Operations can
+ * be made blocking or run with {@link Observable}s
  *
  * @author jesper
  */
@@ -64,6 +65,16 @@ public final class SQLiteOperator {
         }
     }
 
+    /**
+     * Fetches a single object of type {@link T}, blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param query   query specifying which row to fetch
+     * @param <T>     type to fetch
+     * @return        an instance of type {@link T} with database fields mapped to class fields
+     *                annotated with {@link SQLiteField}
+     */
     public static <T> T getSingleBlocking(final @NonNull Context context,
                                           final @NonNull Class<T> cls,
                                           final @NonNull SQLiteQuery query) {
@@ -81,12 +92,22 @@ public final class SQLiteOperator {
                 query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
     }
 
+    /**
+     * Fetches a single object of type {@link T}, non-blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param query   query specifying which row to fetch
+     * @param <T>     type to fetch
+     * @return        an {@link Observable} where an instance of type {@link T} if passed as the
+     *                item in {@link Subscriber#onNext(Object)}
+     */
     public static <T> Observable<T> getSingle(final @NonNull Context context,
-                                  final @NonNull Class<T> cls,
-                                  final @NonNull SQLiteQuery query) {
+                                              final @NonNull Class<T> cls,
+                                              final @NonNull SQLiteQuery query) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(Subscriber<? super T> subscriber) {
+            public void call(final @NonNull Subscriber<? super T> subscriber) {
                 final T instance = getSingleBlocking(context, cls, query);
                 subscriber.onNext(instance);
             }
@@ -106,7 +127,7 @@ public final class SQLiteOperator {
                                               final @NonNull Object id) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(Subscriber<? super T> subscriber) {
+            public void call(final @NonNull Subscriber<? super T> subscriber) {
                 final T instance = getSingleBlocking(context, cls, id);
                 subscriber.onNext(instance);
             }
@@ -146,7 +167,7 @@ public final class SQLiteOperator {
 
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
-            public void call(Subscriber<? super List<T>> subscriber) {
+            public void call(final @NonNull Subscriber<? super List<T>> subscriber) {
                 final List<T> instanceList = getCustomBlocking(context, cls, query);
                 subscriber.onNext(instanceList);
             }
@@ -167,7 +188,7 @@ public final class SQLiteOperator {
 
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
-            public void call(Subscriber<? super List<T>> subscriber) {
+            public void call(final @NonNull Subscriber<? super List<T>> subscriber) {
                 final List<T> instanceList = getAllBlocking(context, cls);
                 subscriber.onNext(instanceList);
             }
@@ -186,7 +207,7 @@ public final class SQLiteOperator {
                                            final @NonNull T objectToInsert) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(Subscriber<? super T> subscriber) {
+            public void call(final @NonNull Subscriber<? super T> subscriber) {
                 insertBlocking(context, objectToInsert);
                 subscriber.onNext(objectToInsert);
             }
@@ -205,7 +226,7 @@ public final class SQLiteOperator {
                                      final @NonNull T objectToUpdate) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(Subscriber<? super T> subscriber) {
+            public void call(final @NonNull Subscriber<? super T> subscriber) {
                 updateBlocking(context, objectToUpdate);
                 subscriber.onNext(objectToUpdate);
             }
@@ -225,7 +246,7 @@ public final class SQLiteOperator {
                                         final @NonNull T objectToDelete) {
         return Observable.create(new Observable.OnSubscribe<Void>() {
             @Override
-            public void call(Subscriber<? super Void> subscriber) {
+            public void call(final @NonNull Subscriber<? super Void> subscriber) {
                 deleteBlocking(context, objectToDelete);
                 subscriber.onNext(null);
             }

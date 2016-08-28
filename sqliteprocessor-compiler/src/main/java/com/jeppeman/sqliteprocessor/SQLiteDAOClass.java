@@ -21,7 +21,7 @@ import javax.lang.model.util.Elements;
 /**
  * Generator of data access objects to automatically handle insertion/updates/deletion of records
  * in a table described in classes annotated with {@link SQLiteTable}. The methods of these
- * generated classes are called from the correspondin methods of {@link SQLiteObject}s.
+ * generated classes are called from the corresponding methods of {@link SQLiteObject}s.
  *
  * @author jeppeman
  */
@@ -330,7 +330,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
                 .addStatement("final $T $L = getWritableDatabase($L)"
-                                + ".query($S, COLUMNS, whereClause, whereArgs, null, null, null)",
+                                + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
+                                + "orderBy)",
                         CURSOR, cursorVarName, "context", mTable.tableName())
                 .addStatement("if (!$L.moveToFirst()) return ret", cursorVarName)
                 .beginControlFlow("do")
