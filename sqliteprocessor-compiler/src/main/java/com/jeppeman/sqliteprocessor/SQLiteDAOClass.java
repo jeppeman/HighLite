@@ -286,9 +286,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
                 .addStatement("return getSingle($L, $S, "
-                                + "new $T[] { $T.valueOf(mTarget.$L) }, null, null, null)",
-                        "context", pkFieldName + " = ?", STRING, STRING,
-                        primaryKeyElement.getSimpleName())
+                                + "new $T[] { $T.valueOf(id) }, null, null, null)",
+                        "context", pkFieldName + " = ?", STRING, STRING)
                 .build();
     }
 

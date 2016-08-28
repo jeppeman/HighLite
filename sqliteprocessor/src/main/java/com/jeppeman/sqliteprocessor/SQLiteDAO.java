@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * @author jesper
  */
-public interface SQLiteDAO<T extends SQLiteObject> {
+public interface SQLiteDAO<T> {
     void insert(Context context);
     void update(Context context);
     void delete(Context context);
