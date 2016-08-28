@@ -6,3 +6,5 @@ targetCompatibility = rootProject.ext.targetCompatibilityVersion
 dependencies {
 
 }
+
+apply from: rootProject.file('gradle/maven-publish-local.gradle')

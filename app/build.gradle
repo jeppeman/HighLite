@@ -11,9 +11,9 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.jeppeman.sqliteprocessor"
+        applicationId "com.example.sqliteprocessor"
         minSdkVersion rootProject.ext.minSdkVersion
-        minSdkVersion rootProject.ext.targetSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
     }
@@ -29,6 +29,8 @@ dependencies {
     testCompile deps.junit
     compile deps.appcompat
 
+//    compile 'com.jeppeman:sqliteprocessor:1.0-SNAPSHOT'
+//    apt 'com.jeppeman:sqliteprocessor-compiler:1.0-SNAPSHOT'
     compile project(':sqliteprocessor')
     apt project(':sqliteprocessor-compiler')
 }

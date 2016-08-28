@@ -1,8 +1,5 @@
-package com.jeppeman.sqliteprocessor.compiler;
+package com.jeppeman.sqliteprocessor;
 
-import com.jeppeman.sqliteprocessor.SQLiteField;
-import com.jeppeman.sqliteprocessor.SQLiteFieldType;
-import com.jeppeman.sqliteprocessor.SQLiteTable;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -22,7 +19,11 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 
 /**
- * Created by jesper on 2016-08-25.
+ * Generator of data access objects to automatically handle insertion/updates/deletion of records
+ * in a table described in classes annotated with {@link SQLiteTable}. The methods of these
+ * generated classes are called from the correspondin methods of {@link SQLiteObject}s.
+ *
+ * @author jeppeman
  */
 final class SQLiteDAOClass extends JavaWritableClass {
 
@@ -58,6 +59,15 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         + mDatabaseName.substring(1) + "Helper");
     }
 
+    private Element getPrimaryKeyField() {
+        for (final Element enclosed : mElement.getEnclosedElements()) {
+            final PrimaryKey field = enclosed.getAnnotation(PrimaryKey.class);
+            if (field != null) return enclosed;
+        }
+
+        return null;
+    }
+
     private MethodSpec buildGetContentValuesMethod() {
         final String contentValsVar = "contentValues";
 
@@ -65,6 +75,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
         for (final Element enclosed : mElement.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
+
+            if (enclosed.getAnnotation(PrimaryKey.class) != null
+                    && enclosed.getAnnotation(AutoIncrement.class) != null) {
+                continue;
+            }
 
             final String fieldType = getFieldType(enclosed, field),
                     fieldName = getFieldName(enclosed, field);
@@ -181,28 +196,54 @@ final class SQLiteDAOClass extends JavaWritableClass {
     }
 
     private MethodSpec buildInsertMethod() {
+        final Element primaryKeyElement = getPrimaryKeyField();
+        final CodeBlock.Builder setIdAfterInsertion = CodeBlock.builder();
+        if (primaryKeyElement != null &&
+                primaryKeyElement.getAnnotation(AutoIncrement.class) != null) {
+            setIdAfterInsertion.addStatement("mTarget.$L = ($T)id",
+                    primaryKeyElement.getSimpleName(), ClassName.get(primaryKeyElement.asType()));
+        }
+
         return MethodSpec.methodBuilder("insert")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addCode("final long id = ")
                 .addStatement("getWritableDatabase($L).insert($S, null, getContentValues())",
                         "context", mTable.tableName())
+                .addCode(setIdAfterInsertion.build())
                 .build();
     }
 
     private MethodSpec buildUpdateMethod() {
+        final Element primaryKeyElement = getPrimaryKeyField();
+        final String pkFieldName = getFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class));
         return MethodSpec.methodBuilder("update")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addStatement("getWritableDatabase($L)" +
+                                ".update($S, getContentValues(), $S, " +
+                                "new $T[] { $T.valueOf(mTarget.$L) })",
+                        "context", mTable.tableName(), pkFieldName + " = ?", STRING, STRING,
+                        primaryKeyElement.getSimpleName())
                 .build();
     }
 
     private MethodSpec buildDeleteMethod() {
+        final Element primaryKeyElement = getPrimaryKeyField();
+        final String pkFieldName = getFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class));
+
         return MethodSpec.methodBuilder("delete")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addStatement("getWritableDatabase($L)" +
+                                ".delete($S, $S, new $T[] { $T.valueOf(mTarget.$L) })",
+                        "context", mTable.tableName(), pkFieldName + " = ?", STRING, STRING,
+                        primaryKeyElement.getSimpleName())
                 .build();
     }
 
@@ -266,26 +307,26 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final TypeName typeName = ClassName.get(enclosed.asType());
             final CodeBlock assignMentStateMent;
             if (typeName.equals(TypeName.BOOLEAN)) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getInt(i) != 0;\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getInt(i) != 0;\n", fieldName);
             } else if (typeName.equals(TypeName.FLOAT)) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getFloat(i);\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getFloat(i);\n", fieldName);
             } else if (typeName.equals(TypeName.DOUBLE)) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getDouble(i);\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getDouble(i);\n", fieldName);
             } else if (typeName.equals(TypeName.SHORT)) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getShort(i);\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getShort(i);\n", fieldName);
             } else if (typeName.equals(TypeName.INT)) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getInt(i);\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getInt(i);\n", fieldName);
             } else if (typeName.equals(TypeName.LONG)) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getLong(i);\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getLong(i);\n", fieldName);
             } else if (typeName.equals(TypeName.get(String.class))) {
-                assignMentStateMent = CodeBlock.of("mTarget.$L = cursor.getString(i);\n", fieldName);
+                assignMentStateMent = CodeBlock.of("ret.$L = cursor.getString(i);\n", fieldName);
             } else {
                 assignMentStateMent = CodeBlock.builder()
                         .beginControlFlow("try")
                         .addStatement("final $T bis = new $T(cursor.getBlob(i))", BYTE_ARRAY_IS,
                                 BYTE_ARRAY_IS)
                         .addStatement("final $T ois = new $T(bis)", OBJECT_IS, OBJECT_IS)
-                        .addStatement("mTarget.$L = ($T)ois.readObject()", fieldName,
+                        .addStatement("ret.$L = ($T)ois.readObject()", fieldName,
                                 ClassName.get(enclosed.asType()))
                         .endControlFlow()
                         .beginControlFlow("catch ($T | $T e)", IO_EXCEPTION,

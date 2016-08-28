@@ -10,3 +10,5 @@ dependencies {
     compile deps.autocommon
     compile deps.javapoet
 }
+
+apply from: rootProject.file('gradle/maven-publish-local.gradle')

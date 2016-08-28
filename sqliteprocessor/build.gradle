@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
-        minSdkVersion rootProject.ext.targetSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
     }
 }
 
@@ -23,3 +23,5 @@ dependencies {
     compile deps.rxandroid
     compile deps.rxjava
 }
+
+apply from: rootProject.file('gradle/maven-publish-local.gradle')

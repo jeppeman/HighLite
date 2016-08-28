@@ -9,9 +9,6 @@ import com.jeppeman.sqliteprocessor.SQLiteTable;
 
 import java.util.List;
 
-/**
- * Created by jesper on 2016-08-25.
- */
 @SQLiteTable(
         tableName = "myLittleTable2",
         autoDeleteColumns = true,

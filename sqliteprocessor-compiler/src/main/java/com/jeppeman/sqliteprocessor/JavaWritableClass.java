@@ -1,7 +1,5 @@
-package com.jeppeman.sqliteprocessor.compiler;
+package com.jeppeman.sqliteprocessor;
 
-import com.jeppeman.sqliteprocessor.SQLiteField;
-import com.jeppeman.sqliteprocessor.SQLiteFieldType;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 
@@ -21,7 +19,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 
 /**
- * Created by jesper on 2016-08-26.
+ * @author jesper
  */
 abstract class JavaWritableClass {
     protected static final ClassName IO_EXCEPTION = ClassName.get(IOException.class);
@@ -41,8 +39,6 @@ abstract class JavaWritableClass {
             "ContentValues");
     protected static final ClassName SQLITE_DAO = ClassName.get("com.jeppeman.sqliteprocessor",
             "SQLiteDAO");
-    protected static final ClassName SQLITE_HELPER_CALLBACKS = ClassName.get(
-            "com.jeppeman.sqliteprocessor", "SQLiteOpenHelperCallbacks");
     protected static final ClassName SQLITE_DATABASE = ClassName.get("android.database.sqlite",
             "SQLiteDatabase");
     protected static final ClassName SQLITE_OPEN_HELPER = ClassName.get("android.database.sqlite",

@@ -1,9 +1,5 @@
-package com.jeppeman.sqliteprocessor.compiler;
+package com.jeppeman.sqliteprocessor;
 
-import com.jeppeman.sqliteprocessor.AutoIncrement;
-import com.jeppeman.sqliteprocessor.PrimaryKey;
-import com.jeppeman.sqliteprocessor.SQLiteField;
-import com.jeppeman.sqliteprocessor.SQLiteTable;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -20,7 +16,10 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.util.Elements;
 
 /**
- * Created by jesper on 2016-08-26.
+ * Generator of subclasses to {@link SQLiteOpenHelper} with the ability to automatically create and
+ * update tables described in classes annotated with {@link SQLiteTable}
+ *
+ * @author jeppeman
  */
 final class SQLiteOpenHelperClass extends JavaWritableClass {
 
@@ -67,17 +66,32 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         final CodeBlock.Builder dropColumnStatements = CodeBlock.builder();
         if (table.autoDeleteColumns()) {
-            final StringBuilder columnsToSave = new StringBuilder();
+            final StringBuilder columnsToSave = new StringBuilder(),
+                    columnsToSaveWithTypes = new StringBuilder();
             for (final Element enclosed : element.getEnclosedElements()) {
                 final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
                 if (field == null) continue;
 
+                columnsToSaveWithTypes.append(getFieldName(enclosed, field));
+                columnsToSaveWithTypes.append(" ");
+                columnsToSaveWithTypes.append(getFieldType(enclosed, field));
+
+                final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
+                if (primaryKey != null) {
+                    columnsToSaveWithTypes.append(" PRIMARY KEY");
+                    columnsToSaveWithTypes.append(enclosed.getAnnotation(AutoIncrement.class) != null
+                            ? " AUTOINCREMENT" : "");
+                }
+
+                columnsToSaveWithTypes.append(", ");
+
                 columnsToSave.append(getFieldName(enclosed, field));
                 columnsToSave.append(",");
             }
-            dropColumnStatements.addStatement("database.execSQL($S)",
-                    getRecreateTableStatement(table.tableName(),
-                            columnsToSave.substring(0, columnsToSave.length() - 1)));
+            dropColumnStatements.add(
+                    getRecreateTableStatement("database", table.tableName(),
+                            columnsToSave.substring(0, columnsToSave.length() - 1),
+                            columnsToSaveWithTypes.substring(0, columnsToSaveWithTypes.length() - 2)));
         }
 
         return CodeBlock.builder()
@@ -118,16 +132,28 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 + getFieldName(element, field)
                 + "` "
                 + getFieldType(element, field)
-                + builder.toString();
+                + builder.toString()
+                + ";";
     }
 
-    private String getRecreateTableStatement(final String tableName, final String columnsToSave) {
-        return "BEGIN TRANSACTION;" +
-                String.format("CREATE TEMPORARY TABLE %s_backup(%s);", tableName, columnsToSave) +
-                String.format("INSERT INTO %s_backup SELECT %s FROM %s;", tableName, columnsToSave, tableName) +
-                String.format("DROP TABLE %s;", tableName) +
-                String.format("ALTER TABLE %s_backup RENAME TO %s;", tableName, tableName) +
-                "COMMIT;";
+    private CodeBlock getRecreateTableStatement(final String dbVarName,
+                                                final String tableName,
+                                                final String columnsToSave,
+                                                final String columnsToSaveWithTypes) {
+        return CodeBlock.builder()
+                .addStatement("$L.execSQL($S)", dbVarName, "BEGIN TRANSACTION;")
+                .addStatement("$L.execSQL($S)", dbVarName,
+                        String.format("CREATE TABLE %s_backup(%s);", tableName,
+                                columnsToSaveWithTypes))
+                .addStatement("$L.execSQL($S)", dbVarName,
+                        String.format("INSERT INTO %s_backup SELECT %s FROM %s;", tableName,
+                                columnsToSave, tableName))
+                .addStatement("$L.execSQL($S)", dbVarName,
+                        String.format("DROP TABLE %s;", tableName))
+                .addStatement("$L.execSQL($S)", dbVarName,
+                        String.format("ALTER TABLE %s_backup RENAME TO %s;", tableName, tableName))
+                .addStatement("$L.execSQL($S)", dbVarName, "COMMIT;")
+                .build();
     }
 
     private String getCreateStatement(final Element element, final SQLiteTable table) {
@@ -181,7 +207,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .addCode("super(context, $L, null, $L);\n", dbName.name, dbVersion.name)
                 .build();
 
-        String packageName = null;
+        String packageName = "";
         final CodeBlock.Builder codeBlockOnCreate = CodeBlock.builder(),
                 codeBlockOnUpgrade = CodeBlock.builder();
 
@@ -191,7 +217,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final SQLiteTable table = tableElementEntry.getKey();
             final Element element = tableElementEntry.getValue();
 
-            if (packageName == null) {
+            if (packageName.length() == 0) {
                 packageName = mElementUtils
                         .getPackageOf(element)
                         .getQualifiedName()

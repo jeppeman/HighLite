@@ -17,9 +17,11 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 /**
- * Created by jesper on 2016-08-25.
+ * Delegates calls to the generated DAO and returns {@link Observable}s
+ *
+ * @author jesper
  */
-public class SQLiteObject {
+public abstract class SQLiteObject {
 
     private static final Map<Class<?>, Constructor> CTOR_CACHE = new LinkedHashMap<>();
 
@@ -31,28 +33,29 @@ public class SQLiteObject {
 
     @SuppressWarnings("unchecked")
     @WorkerThread
-    private static <T extends SQLiteObject> SQLiteDAO<T> getWrappingObject(
-            final @NonNull Class<T> cls) {
-        Constructor<SQLiteDAO<T>> wrappingCtor = null;
+    static <T extends SQLiteObject> SQLiteDAO<T> getGeneratedObject(
+            final @NonNull Class<T> cls,
+            final @Nullable T generator) {
+        Constructor<SQLiteDAO<T>> generatedCtor = null;
         try {
-            wrappingCtor = CTOR_CACHE.get(cls);
-            if (wrappingCtor != null) return wrappingCtor.newInstance();
+            generatedCtor = CTOR_CACHE.get(cls);
+            if (generatedCtor != null) return generatedCtor.newInstance();
 
             final Class<SQLiteDAO<T>> clazz = (Class<SQLiteDAO<T>>)
-                    Class.forName(cls.getName() + "_DAO");
+                    Class.forName(cls.getCanonicalName() + "_DAO");
 
-            wrappingCtor = clazz.getConstructor();
-            CTOR_CACHE.put(cls, wrappingCtor);
+            generatedCtor = clazz.getConstructor(cls);
+            CTOR_CACHE.put(cls, generatedCtor);
 
-            return wrappingCtor.newInstance();
+            return generatedCtor.newInstance(generator);
         } catch (InstantiationException e) {
-            throw new RuntimeException("Unable to invoke " + wrappingCtor, e);
+            throw new RuntimeException("Unable to invoke " + generatedCtor, e);
         } catch (IllegalAccessException e) {
-            throw new RuntimeException("Illegal access, unable to invoke " + wrappingCtor, e);
+            throw new RuntimeException("Illegal access, unable to invoke " + generatedCtor, e);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Wrapping class not found", e);
+            throw new RuntimeException("Generated class not found", e);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException("Unable to find ctor for " + cls.getName(), e);
+            throw new RuntimeException("Unable to find ctor for " + cls.getName() + "_DAO", e);
         } catch (InvocationTargetException e) {
             final Throwable cause = e.getCause();
             if (cause instanceof RuntimeException) {
@@ -71,12 +74,21 @@ public class SQLiteObject {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                final SQLiteDAO<T> wrapper = getWrappingObject(cls);
-                T instance = wrapper.getSingle(context, id);
+                final T instance = getSingleBlocking(context, id, cls);
                 subscriber.onNext(instance);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
+    }
+
+    public static <T extends SQLiteObject> T getSingleBlocking(final @NonNull Context context,
+                                                               final @NonNull Object id,
+                                                               final @NonNull Class<T> cls) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        final T instance = generated.getSingle(context, id);
+        instance.mObjectState = ObjectState.EXISTING;
+
+        return instance;
     }
 
     public static <T extends SQLiteObject> Observable<List<T>> getCustom(
@@ -87,12 +99,24 @@ public class SQLiteObject {
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
             public void call(Subscriber<? super List<T>> subscriber) {
-                final SQLiteDAO<T> wrapper = getWrappingObject(cls);
-                List<T> instance = wrapper.getCustom(context, customWhere);
-                subscriber.onNext(instance);
+                final List<T> instanceList = getCustomBlocking(context, customWhere, cls);
+                subscriber.onNext(instanceList);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
+    }
+
+    public static <T extends SQLiteObject> List<T> getCustomBlocking(
+            final @NonNull Context context,
+            final @Nullable String customWhere,
+            final @NonNull Class<T> cls) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        final List<T> instanceList = generated.getCustom(context, customWhere);
+        for (final T instance : instanceList) {
+            instance.mObjectState = ObjectState.EXISTING;
+        }
+
+        return instanceList;
     }
 
     public static <T extends SQLiteObject> Observable<List<T>> getAll(
@@ -102,12 +126,38 @@ public class SQLiteObject {
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
             public void call(Subscriber<? super List<T>> subscriber) {
-                final SQLiteDAO<T> wrapper = getWrappingObject(cls);
-                List<T> instance = wrapper.getCustom(context, null);
-                subscriber.onNext(instance);
+                final List<T> instanceList = getAllBlocking(context, cls);
+                subscriber.onNext(instanceList);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
+    }
+
+    public static <T extends SQLiteObject> List<T> getAllBlocking(
+            final @NonNull Context context,
+            final @NonNull Class<T> cls) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        final List<T> instanceList = generated.getCustom(context, null);
+        for (final T instance : instanceList) {
+            instance.mObjectState = ObjectState.EXISTING;
+        }
+
+        return instanceList;
+    }
+
+    @SuppressWarnings("unchecked")
+    <T extends SQLiteObject> void dbInsertBlocking(final @NonNull Context context) {
+        final SQLiteDAO<T> generated = getGeneratedObject(
+                (Class<T>) getClass(), (T) this);
+        generated.insert(context);
+        mObjectState = ObjectState.EXISTING;
+    }
+
+    @SuppressWarnings("unchecked")
+    <T extends SQLiteObject> void dbUpdateBlocking(final @NonNull Context context) {
+        final SQLiteDAO<T> generated = getGeneratedObject(
+                (Class<T>) SQLiteObject.this.getClass(), (T) SQLiteObject.this);
+        generated.update(context);
     }
 
     @SuppressWarnings("unchecked")
@@ -115,9 +165,7 @@ public class SQLiteObject {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                final SQLiteDAO<T> wrapper = getWrappingObject(
-                        (Class<T>)SQLiteObject.this.getClass());
-                wrapper.insert(context);
+                dbInsertBlocking(context);
                 subscriber.onNext((T) SQLiteObject.this);
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -129,9 +177,7 @@ public class SQLiteObject {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                final SQLiteDAO<T> wrapper = getWrappingObject(
-                        (Class<T>)SQLiteObject.this.getClass());
-                wrapper.update(context);
+                dbUpdateBlocking(context);
                 subscriber.onNext((T) SQLiteObject.this);
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -149,15 +195,32 @@ public class SQLiteObject {
         return null;
     }
 
-    public void delete(final @NonNull Context context) {
-        Observable.create(new Observable.OnSubscribe<Void>() {
+    public void saveBlocking(final @NonNull Context context) {
+        switch (mObjectState) {
+            case NEW:
+                dbInsertBlocking(context);
+            case EXISTING:
+                dbUpdateBlocking(context);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Observable delete(final @NonNull Context context) {
+        return Observable.create(new Observable.OnSubscribe<Void>() {
             @Override
             public void call(Subscriber<? super Void> subscriber) {
-                final SQLiteDAO<?> wrapper = getWrappingObject(SQLiteObject.this.getClass());
-                wrapper.delete(context);
+                deleteBlocking(context);
                 subscriber.onNext(null);
             }
-        });
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.newThread());
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends SQLiteObject> void deleteBlocking(final @NonNull Context context) {
+        final SQLiteDAO<T> generated = getGeneratedObject(
+                (Class<T>) SQLiteObject.this.getClass(), (T) SQLiteObject.this);
+        generated.delete(context);
     }
 
     protected enum ObjectState {

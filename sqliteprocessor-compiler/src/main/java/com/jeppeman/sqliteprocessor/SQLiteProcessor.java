@@ -1,18 +1,11 @@
-package com.jeppeman.sqliteprocessor.compiler;
+package com.jeppeman.sqliteprocessor;
 
 import com.google.auto.service.AutoService;
-import com.jeppeman.sqliteprocessor.AutoIncrement;
-import com.jeppeman.sqliteprocessor.PrimaryKey;
-import com.jeppeman.sqliteprocessor.SQLiteDatabaseDescriptor;
-import com.jeppeman.sqliteprocessor.SQLiteDatabaseHolder;
-import com.jeppeman.sqliteprocessor.SQLiteField;
-import com.jeppeman.sqliteprocessor.SQLiteGetter;
-import com.jeppeman.sqliteprocessor.SQLiteSetter;
-import com.jeppeman.sqliteprocessor.SQLiteTable;
 import com.squareup.javapoet.JavaFile;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -62,7 +55,7 @@ public class SQLiteProcessor extends AbstractProcessor {
             final SQLiteDatabaseHolder dbAnno = element.getAnnotation(SQLiteDatabaseHolder.class);
 
             for (final SQLiteDatabaseDescriptor descriptor : dbAnno.databases()) {
-                List<? extends TypeMirror> mirrors = null;
+                List<? extends TypeMirror> mirrors = new ArrayList<>();
                 try {
                     descriptor.tables();
                 } catch (MirroredTypesException e) {
