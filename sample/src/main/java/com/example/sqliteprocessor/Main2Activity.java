@@ -9,6 +9,7 @@ import com.jeppeman.sqliteprocessor.SQLiteOperator;
 import java.util.Arrays;
 
 import rx.Subscriber;
+import rx.functions.Func1;
 
 public class Main2Activity extends AppCompatActivity {
 
@@ -17,8 +18,14 @@ public class Main2Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
-        SQLiteOperator.get(this, MyLittleClass.class, 1)
-                .subscribe(new Subscriber<MyLittleClass>() {
+        SQLiteOperator.getSingle(this, MyLittleClass.class, 1)
+                .map(new Func1<MyLittleClass, String>() {
+                    @Override
+                    public String call(MyLittleClass myLittleClass) {
+                        return myLittleClass.name;
+                    }
+                })
+                .subscribe(new Subscriber<String>() {
                     @Override
                     public void onCompleted() {
 
@@ -30,7 +37,7 @@ public class Main2Activity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onNext(MyLittleClass myLittleClass) {
+                    public void onNext(String myLittleClass) {
 
                     }
                 });

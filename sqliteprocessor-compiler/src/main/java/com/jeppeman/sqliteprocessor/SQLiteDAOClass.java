@@ -267,7 +267,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildGetByIdMethod() {
+    private MethodSpec buildGetSingleByIdMethod() {
         final Element primaryKeyElement = getPrimaryKeyField();
 
         if (primaryKeyElement == null) {
@@ -279,21 +279,21 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final String pkFieldName = getDBFieldName(primaryKeyElement,
                 primaryKeyElement.getAnnotation(SQLiteField.class));
 
-        return MethodSpec.methodBuilder("get")
+        return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(getClassNameOfElement())
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
-                .addStatement("return get($L, $S, "
+                .addStatement("return getSingle($L, $S, "
                                 + "new $T[] { $T.valueOf(id) }, null, null, null)",
                         "context", pkFieldName + " = ?", STRING, STRING)
                 .build();
     }
 
-    private MethodSpec buildGetByRawQueryMethod() {
+    private MethodSpec buildGetSingleByRawQueryMethod() {
         final String cursorVarName = "cursor";
-        return MethodSpec.methodBuilder("get")
+        return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(getClassNameOfElement())
@@ -310,9 +310,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildGetMethod() {
+    private MethodSpec buildGetSingleMethod() {
         final String cursorVarName = "cursor";
-        return MethodSpec.methodBuilder("get")
+        return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(getClassNameOfElement())
@@ -474,9 +474,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         buildInsertMethod(),
                         buildUpdateMethod(),
                         buildDeleteMethod(),
-                        buildGetByRawQueryMethod(),
-                        buildGetMethod(),
-                        buildGetByIdMethod(),
+                        buildGetSingleByRawQueryMethod(),
+                        buildGetSingleMethod(),
+                        buildGetSingleByIdMethod(),
                         buildGetListByRawQueryMethod(),
                         buildGetListMethod()
                 ))

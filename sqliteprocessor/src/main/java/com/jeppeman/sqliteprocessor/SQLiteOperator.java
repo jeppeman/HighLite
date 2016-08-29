@@ -78,10 +78,10 @@ public final class SQLiteOperator {
      */
     @WorkerThread
     @Nullable
-    public static <T> T getBlocking(final @NonNull Context context,
-                                    final @NonNull Class<T> cls,
-                                    final @NonNull String rawQueryClause,
-                                    final @Nullable Object... rawQueryArgs) {
+    public static <T> T getSingleBlocking(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull String rawQueryClause,
+                                          final @Nullable Object... rawQueryArgs) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
         final String[] rawQueryArgsAsStringArray;
         if (rawQueryArgs != null) {
@@ -93,17 +93,17 @@ public final class SQLiteOperator {
             rawQueryArgsAsStringArray = null;
         }
 
-        return generated.get(context, rawQueryClause, rawQueryArgsAsStringArray);
+        return generated.getSingle(context, rawQueryClause, rawQueryArgsAsStringArray);
     }
 
-    public static <T> Observable<T> get(final @NonNull Context context,
-                                        final @NonNull Class<T> cls,
-                                        final @NonNull String rawQueryClause,
-                                        final @Nullable Object... rawQueryArgs) {
+    public static <T> Observable<T> getSingle(final @NonNull Context context,
+                                              final @NonNull Class<T> cls,
+                                              final @NonNull String rawQueryClause,
+                                              final @Nullable Object... rawQueryArgs) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                final T instance = getBlocking(context, cls, rawQueryClause, rawQueryArgs);
+                final T instance = getSingleBlocking(context, cls, rawQueryClause, rawQueryArgs);
                 subscriber.onNext(instance);
             }
         });
@@ -121,9 +121,9 @@ public final class SQLiteOperator {
      */
     @WorkerThread
     @Nullable
-    public static <T> T getBlocking(final @NonNull Context context,
-                                    final @NonNull Class<T> cls,
-                                    final @NonNull SQLiteQuery query) {
+    public static <T> T getSingleBlocking(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull SQLiteQuery query) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
         final String[] whereArgsAsStringArray;
         if (query.mWhereArgs != null) {
@@ -134,7 +134,7 @@ public final class SQLiteOperator {
         } else {
             whereArgsAsStringArray = null;
         }
-        return generated.get(context, query.mWhereClause, whereArgsAsStringArray,
+        return generated.getSingle(context, query.mWhereClause, whereArgsAsStringArray,
                 query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
     }
 
@@ -148,13 +148,13 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where an instance of type {@link T} is passed as the
      * item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> get(final @NonNull Context context,
-                                        final @NonNull Class<T> cls,
-                                        final @NonNull SQLiteQuery query) {
+    public static <T> Observable<T> getSingle(final @NonNull Context context,
+                                              final @NonNull Class<T> cls,
+                                              final @NonNull SQLiteQuery query) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final T instance = getBlocking(context, cls, query);
+                final T instance = getSingleBlocking(context, cls, query);
                 subscriber.onNext(instance);
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -173,11 +173,11 @@ public final class SQLiteOperator {
      */
     @WorkerThread
     @Nullable
-    public static <T> T getBlocking(final @NonNull Context context,
-                                    final @NonNull Class<T> cls,
-                                    final @NonNull Object id) {
+    public static <T> T getSingleBlocking(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull Object id) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        return generated.get(context, id);
+        return generated.getSingle(context, id);
     }
 
     /**
@@ -190,13 +190,13 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where an instance of type {@link T} is passed as the
      * item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> get(final @NonNull Context context,
-                                        final @NonNull Class<T> cls,
-                                        final @NonNull Object id) {
+    public static <T> Observable<T> getSingle(final @NonNull Context context,
+                                              final @NonNull Class<T> cls,
+                                              final @NonNull Object id) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final T instance = getBlocking(context, cls, id);
+                final T instance = getSingleBlocking(context, cls, id);
                 subscriber.onNext(instance);
             }
         }).observeOn(AndroidSchedulers.mainThread())

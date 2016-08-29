@@ -14,14 +14,14 @@ public interface SQLiteDAO<T> {
     void insert(Context context);
     void update(Context context);
     void delete(Context context);
-    T get(Context context, Object id);
-    T get(Context context, String rawQueryClause, String[] rawQueryArgs);
-    T get(Context context,
-          String whereClause,
-          String[] whereArgs,
-          String groupBy,
-          String having,
-          String orderBy);
+    T getSingle(Context context, Object id);
+    T getSingle(Context context, String rawQueryClause, String[] rawQueryArgs);
+    T getSingle(Context context,
+                String whereClause,
+                String[] whereArgs,
+                String groupBy,
+                String having,
+                String orderBy);
     List<T> getList(Context context, String rawQueryClause, String[] rawQueryArgs);
     List<T> getList(Context context,
                     String whereClause,
