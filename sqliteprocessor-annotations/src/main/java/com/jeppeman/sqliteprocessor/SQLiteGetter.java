@@ -6,8 +6,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * TODO: Not sure if I'm going to implement this or not..
- *
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)

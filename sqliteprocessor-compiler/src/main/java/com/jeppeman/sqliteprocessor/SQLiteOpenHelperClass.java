@@ -23,6 +23,7 @@ import javax.lang.model.util.Elements;
  */
 final class SQLiteOpenHelperClass extends JavaWritableClass {
 
+    private String mPackageName = "";
     private final String mDatabaseName;
     private final Map<SQLiteTable, Element> mTableElementMap;
     private final Elements mElementUtils;
@@ -185,34 +186,36 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return builder.substring(0, builder.length() - 2) + ");";
     }
 
-    @Override
-    public JavaFile writeJava() {
-        final String className = String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
-                + mDatabaseName.substring(1);
-
-        final FieldSpec colNameIndex = FieldSpec.builder(TypeName.INT,
+    private FieldSpec buildColNameIndexField() {
+        return FieldSpec.builder(TypeName.INT,
                 "COL_NAME_INDEX", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .initializer("1")
                 .build();
+    }
 
-        final FieldSpec dbName = FieldSpec.builder(STRING, "DATABASE_NAME", Modifier.PRIVATE,
+    private FieldSpec buildDbNameField() {
+        return FieldSpec.builder(STRING, "DATABASE_NAME", Modifier.PRIVATE,
                 Modifier.STATIC, Modifier.FINAL)
                 .initializer("$S", mDatabaseName)
                 .build();
+    }
 
-        final FieldSpec dbVersion = FieldSpec.builder(TypeName.INT,
+    private FieldSpec buildDbVersionField() {
+        return FieldSpec.builder(TypeName.INT,
                 "DATABASE_VERSION", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .initializer("$L", mVersion)
                 .build();
+    }
 
-        final MethodSpec ctor = MethodSpec.constructorBuilder()
+    private MethodSpec buildCtor() {
+        return  MethodSpec.constructorBuilder()
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
-                .addCode("super(context, $L, null, $L);\n", dbName.name, dbVersion.name)
+                .addStatement("super(context, $L, null, $L)", "DATABASE_NAME", "DATABASE_VERSION")
                 .build();
+    }
 
-        String packageName = "";
-        final CodeBlock.Builder codeBlockOnCreate = CodeBlock.builder(),
-                codeBlockOnUpgrade = CodeBlock.builder();
+    private MethodSpec buildOnCreateMethod() {
+        final CodeBlock.Builder code = CodeBlock.builder();
 
         for (final Map.Entry<SQLiteTable, Element> tableElementEntry
                 : mTableElementMap.entrySet()) {
@@ -220,42 +223,74 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final SQLiteTable table = tableElementEntry.getKey();
             final Element element = tableElementEntry.getValue();
 
-            if (packageName.length() == 0) {
-                packageName = mElementUtils
+            if (mPackageName.length() == 0) {
+                mPackageName = mElementUtils
                         .getPackageOf(element)
                         .getQualifiedName()
                         .toString();
             }
 
-            codeBlockOnCreate.add(getCreateBlock(element, table));
-            codeBlockOnUpgrade.add(getUpgradeBlock(element, table));
+            code.add(getCreateBlock(element, table));
         }
 
-        final MethodSpec onCreateMethod = MethodSpec.methodBuilder("onCreate")
+        return MethodSpec.methodBuilder("onCreate")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(Override.class).build())
                 .addParameter(SQLITE_DATABASE, "database", Modifier.FINAL)
-                .addCode(codeBlockOnCreate.build())
+                .addCode(code.build())
                 .build();
+    }
 
-        final MethodSpec onUpgradeMethod = MethodSpec.methodBuilder("onUpgrade")
+    private MethodSpec buildOnUpgradeMethod() {
+        final CodeBlock.Builder code = CodeBlock.builder();
+
+        for (final Map.Entry<SQLiteTable, Element> tableElementEntry
+                : mTableElementMap.entrySet()) {
+
+            final SQLiteTable table = tableElementEntry.getKey();
+            final Element element = tableElementEntry.getValue();
+
+            if (mPackageName.length() == 0) {
+                mPackageName = mElementUtils
+                        .getPackageOf(element)
+                        .getQualifiedName()
+                        .toString();
+            }
+
+            code.add(getUpgradeBlock(element, table));
+        }
+
+        return MethodSpec.methodBuilder("onUpgrade")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(Override.class).build())
                 .addParameter(SQLITE_DATABASE, "database", Modifier.FINAL)
                 .addParameter(TypeName.INT, "oldVersion", Modifier.FINAL)
                 .addParameter(TypeName.INT, "newVersion", Modifier.FINAL)
-                .addCode(codeBlockOnUpgrade.build())
+                .addCode(code.build())
                 .build();
+    }
 
+    @Override
+    public JavaFile writeJava() {
+        final String className = String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
+                + mDatabaseName.substring(1);
         final TypeSpec typeSpec = TypeSpec.classBuilder(
                 className + "Helper")
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .superclass(SQLITE_OPEN_HELPER)
-                .addFields(Arrays.asList(colNameIndex, dbVersion, dbName))
-                .addMethods(Arrays.asList(ctor, onCreateMethod, onUpgradeMethod))
+                .addFields(Arrays.asList(
+                        buildColNameIndexField(),
+                        buildDbNameField(),
+                        buildDbVersionField()
+                ))
+                .addMethods(Arrays.asList(
+                        buildCtor(),
+                        buildOnCreateMethod(),
+                        buildOnUpgradeMethod()
+                ))
                 .build();
 
-        return JavaFile.builder(packageName, typeSpec)
+        return JavaFile.builder(mPackageName, typeSpec)
                 .addFileComment("Generated code from SQLiteProcessor. Do not modify!")
                 .build();
     }
