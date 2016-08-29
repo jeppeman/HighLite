@@ -17,7 +17,7 @@ public class Main2Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
-        SQLiteOperator.getSingle(this, MyLittleClass.class, 1)
+        SQLiteOperator.get(this, MyLittleClass.class, 1)
                 .subscribe(new Subscriber<MyLittleClass>() {
                     @Override
                     public void onCompleted() {

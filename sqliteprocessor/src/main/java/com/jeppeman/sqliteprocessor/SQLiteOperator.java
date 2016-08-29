@@ -3,6 +3,7 @@ package com.jeppeman.sqliteprocessor;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.WorkerThread;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -16,8 +17,8 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 /**
- * Performs database operations by delegating calls to the generated DAO. Operations can
- * be made blocking or run with {@link Observable}s
+ * Performs database operations by delegating calls to a generated DAO. Operations can
+ * be blocking or run with {@link Observable}s
  *
  * @author jesper
  */
@@ -66,18 +67,63 @@ public final class SQLiteOperator {
     }
 
     /**
+     * Fetches an object of type {@link T} based on a raw query, blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param cls            class object of the type to fetch
+     * @param rawQueryClause an SQLite command with where ? is a parameter
+     * @param rawQueryArgs   parameter values for the query clause
+     * @param <T>            type to fetch
+     * @return an instance of {@link T} based on the raw query supplied if found, else null
+     */
+    @WorkerThread
+    @Nullable
+    public static <T> T getBlocking(final @NonNull Context context,
+                                    final @NonNull Class<T> cls,
+                                    final @NonNull String rawQueryClause,
+                                    final @Nullable Object... rawQueryArgs) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        final String[] rawQueryArgsAsStringArray;
+        if (rawQueryArgs != null) {
+            rawQueryArgsAsStringArray = new String[rawQueryArgs.length];
+            for (int i = 0; i < rawQueryArgs.length; i++) {
+                rawQueryArgsAsStringArray[i] = String.valueOf(rawQueryArgs[i]);
+            }
+        } else {
+            rawQueryArgsAsStringArray = null;
+        }
+
+        return generated.get(context, rawQueryClause, rawQueryArgsAsStringArray);
+    }
+
+    public static <T> Observable<T> get(final @NonNull Context context,
+                                        final @NonNull Class<T> cls,
+                                        final @NonNull String rawQueryClause,
+                                        final @Nullable Object... rawQueryArgs) {
+        return Observable.create(new Observable.OnSubscribe<T>() {
+            @Override
+            public void call(Subscriber<? super T> subscriber) {
+                final T instance = getBlocking(context, cls, rawQueryClause, rawQueryArgs);
+                subscriber.onNext(instance);
+            }
+        });
+    }
+
+    /**
      * Fetches a single object of type {@link T}, blocking operation.
      *
      * @param context the context from which the call is being made
      * @param cls     class object of the type to fetch
      * @param query   query specifying which row to fetch
      * @param <T>     type to fetch
-     * @return        an instance of type {@link T} with database fields mapped to class fields
-     *                annotated with {@link SQLiteField}
+     * @return an instance of type {@link T} with database fields mapped to class fields
+     * annotated with {@link SQLiteField} based on the query supplied if found, else null
      */
-    public static <T> T getSingleBlocking(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull SQLiteQuery query) {
+    @WorkerThread
+    @Nullable
+    public static <T> T getBlocking(final @NonNull Context context,
+                                    final @NonNull Class<T> cls,
+                                    final @NonNull SQLiteQuery query) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
         final String[] whereArgsAsStringArray;
         if (query.mWhereArgs != null) {
@@ -88,7 +134,7 @@ public final class SQLiteOperator {
         } else {
             whereArgsAsStringArray = null;
         }
-        return generated.getSingle(context, query.mWhereClause, whereArgsAsStringArray,
+        return generated.get(context, query.mWhereClause, whereArgsAsStringArray,
                 query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
     }
 
@@ -99,50 +145,136 @@ public final class SQLiteOperator {
      * @param cls     class object of the type to fetch
      * @param query   query specifying which row to fetch
      * @param <T>     type to fetch
-     * @return        an {@link Observable} where an instance of type {@link T} if passed as the
-     *                item in {@link Subscriber#onNext(Object)}
+     * @return an {@link Observable} where an instance of type {@link T} is passed as the
+     * item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> getSingle(final @NonNull Context context,
-                                              final @NonNull Class<T> cls,
-                                              final @NonNull SQLiteQuery query) {
+    public static <T> Observable<T> get(final @NonNull Context context,
+                                        final @NonNull Class<T> cls,
+                                        final @NonNull SQLiteQuery query) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final T instance = getSingleBlocking(context, cls, query);
+                final T instance = getBlocking(context, cls, query);
                 subscriber.onNext(instance);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
     }
 
-    public static <T> T getSingleBlocking(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull Object id) {
+    /**
+     * Fetches a single object with id of type {@link T}, blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param id      id of the row to fetch
+     * @param <T>     type to fetch
+     * @return an instance of type {@link T} with database fields mapped to class fields
+     * annotated with {@link SQLiteField}
+     */
+    @WorkerThread
+    @Nullable
+    public static <T> T getBlocking(final @NonNull Context context,
+                                    final @NonNull Class<T> cls,
+                                    final @NonNull Object id) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        return generated.getSingle(context, id);
+        return generated.get(context, id);
     }
 
-    public static <T> Observable<T> getSingle(final @NonNull Context context,
-                                              final @NonNull Class<T> cls,
-                                              final @NonNull Object id) {
+    /**
+     * * Fetches a single object with id of type {@link T}, non-blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param id      id of the row to fetch
+     * @param <T>     type to fetch
+     * @return an {@link Observable} where an instance of type {@link T} is passed as the
+     * item in {@link Subscriber#onNext(Object)}
+     */
+    public static <T> Observable<T> get(final @NonNull Context context,
+                                        final @NonNull Class<T> cls,
+                                        final @NonNull Object id) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final T instance = getSingleBlocking(context, cls, id);
+                final T instance = getBlocking(context, cls, id);
                 subscriber.onNext(instance);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
     }
 
-    public static <T> List<T> getCustomBlocking(
+    /**
+     * Fetches a {@link List} of type {@link T} based on a raw query, blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param cls            class object of the type to fetch
+     * @param rawQueryClause an SQLite command with where ? is a parameter
+     * @param rawQueryArgs   parameter values for the query clause
+     * @param <T>            type to fetch
+     * @return a {@link List} of type {@link T} based on the raw query supplied
+     */
+    @WorkerThread
+    public static <T> List<T> getListBlocking(final @NonNull Context context,
+                                              final @NonNull Class<T> cls,
+                                              final @NonNull String rawQueryClause,
+                                              final @Nullable Object... rawQueryArgs) {
+        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
+        final String[] rawQueryArgsAsStringArray;
+        if (rawQueryArgs != null) {
+            rawQueryArgsAsStringArray = new String[rawQueryArgs.length];
+            for (int i = 0; i < rawQueryArgs.length; i++) {
+                rawQueryArgsAsStringArray[i] = String.valueOf(rawQueryArgs[i]);
+            }
+        } else {
+            rawQueryArgsAsStringArray = null;
+        }
+
+        return generated.getList(context, rawQueryClause, rawQueryArgsAsStringArray);
+    }
+
+    /**
+     * Fetches a {@link List} of type {@link T} based on a raw query, non-blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param cls            class object of the type to fetch
+     * @param rawQueryClause an SQLite command with where ? is a parameter
+     * @param rawQueryArgs   parameter values for the query clause
+     * @param <T>            type to fetch
+     * @return an {@link Observable} where a {@link List} of type {@link T} based on the raw query
+     * is passed as the item in {@link Subscriber#onNext(Object)}
+     */
+    public static <T> Observable<List<T>> getList(final @NonNull Context context,
+                                                  final @NonNull Class<T> cls,
+                                                  final @NonNull String rawQueryClause,
+                                                  final @Nullable Object... rawQueryArgs) {
+        return Observable.create(new Observable.OnSubscribe<List<T>>() {
+            @Override
+            public void call(Subscriber<? super List<T>> subscriber) {
+                final List<T> instanceList = getListBlocking(context, cls, rawQueryClause,
+                        rawQueryArgs);
+                subscriber.onNext(instanceList);
+            }
+        });
+    }
+
+    /**
+     * Fetches a {@link List} of {@link T} filtered by an {@link SQLiteQuery, blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param query   query specifying which rows to fetch
+     * @param <T>     type to fetch
+     * @return a {@link List} of {@link T} filtered by {@link SQLiteQuery}
+     */
+    @WorkerThread
+    public static <T> List<T> getListBlocking(
             final @NonNull Context context,
             final @NonNull Class<T> cls,
             final @Nullable SQLiteQuery query) {
         final List<T> instanceList;
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
         if (query == null) {
-            instanceList = generated.getCustom(context, null, null, null, null, null);
+            instanceList = generated.getList(context, null, null, null, null, null, null);
         } else {
             final String[] whereArgsAsStringArray;
             if (query.mWhereArgs != null) {
@@ -153,14 +285,26 @@ public final class SQLiteOperator {
             } else {
                 whereArgsAsStringArray = null;
             }
-            instanceList = generated.getCustom(context, query.mWhereClause, whereArgsAsStringArray,
-                    query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
+            instanceList = generated.getList(context, query.mWhereClause, whereArgsAsStringArray,
+                    query.mGroupByClause, query.mHavingClause, query.mOrderByClause,
+                    query.mLimitClause);
         }
 
         return instanceList;
     }
 
-    public static <T> Observable<List<T>> getCustom(
+    /**
+     * Fetches a {@link List} of {@link T} filtered by an {@link SQLiteQuery, non-blocking
+     * operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param query   query specifying which rows to fetch
+     * @param <T>     type to fetch
+     * @return an {@link Observable} where a {@link List} of type {@link T} is passed as the
+     * item in {@link Subscriber#onNext(Object)}
+     */
+    public static <T> Observable<List<T>> getList(
             final @NonNull Context context,
             final @NonNull Class<T> cls,
             final @Nullable SQLiteQuery query) {
@@ -168,34 +312,60 @@ public final class SQLiteOperator {
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
             public void call(final @NonNull Subscriber<? super List<T>> subscriber) {
-                final List<T> instanceList = getCustomBlocking(context, cls, query);
+                final List<T> instanceList = getListBlocking(context, cls, query);
                 subscriber.onNext(instanceList);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
     }
 
-    public static <T> List<T> getAllBlocking(
+    /**
+     * Fetches a full {@link List} of {@link T}, blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param <T>     type to fetch
+     * @return a {@link List} of {@link T} from all table records
+     */
+    @WorkerThread
+    public static <T> List<T> getFullListBlocking(
             final @NonNull Context context,
             final @NonNull Class<T> cls) {
         final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        return generated.getCustom(context, null, null, null, null, null);
+        return generated.getList(context, null, null, null, null, null, null);
     }
 
-    public static <T> Observable<List<T>> getAll(
+    /**
+     * Fetches a full {@link List} of {@link T}, non-blocking operation.
+     *
+     * @param context the context from which the call is being made
+     * @param cls     class object of the type to fetch
+     * @param <T>     type to fetch
+     * @return an {@link Observable} where a {@link List} of type {@link T} from all table records
+     * is passed as the item in {@link Subscriber#onNext(Object)}
+     */
+    public static <T> Observable<List<T>> getFullList(
             final @NonNull Context context,
             final @NonNull Class<T> cls) {
 
         return Observable.create(new Observable.OnSubscribe<List<T>>() {
             @Override
             public void call(final @NonNull Subscriber<? super List<T>> subscriber) {
-                final List<T> instanceList = getAllBlocking(context, cls);
+                final List<T> instanceList = getFullListBlocking(context, cls);
                 subscriber.onNext(instanceList);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
     }
 
+    /**
+     * Inserts an object of type {@link T} into a database, blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param objectToInsert the object to insert
+     * @param <T>            type of the object to insert
+     */
+    @WorkerThread
     public static <T> void insertBlocking(final @NonNull Context context,
                                           final @NonNull T objectToInsert) {
         final SQLiteDAO<T> generated = getGeneratedObject(
@@ -203,6 +373,15 @@ public final class SQLiteOperator {
         generated.insert(context);
     }
 
+    /**
+     * Inserts an object of type {@link T} into a database, non-blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param objectToInsert the object to insert
+     * @param <T>            type of the object to insert
+     * @return an {@link Observable} where the objectToInsert parameter is passed as the item
+     * in {@link Subscriber#onNext(Object)}
+     */
     public static <T> Observable<T> insert(final @NonNull Context context,
                                            final @NonNull T objectToInsert) {
         return Observable.create(new Observable.OnSubscribe<T>() {
@@ -215,6 +394,14 @@ public final class SQLiteOperator {
                 .subscribeOn(Schedulers.newThread());
     }
 
+    /**
+     * Updates a database record based on an object of type {@link T}, blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param objectToUpdate the object to update
+     * @param <T>            type of the object to update
+     */
+    @WorkerThread
     public static <T> void updateBlocking(final @NonNull Context context,
                                           final @NonNull T objectToUpdate) {
         final SQLiteDAO<T> generated = getGeneratedObject((Class<T>) objectToUpdate.getClass(),
@@ -222,6 +409,15 @@ public final class SQLiteOperator {
         generated.update(context);
     }
 
+    /**
+     * Updates a database record based on an object of type {@link T}, non-blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param objectToUpdate the object to update
+     * @param <T>            type of the object to update
+     * @return an {@link Observable} where the objectToUpdate parameter is passed as the item
+     * in {@link Subscriber#onNext(Object)}
+     */
     private <T> Observable<T> update(final @NonNull Context context,
                                      final @NonNull T objectToUpdate) {
         return Observable.create(new Observable.OnSubscribe<T>() {
@@ -234,6 +430,14 @@ public final class SQLiteOperator {
                 .subscribeOn(Schedulers.newThread());
     }
 
+    /**
+     * Deletes a database record based on an object of type {@link T}
+     *
+     * @param context        the context from which the call is being made
+     * @param objectToDelete the object to delete
+     * @param <T>            type of the object to delete
+     */
+    @WorkerThread
     public static <T> void deleteBlocking(
             final @NonNull Context context,
             final @NonNull T objectToDelete) {
@@ -242,6 +446,15 @@ public final class SQLiteOperator {
         generated.delete(context);
     }
 
+    /**
+     * Deletes a database record based on an object of type {@link T}
+     *
+     * @param context        the context from which the call is being made
+     * @param objectToDelete the object to delete
+     * @param <T>            type of the object to delete
+     * @return an {@link Observable} where null is passed as the item in
+     * {@link Subscriber#onNext(Object)}
+     */
     public static <T> Observable delete(final @NonNull Context context,
                                         final @NonNull T objectToDelete) {
         return Observable.create(new Observable.OnSubscribe<Void>() {

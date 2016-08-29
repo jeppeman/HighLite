@@ -11,8 +11,9 @@ import android.support.annotation.Nullable;
  * @author jesper
  */
 @SuppressWarnings("unused")
-public class SQLiteQuery {
+public final class SQLiteQuery {
 
+    String mLimitClause;
     String mGroupByClause;
     String mHavingClause;
     String mOrderByClause;
@@ -27,7 +28,7 @@ public class SQLiteQuery {
         return new Builder(new SQLiteQuery());
     }
 
-    public static class Builder {
+    public static final class Builder {
 
         private SQLiteQuery mQuery;
 
@@ -54,6 +55,11 @@ public class SQLiteQuery {
 
         public Builder having(final @NonNull String havingClause) {
             mQuery.mHavingClause = havingClause;
+            return this;
+        }
+
+        public Builder limit(final @NonNull String limitClause) {
+            mQuery.mLimitClause = limitClause;
             return this;
         }
 

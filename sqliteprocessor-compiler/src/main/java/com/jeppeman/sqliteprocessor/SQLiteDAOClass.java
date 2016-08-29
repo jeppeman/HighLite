@@ -267,7 +267,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildGetSingleByIdMethod() {
+    private MethodSpec buildGetByIdMethod() {
         final Element primaryKeyElement = getPrimaryKeyField();
 
         if (primaryKeyElement == null) {
@@ -279,22 +279,40 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final String pkFieldName = getDBFieldName(primaryKeyElement,
                 primaryKeyElement.getAnnotation(SQLiteField.class));
 
-        return MethodSpec.methodBuilder("getSingle")
+        return MethodSpec.methodBuilder("get")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(getClassNameOfElement())
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
-                .addStatement("return getSingle($L, $S, "
+                .addStatement("return get($L, $S, "
                                 + "new $T[] { $T.valueOf(id) }, null, null, null)",
                         "context", pkFieldName + " = ?", STRING, STRING)
                 .build();
     }
 
-    private MethodSpec buildGetSingleMethod() {
+    private MethodSpec buildGetByRawQueryMethod() {
         final String cursorVarName = "cursor";
+        return MethodSpec.methodBuilder("get")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(getClassNameOfElement())
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(STRING, "rawQueryClause", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "rawQueryArgs", Modifier.FINAL)
+                .addStatement("final $T $L = getReadableDatabase($L)"
+                                + ".rawQuery(rawQueryClause, rawQueryArgs)",
+                        CURSOR, cursorVarName, "context")
+                .addStatement("if (!$L.moveToFirst()) return null", cursorVarName)
+                .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
+                .addStatement("$L.close()", cursorVarName)
+                .addStatement("return ret")
+                .build();
+    }
 
-        return MethodSpec.methodBuilder("getSingle")
+    private MethodSpec buildGetMethod() {
+        final String cursorVarName = "cursor";
+        return MethodSpec.methodBuilder("get")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(getClassNameOfElement())
@@ -304,10 +322,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "groupBy", Modifier.FINAL)
                 .addParameter(STRING, "having", Modifier.FINAL)
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
-                .addStatement("final $T $L = getWritableDatabase($L)"
+                .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
-                                + "orderBy)",
-                        CURSOR, cursorVarName, "context", mTable.tableName())
+                                + "orderBy, $S)",
+                        CURSOR, cursorVarName, "context", mTable.tableName(), 1)
                 .addStatement("if (!$L.moveToFirst()) return null", cursorVarName)
                 .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
@@ -315,9 +333,32 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildGetCustomMethod() {
+    private MethodSpec buildGetListByRawQueryMethod() {
         final String cursorVarName = "cursor";
-        return MethodSpec.methodBuilder("getCustom")
+        return MethodSpec.methodBuilder("getList")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(ParameterizedTypeName.get(LIST, getClassNameOfElement()))
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(STRING, "rawQueryClause", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "rawQueryArgs", Modifier.FINAL)
+                .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
+                        ARRAY_LIST)
+                .addStatement("final $T $L = getReadableDatabase($L)"
+                                + ".rawQuery(rawQueryClause, rawQueryArgs)",
+                        CURSOR, cursorVarName, "context")
+                .addStatement("if (!$L.moveToFirst()) return ret", cursorVarName)
+                .beginControlFlow("do")
+                .addStatement("ret.add(instantiateObject(cursor))")
+                .endControlFlow("while(cursor.moveToNext())")
+                .addStatement("$L.close()", cursorVarName)
+                .addStatement("return ret")
+                .build();
+    }
+
+    private MethodSpec buildGetListMethod() {
+        final String cursorVarName = "cursor";
+        return MethodSpec.methodBuilder("getList")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .returns(ParameterizedTypeName.get(LIST, getClassNameOfElement()))
@@ -327,11 +368,12 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "groupBy", Modifier.FINAL)
                 .addParameter(STRING, "having", Modifier.FINAL)
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
+                .addParameter(STRING, "limit", Modifier.FINAL)
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
-                .addStatement("final $T $L = getWritableDatabase($L)"
+                .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
-                                + "orderBy)",
+                                + "orderBy, limit)",
                         CURSOR, cursorVarName, "context", mTable.tableName())
                 .addStatement("if (!$L.moveToFirst()) return ret", cursorVarName)
                 .beginControlFlow("do")
@@ -432,9 +474,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         buildInsertMethod(),
                         buildUpdateMethod(),
                         buildDeleteMethod(),
-                        buildGetSingleMethod(),
-                        buildGetSingleByIdMethod(),
-                        buildGetCustomMethod()
+                        buildGetByRawQueryMethod(),
+                        buildGetMethod(),
+                        buildGetByIdMethod(),
+                        buildGetListByRawQueryMethod(),
+                        buildGetListMethod()
                 ))
                 .build();
 

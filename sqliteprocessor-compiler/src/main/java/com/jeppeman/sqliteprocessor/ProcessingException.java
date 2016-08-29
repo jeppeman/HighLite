@@ -3,10 +3,13 @@ package com.jeppeman.sqliteprocessor;
 import javax.lang.model.element.Element;
 
 /**
+ * {@link RuntimeException} that holds a reference to the {@link Element} that caused the exception
+ * so that the {@link SQLiteProcessor} can handle the error properly.
+ *
  * @author jesper
  */
 @SuppressWarnings("unused")
-public class ProcessingException extends RuntimeException {
+final class ProcessingException extends RuntimeException {
 
     private final Element mElement;
 

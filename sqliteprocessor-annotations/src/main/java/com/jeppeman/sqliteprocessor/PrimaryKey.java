@@ -6,7 +6,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Created by jesper on 2016-08-24.
+ * A field annotated with {@link PrimaryKey} will have the property PRIMARY KEY written
+ * to its corresponding database field.
+ *
+ * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
 @Target({ElementType.FIELD, ElementType.METHOD })
