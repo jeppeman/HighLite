@@ -17,6 +17,8 @@ dependencies {
     compile project(':sqliteprocessor-annotations')
 
     testCompile deps.junit
+    testCompile deps.robolectric
+    testCompile project(':sqliteprocessor-compiler')
 
     provided deps.supportv4
     compile deps.supportAnnotations
