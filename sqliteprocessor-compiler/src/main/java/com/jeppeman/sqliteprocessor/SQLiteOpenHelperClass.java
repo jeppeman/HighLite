@@ -230,6 +230,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         .toString();
             }
 
+            for (final Element enclosed : element.getEnclosedElements()) {
+
+            }
+
             code.add(getCreateBlock(element, table));
         }
 

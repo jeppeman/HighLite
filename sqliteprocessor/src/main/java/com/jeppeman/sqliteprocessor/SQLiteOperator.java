@@ -10,6 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -96,17 +97,28 @@ public final class SQLiteOperator {
         return generated.getSingle(context, rawQueryClause, rawQueryArgsAsStringArray);
     }
 
+    /**
+     * Fetches an object of type {@link T} based on a raw query, non-blocking operation.
+     *
+     * @param context        the context from which the call is being made
+     * @param cls            class object of the type to fetch
+     * @param rawQueryClause an SQLite command with where ? is a parameter
+     * @param rawQueryArgs   parameter values for the query clause
+     * @param <T>            type to fetch
+     * @return an {@link Observable} where an instance of type {@link T} based on the raw query
+     * is passed as the item in {@link Subscriber#onNext(Object)}
+     */
     public static <T> Observable<T> getSingle(final @NonNull Context context,
                                               final @NonNull Class<T> cls,
                                               final @NonNull String rawQueryClause,
                                               final @Nullable Object... rawQueryArgs) {
-        return Observable.create(new Observable.OnSubscribe<T>() {
+        return Observable.fromCallable(new Callable<T>() {
             @Override
-            public void call(Subscriber<? super T> subscriber) {
-                final T instance = getSingleBlocking(context, cls, rawQueryClause, rawQueryArgs);
-                subscriber.onNext(instance);
+            public T call() throws Exception {
+                return getSingleBlocking(context, cls, rawQueryClause, rawQueryArgs);
             }
-        });
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.newThread());
     }
 
     /**
@@ -151,11 +163,10 @@ public final class SQLiteOperator {
     public static <T> Observable<T> getSingle(final @NonNull Context context,
                                               final @NonNull Class<T> cls,
                                               final @NonNull SQLiteQuery query) {
-        return Observable.create(new Observable.OnSubscribe<T>() {
+        return Observable.fromCallable(new Callable<T>() {
             @Override
-            public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final T instance = getSingleBlocking(context, cls, query);
-                subscriber.onNext(instance);
+            public T call() throws Exception {
+                return getSingleBlocking(context, cls, query);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -181,7 +192,7 @@ public final class SQLiteOperator {
     }
 
     /**
-     * * Fetches a single object with id of type {@link T}, non-blocking operation.
+     * Fetches a single object with id of type {@link T}, non-blocking operation.
      *
      * @param context the context from which the call is being made
      * @param cls     class object of the type to fetch
@@ -193,11 +204,10 @@ public final class SQLiteOperator {
     public static <T> Observable<T> getSingle(final @NonNull Context context,
                                               final @NonNull Class<T> cls,
                                               final @NonNull Object id) {
-        return Observable.create(new Observable.OnSubscribe<T>() {
+        return Observable.fromCallable(new Callable<T>() {
             @Override
-            public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final T instance = getSingleBlocking(context, cls, id);
-                subscriber.onNext(instance);
+            public T call() throws Exception {
+                return getSingleBlocking(context, cls, id);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -243,18 +253,22 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where a {@link List} of type {@link T} based on the raw query
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<List<T>> getList(final @NonNull Context context,
-                                                  final @NonNull Class<T> cls,
-                                                  final @NonNull String rawQueryClause,
-                                                  final @Nullable Object... rawQueryArgs) {
-        return Observable.create(new Observable.OnSubscribe<List<T>>() {
+    public static <T> Observable<T> getList(final @NonNull Context context,
+                                            final @NonNull Class<T> cls,
+                                            final @NonNull String rawQueryClause,
+                                            final @Nullable Object... rawQueryArgs) {
+        return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(Subscriber<? super List<T>> subscriber) {
+            public void call(Subscriber<? super T> subscriber) {
                 final List<T> instanceList = getListBlocking(context, cls, rawQueryClause,
                         rawQueryArgs);
-                subscriber.onNext(instanceList);
+                for (final T item : instanceList) {
+                    subscriber.onNext(item);
+                }
+                subscriber.onCompleted();
             }
-        });
+        }).observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.newThread());
     }
 
     /**
@@ -304,16 +318,19 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where a {@link List} of type {@link T} is passed as the
      * item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<List<T>> getList(
+    public static <T> Observable<T> getList(
             final @NonNull Context context,
             final @NonNull Class<T> cls,
             final @Nullable SQLiteQuery query) {
 
-        return Observable.create(new Observable.OnSubscribe<List<T>>() {
+        return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(final @NonNull Subscriber<? super List<T>> subscriber) {
+            public void call(final @NonNull Subscriber<? super T> subscriber) {
                 final List<T> instanceList = getListBlocking(context, cls, query);
-                subscriber.onNext(instanceList);
+                for (final T item : instanceList) {
+                    subscriber.onNext(item);
+                }
+                subscriber.onCompleted();
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -344,15 +361,18 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where a {@link List} of type {@link T} from all table records
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<List<T>> getFullList(
+    public static <T> Observable<T> getFullList(
             final @NonNull Context context,
             final @NonNull Class<T> cls) {
 
-        return Observable.create(new Observable.OnSubscribe<List<T>>() {
+        return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(final @NonNull Subscriber<? super List<T>> subscriber) {
+            public void call(final @NonNull Subscriber<? super T> subscriber) {
                 final List<T> instanceList = getFullListBlocking(context, cls);
-                subscriber.onNext(instanceList);
+                for (final T item : instanceList) {
+                    subscriber.onNext(item);
+                }
+                subscriber.onCompleted();
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -384,11 +404,11 @@ public final class SQLiteOperator {
      */
     public static <T> Observable<T> insert(final @NonNull Context context,
                                            final @NonNull T objectToInsert) {
-        return Observable.create(new Observable.OnSubscribe<T>() {
+        return Observable.fromCallable(new Callable<T>() {
             @Override
-            public void call(final @NonNull Subscriber<? super T> subscriber) {
+            public T call() throws Exception {
                 insertBlocking(context, objectToInsert);
-                subscriber.onNext(objectToInsert);
+                return objectToInsert;
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -420,11 +440,11 @@ public final class SQLiteOperator {
      */
     private <T> Observable<T> update(final @NonNull Context context,
                                      final @NonNull T objectToUpdate) {
-        return Observable.create(new Observable.OnSubscribe<T>() {
+        return Observable.fromCallable(new Callable<T>() {
             @Override
-            public void call(final @NonNull Subscriber<? super T> subscriber) {
+            public T call() throws Exception {
                 updateBlocking(context, objectToUpdate);
-                subscriber.onNext(objectToUpdate);
+                return objectToUpdate;
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -457,11 +477,11 @@ public final class SQLiteOperator {
      */
     public static <T> Observable delete(final @NonNull Context context,
                                         final @NonNull T objectToDelete) {
-        return Observable.create(new Observable.OnSubscribe<Void>() {
+        return Observable.fromCallable(new Callable() {
             @Override
-            public void call(final @NonNull Subscriber<? super Void> subscriber) {
+            public Object call() throws Exception {
                 deleteBlocking(context, objectToDelete);
-                subscriber.onNext(null);
+                return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());

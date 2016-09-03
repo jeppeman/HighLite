@@ -148,6 +148,8 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteTable.class);
         annotations.add(SQLiteDatabaseHolder.class);
         annotations.add(SQLiteDatabaseDescriptor.class);
+        annotations.add(OnCreate.class);
+        annotations.add(OnUpdate.class);
 
         return annotations;
     }

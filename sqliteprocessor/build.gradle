@@ -20,10 +20,10 @@ dependencies {
     testCompile deps.robolectric
     testCompile project(':sqliteprocessor-compiler')
 
-    provided deps.supportv4
     compile deps.supportAnnotations
-    compile deps.rxandroid
-    compile deps.rxjava
+    provided deps.supportv4
+    provided deps.rxandroid
+    provided deps.rxjava
 }
 
 apply from: rootProject.file('gradle/maven-publish-local.gradle')

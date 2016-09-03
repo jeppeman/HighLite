@@ -31,6 +31,8 @@ dependencies {
 
 //    compile 'com.jeppeman:sqliteprocessor:1.0-SNAPSHOT'
 //    apt 'com.jeppeman:sqliteprocessor-compiler:1.0-SNAPSHOT'
+    compile deps.rxjava
+    compile deps.rxandroid
     compile project(':sqliteprocessor')
     apt project(':sqliteprocessor-compiler')
 }
