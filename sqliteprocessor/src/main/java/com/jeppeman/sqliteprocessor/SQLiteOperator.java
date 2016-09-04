@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import rx.Completable;
 import rx.Observable;
+import rx.Single;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -108,11 +110,11 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where an instance of type {@link T} based on the raw query
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> getSingle(final @NonNull Context context,
-                                              final @NonNull Class<T> cls,
-                                              final @NonNull String rawQueryClause,
-                                              final @Nullable Object... rawQueryArgs) {
-        return Observable.fromCallable(new Callable<T>() {
+    public static <T> Single<T> getSingle(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull String rawQueryClause,
+                                          final @Nullable Object... rawQueryArgs) {
+        return Single.fromCallable(new Callable<T>() {
             @Override
             public T call() throws Exception {
                 return getSingleBlocking(context, cls, rawQueryClause, rawQueryArgs);
@@ -160,10 +162,10 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where an instance of type {@link T} is passed as the
      * item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> getSingle(final @NonNull Context context,
-                                              final @NonNull Class<T> cls,
-                                              final @NonNull SQLiteQuery query) {
-        return Observable.fromCallable(new Callable<T>() {
+    public static <T> Single<T> getSingle(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull SQLiteQuery query) {
+        return Single.fromCallable(new Callable<T>() {
             @Override
             public T call() throws Exception {
                 return getSingleBlocking(context, cls, query);
@@ -201,10 +203,10 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where an instance of type {@link T} is passed as the
      * item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> getSingle(final @NonNull Context context,
-                                              final @NonNull Class<T> cls,
-                                              final @NonNull Object id) {
-        return Observable.fromCallable(new Callable<T>() {
+    public static <T> Single<T> getSingle(final @NonNull Context context,
+                                          final @NonNull Class<T> cls,
+                                          final @NonNull Object id) {
+        return Single.fromCallable(new Callable<T>() {
             @Override
             public T call() throws Exception {
                 return getSingleBlocking(context, cls, id);
@@ -381,34 +383,36 @@ public final class SQLiteOperator {
     /**
      * Inserts an object of type {@link T} into a database, blocking operation.
      *
-     * @param context        the context from which the call is being made
-     * @param objectToInsert the object to insert
-     * @param <T>            type of the object to insert
+     * @param context         the context from which the call is being made
+     * @param objectsToInsert the object to insert
+     * @param <T>             type of the object to insert
      */
     @WorkerThread
     public static <T> void insertBlocking(final @NonNull Context context,
-                                          final @NonNull T objectToInsert) {
-        final SQLiteDAO<T> generated = getGeneratedObject(
-                (Class<T>) objectToInsert.getClass(), objectToInsert);
-        generated.insert(context);
+                                          final @NonNull T... objectsToInsert) {
+        for (final T objectToInsert : objectsToInsert) {
+            final SQLiteDAO<T> generated = getGeneratedObject(
+                    (Class<T>) objectToInsert.getClass(), objectToInsert);
+            generated.insert(context);
+        }
     }
 
     /**
      * Inserts an object of type {@link T} into a database, non-blocking operation.
      *
-     * @param context        the context from which the call is being made
-     * @param objectToInsert the object to insert
-     * @param <T>            type of the object to insert
+     * @param context         the context from which the call is being made
+     * @param objectsToInsert the object to insert
+     * @param <T>             type of the object to insert
      * @return an {@link Observable} where the objectToInsert parameter is passed as the item
      * in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> insert(final @NonNull Context context,
-                                           final @NonNull T objectToInsert) {
-        return Observable.fromCallable(new Callable<T>() {
+    public static <T> Completable insert(final @NonNull Context context,
+                                         final @NonNull T... objectsToInsert) {
+        return Completable.fromCallable(new Callable() {
             @Override
-            public T call() throws Exception {
-                insertBlocking(context, objectToInsert);
-                return objectToInsert;
+            public Object call() throws Exception {
+                insertBlocking(context, objectsToInsert);
+                return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -438,13 +442,13 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where the objectToUpdate parameter is passed as the item
      * in {@link Subscriber#onNext(Object)}
      */
-    private <T> Observable<T> update(final @NonNull Context context,
-                                     final @NonNull T objectToUpdate) {
-        return Observable.fromCallable(new Callable<T>() {
+    private <T> Completable update(final @NonNull Context context,
+                                   final @NonNull T objectToUpdate) {
+        return Completable.fromCallable(new Callable() {
             @Override
-            public T call() throws Exception {
+            public Object call() throws Exception {
                 updateBlocking(context, objectToUpdate);
-                return objectToUpdate;
+                return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.newThread());
@@ -453,34 +457,35 @@ public final class SQLiteOperator {
     /**
      * Deletes a database record based on an object of type {@link T}
      *
-     * @param context        the context from which the call is being made
-     * @param objectToDelete the object to delete
-     * @param <T>            type of the object to delete
+     * @param context         the context from which the call is being made
+     * @param objectsToDelete the objects to delete
+     * @param <T>             type of the object to delete
      */
     @WorkerThread
-    public static <T> void deleteBlocking(
-            final @NonNull Context context,
-            final @NonNull T objectToDelete) {
-        final SQLiteDAO<T> generated = getGeneratedObject(
-                (Class<T>) objectToDelete.getClass(), objectToDelete);
-        generated.delete(context);
+    public static <T> void deleteBlocking(final @NonNull Context context,
+                                          final @NonNull T... objectsToDelete) {
+        for (final T objectToDelete : objectsToDelete) {
+            final SQLiteDAO<T> generated = getGeneratedObject(
+                    (Class<T>) objectToDelete.getClass(), objectToDelete);
+            generated.delete(context);
+        }
     }
 
     /**
      * Deletes a database record based on an object of type {@link T}
      *
-     * @param context        the context from which the call is being made
-     * @param objectToDelete the object to delete
-     * @param <T>            type of the object to delete
+     * @param context         the context from which the call is being made
+     * @param objectsToDelete the object to delete
+     * @param <T>             type of the object to delete
      * @return an {@link Observable} where null is passed as the item in
      * {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable delete(final @NonNull Context context,
-                                        final @NonNull T objectToDelete) {
-        return Observable.fromCallable(new Callable() {
+    public static <T> Completable delete(final @NonNull Context context,
+                                         final @NonNull T... objectsToDelete) {
+        return Completable.fromCallable(new Callable() {
             @Override
             public Object call() throws Exception {
-                deleteBlocking(context, objectToDelete);
+                deleteBlocking(context, objectsToDelete);
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
