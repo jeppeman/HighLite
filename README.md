@@ -65,7 +65,7 @@ public class MyClass {
 
 ```java
 @SQLiteTable(tableName = "myTable2", autoCreate = false, autoAddColumns = false)
-public class MyClass {
+public class MyClass2 {
 
     @OnCreate
     public static void onCreate(SQLiteDatabase database) {
