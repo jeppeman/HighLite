@@ -19,6 +19,7 @@ Annotate a class or a package with ```@SQLiteDatabaseHolder``` as follows:
                 dbVersion = 1,
                 tables = {
                         MyClass.class,
+                        MyClass2.class
                 }
         )
 })
@@ -36,6 +37,7 @@ or
                 dbVersion = 1,
                 tables = {
                         MyClass.class,
+                        MyClass2.class
                 }
         )
 })
@@ -61,26 +63,108 @@ public class MyClass {
 }
 ```
 
+```java
+@SQLiteTable(tableName = "myTable2", autoCreate = false, autoAddColumns = false)
+public class MyClass {
+
+    @OnCreate
+    public static void onCreate(SQLiteDatabase database) {
+        // If you want to handle creation manually do so here
+    }
+    
+    @OnUpgrade
+    public static void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
+        // If you want to handle upgrading manually do so here
+    }
+    
+    @SQLiteField
+    @PrimaryKey
+    @AutoIncrement
+    long id;
+    
+    @SQLiteField
+    String name;
+    
+    @SQLiteField
+    List<String> names;
+}
+```
+
 This setup would generate code to automatically create the database ```myDatabase``` containing the table ```myTable``` with database fields ```id (INTEGER PRIMARY KEY AUTOINCREMENT)```, ```anotherFieldName (TEXT)``` and ```names (BLOB)```.
 
-<b>Insertion</b>:
+Some operation examples:
+
+<b>Insert</b>
 ```java
 final MyClass myClass = new MyClass();
 myClass.name = "name";
 myClass.names = Arrays.asList("name1", "name2");
 
+// Blocking
 SQLiteOperator.insertBlocking(context, myClass);
+
+// Non-blocking
+SQLiteOperator.insert(context, myClass)
+    .subscribe(new Completable.CompletableSubscriber() {
+        @Override
+        public void onCompleted() {
+                       
+        }
+
+        @Override
+        public void onError(Throwable e) {
+
+        }
+
+        @Override
+        public void onSubscribe(Subscription d) {
+                        
+        }
+});
 ```
 
-<b>Fetch and Update by id</b>:
+<b>Fetch by id and Update</b>
 ```java
+// Blocking
 final MyClass myClass = SQLiteOperator.getSingleBlocking(context, MyClass.class, 1);
 myClass.name = "anotherName";
 SQLiteOperator.updateBlocking(context, myClass);
-```
 
-<b>Fetch and Update by query</b>:
+// Non-blocking
+SQLiteOperator.getSingle(this, MyClass.class, 1)
+    .subscribe(new SingleSubscriber<MyClass>() {
+        @Override
+        public void onSuccess(MyClass value) {
+                        
+        }
+
+        @Override
+        public void onError(Throwable error) {
+
+        }
+});
 ```
-final MyClass myClass = SQLiteOperator.getSingle(context, MyClass.class, );
-myClass.name = "namer";
+<b>Fetch by query</b>
+```java
+// Blocking
+final List<MyClass> list = SQLiteOperator.getListBlocking(context, MyClass.class, SQLiteQuery.builder().where("id = ?", 1).build());
+
+// Non-blocking
+SQLiteOperator.getList(context, MyClass.class, SQLiteQuery.builder().where("id = ?", 1).build())
+    .subscribe(new Subscriber<MyClass>() {
+        @Override
+        public void onCompleted() {
+                        
+        }
+
+        @Override
+        public void onError(Throwable e) {
+
+        }
+
+        @Override
+        public void onNext(MyClass myClass) {
+            
+        }
+});
 ```
