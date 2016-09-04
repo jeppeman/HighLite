@@ -58,7 +58,29 @@ public class MyClass {
     
     @SQLiteField
     List<String> names;
-}```
-`````````
+}
+```
 
-This setup would generate code to automatically create the database ```myDatabase``` containing the table ```myTable``` with database fields ```id (INTEGER)```, ```anotherFieldName (TEXT)``` and ```names (BLOB)```.
+This setup would generate code to automatically create the database ```myDatabase``` containing the table ```myTable``` with database fields ```id (INTEGER PRIMARY KEY AUTOINCREMENT)```, ```anotherFieldName (TEXT)``` and ```names (BLOB)```.
+
+<b>Insertion</b>:
+```java
+final MyClass myClass = new MyClass();
+myClass.name = "name";
+myClass.names = Arrays.asList("name1", "name2");
+
+SQLiteOperator.insertBlocking(context, myClass);
+```
+
+<b>Fetch and Update by id</b>:
+```java
+final MyClass myClass = SQLiteOperator.getSingleBlocking(context, MyClass.class, 1);
+myClass.name = "anotherName";
+SQLiteOperator.updateBlocking(context, myClass);
+```
+
+<b>Fetch and Update by query</b>:
+```
+final MyClass myClass = SQLiteOperator.getSingle(context, MyClass.class, );
+myClass.name = "namer";
+```
