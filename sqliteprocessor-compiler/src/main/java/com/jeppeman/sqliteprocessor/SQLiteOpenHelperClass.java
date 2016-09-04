@@ -1,6 +1,7 @@
 package com.jeppeman.sqliteprocessor;
 
 import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
@@ -12,8 +13,10 @@ import java.util.Arrays;
 import java.util.Map;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 
 /**
  * Generator of subclasses to {@link SQLiteOpenHelper} with the ability to automatically create and
@@ -27,16 +30,19 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
     private final String mDatabaseName;
     private final Map<SQLiteTable, Element> mTableElementMap;
     private final Elements mElementUtils;
+    private final Types mTypeUtils;
     private final int mVersion;
 
     SQLiteOpenHelperClass(final String databaseName,
                           final Map<SQLiteTable, Element> tableElementMap,
                           final int version,
-                          final Elements elementUtils) {
+                          final Elements elementUtils,
+                          final Types typeUtils) {
         mDatabaseName = databaseName;
         mTableElementMap = tableElementMap;
         mVersion = version;
         mElementUtils = elementUtils;
+        mTypeUtils = typeUtils;
     }
 
     private CodeBlock getCreateBlock(final Element element, final SQLiteTable table) {
@@ -52,6 +58,22 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         final CodeBlock.Builder addColumnStatements = CodeBlock.builder();
         if (table.autoAddColumns()) {
+            addColumnStatements
+                    .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
+                            + "null)", CURSOR, cursorVarName, table.tableName())
+                    .add("\n")
+                    .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
+                    .add("\n")
+                    .addStatement("final $T<String> $L = new $T<>()", LIST, dbColsVarName,
+                            ARRAY_LIST)
+                    .add("\n")
+                    .beginControlFlow("do")
+                    .addStatement("$L.add($L.getString(COL_NAME_INDEX))", dbColsVarName,
+                            cursorVarName)
+                    .endControlFlow("while ($L.moveToNext())", cursorVarName)
+                    .add("\n")
+                    .addStatement("$L.close()", cursorVarName)
+                    .add("\n");
             for (final Element enclosed : element.getEnclosedElements()) {
                 final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
                 if (field == null) continue;
@@ -100,20 +122,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         return CodeBlock.builder()
                 .add(getCreateBlock(element, table))
-                .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", null)",
-                        CURSOR, cursorVarName, table.tableName())
-                .add("\n")
-                .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
-                .add("\n")
-                .addStatement("final $T<String> $L = new $T<>()", LIST, dbColsVarName, ARRAY_LIST)
-                .add("\n")
-                .beginControlFlow("do")
-                .addStatement("$L.add($L.getString(COL_NAME_INDEX))", dbColsVarName,
-                        cursorVarName)
-                .endControlFlow("while ($L.moveToNext())", cursorVarName)
-                .add("\n")
-                .addStatement("$L.close()", cursorVarName)
-                .add("\n")
                 .add(addColumnStatements.build())
                 .add(dropColumnStatements.build())
                 .build();
@@ -208,7 +216,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
     }
 
     private MethodSpec buildCtor() {
-        return  MethodSpec.constructorBuilder()
+        return MethodSpec.constructorBuilder()
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addStatement("super(context, $L, null, $L)", "DATABASE_NAME", "DATABASE_VERSION")
                 .build();
@@ -230,10 +238,39 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         .toString();
             }
 
+            final CodeBlock.Builder onCreateStatements = CodeBlock.builder();
+            int onCreateCounter = 0;
             for (final Element enclosed : element.getEnclosedElements()) {
+                if (enclosed.getAnnotation(OnCreate.class) == null) continue;
 
+                if (++onCreateCounter > 1) {
+                    throw new ProcessingException(enclosed,
+                            String.format("Only one method per class may be annotated with %s",
+                                    OnCreate.class.getCanonicalName()));
+                }
+
+                if (!enclosed.getModifiers().contains(Modifier.STATIC)) {
+                    throw new ProcessingException(enclosed,
+                            String.format("%s annotated methods need to be static",
+                                    OnCreate.class.getCanonicalName()));
+                }
+
+                final ExecutableElement executableElement = (ExecutableElement) enclosed;
+                if (executableElement.getParameters().size() != 1
+                        || !SQLITE_DATABASE.equals(
+                        ClassName.get(executableElement.getParameters().get(0).asType()))) {
+                    throw new ProcessingException(enclosed,
+                            String.format("%s annotated methods needs to have exactly "
+                                            + "one parameter, being of type %s",
+                                    OnCreate.class.getCanonicalName(),
+                                    SQLITE_DATABASE.toString()));
+                }
+
+                onCreateStatements.addStatement("$T.$L(database)", ClassName.get(element.asType()),
+                        enclosed.getSimpleName());
             }
 
+            code.add(onCreateStatements.build());
             code.add(getCreateBlock(element, table));
         }
 
@@ -261,6 +298,46 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         .toString();
             }
 
+            final CodeBlock.Builder onUpgradeStatements = CodeBlock.builder();
+            int onUpgradeCounter = 0;
+            for (final Element enclosed : element.getEnclosedElements()) {
+                if (enclosed.getAnnotation(OnUpgrade.class) == null) continue;
+
+                if (++onUpgradeCounter > 1) {
+                    throw new ProcessingException(enclosed,
+                            String.format("Only one method per class may be annotated with %s",
+                                    OnUpgrade.class.getCanonicalName()));
+                }
+
+                if (!enclosed.getModifiers().contains(Modifier.STATIC)) {
+                    throw new ProcessingException(enclosed,
+                            String.format("%s annotated methods need to be static",
+                                    OnUpgrade.class.getCanonicalName()));
+                }
+
+                final ExecutableElement executableElement = (ExecutableElement) enclosed;
+                if (executableElement.getParameters().size() != 3
+                        || !SQLITE_DATABASE.equals(
+                        ClassName.get(executableElement.getParameters().get(0).asType()))
+                        || !TypeName.INT.equals(
+                        ClassName.get(executableElement.getParameters().get(1).asType()))
+                        || !TypeName.INT.equals(
+                        ClassName.get(executableElement.getParameters().get(2).asType()))) {
+                    throw new ProcessingException(enclosed,
+                            String.format("%s annotated methods needs to have exactly "
+                                            + "three parameters, being of type %s, %s and %s "
+                                            + "respectively",
+                                    OnUpgrade.class.getCanonicalName(),
+                                    SQLITE_DATABASE.toString(),
+                                    TypeName.INT.toString(),
+                                    TypeName.INT.toString()));
+                }
+
+                onUpgradeStatements.addStatement("$T.$L(database, oldVersion, newVersion)",
+                        ClassName.get(element.asType()), enclosed.getSimpleName());
+            }
+
+            code.add(onUpgradeStatements.build());
             code.add(getUpgradeBlock(element, table));
         }
 

@@ -76,7 +76,8 @@ public class SQLiteProcessor extends AbstractProcessor {
 
                 try {
                     final JavaFile helperFile = new SQLiteOpenHelperClass(descriptor.dbName(),
-                            tablesForDatabase, descriptor.dbVersion(), mElementUtils).writeJava();
+                            tablesForDatabase, descriptor.dbVersion(), mElementUtils,
+                            mTypeUtils).writeJava();
                     helperFile.writeTo(mFiler);
                 } catch (IOException e) {
                     error(element, "Unable to generate helper file for %s: %s",
@@ -84,7 +85,7 @@ public class SQLiteProcessor extends AbstractProcessor {
                     return true;
                 } catch (ProcessingException e) {
                     error(e.getElement(), "Unable to generate helper file for %s: %s",
-                            e.getElement().asType().toString(), e.getMessage());
+                            descriptor.dbName(), e.getMessage());
                     return true;
                 }
 
@@ -99,7 +100,7 @@ public class SQLiteProcessor extends AbstractProcessor {
                         return true;
                     } catch (ProcessingException e) {
                         error(e.getElement(), "Unable to generate DAO file for %s: %s",
-                                e.getElement().asType().toString(), e.getMessage());
+                                entry.getValue().asType().toString(), e.getMessage());
                         return true;
                     }
                 }
@@ -149,7 +150,7 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteDatabaseHolder.class);
         annotations.add(SQLiteDatabaseDescriptor.class);
         annotations.add(OnCreate.class);
-        annotations.add(OnUpdate.class);
+        annotations.add(OnUpgrade.class);
 
         return annotations;
     }

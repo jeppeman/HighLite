@@ -11,7 +11,6 @@ import java.util.List;
 @SQLiteTable(
         tableName = "myLittleTable2",
         autoDeleteColumns = true,
-        autoAddColumns = false,
         autoCreate = false)
 public class MyLittleClass2 {
 
