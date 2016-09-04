@@ -131,7 +131,7 @@ myClass.name = "anotherName";
 SQLiteOperator.updateBlocking(context, myClass);
 
 // Non-blocking
-SQLiteOperator.getSingle(this, MyClass.class, 1)
+SQLiteOperator.getSingle(context, MyClass.class, 1)
     .subscribe(new SingleSubscriber<MyClass>() {
         @Override
         public void onSuccess(MyClass value) {
