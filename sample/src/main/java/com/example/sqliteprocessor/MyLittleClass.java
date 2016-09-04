@@ -24,7 +24,7 @@ public class MyLittleClass {
     }
 
     @OnUpgrade
-    public static void onUpgrade(SQLiteDatabase database, int oldVersionz, int newVersion) {
+    public static void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
 
     }
 

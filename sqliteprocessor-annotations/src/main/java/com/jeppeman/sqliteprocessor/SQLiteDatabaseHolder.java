@@ -6,14 +6,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A package annotated with {@link SQLiteDatabaseHolder} has the ability to have the tables from
+ * An element annotated with {@link SQLiteDatabaseHolder} has the ability to have the tables from
  * {@link SQLiteDatabaseDescriptor#tables()} automatically created, its columns automatically
  * added and dropped if opted in.
  *
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
-@Target(ElementType.PACKAGE)
+@Target({ ElementType.PACKAGE, ElementType.TYPE })
 public @interface SQLiteDatabaseHolder {
     /**
      * The databases contained in this package
