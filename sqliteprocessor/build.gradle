@@ -26,4 +26,4 @@ dependencies {
     provided deps.rxjava
 }
 
-apply from: rootProject.file('gradle/maven-publish-local.gradle')
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
