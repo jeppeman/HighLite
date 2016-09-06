@@ -120,7 +120,7 @@ public final class SQLiteOperator {
                 return getSingleBlocking(context, cls, rawQueryClause, rawQueryArgs);
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -171,7 +171,7 @@ public final class SQLiteOperator {
                 return getSingleBlocking(context, cls, query);
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -212,7 +212,7 @@ public final class SQLiteOperator {
                 return getSingleBlocking(context, cls, id);
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -270,7 +270,7 @@ public final class SQLiteOperator {
                 subscriber.onCompleted();
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -335,7 +335,7 @@ public final class SQLiteOperator {
                 subscriber.onCompleted();
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -377,7 +377,7 @@ public final class SQLiteOperator {
                 subscriber.onCompleted();
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -415,7 +415,7 @@ public final class SQLiteOperator {
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -451,7 +451,7 @@ public final class SQLiteOperator {
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -489,6 +489,6 @@ public final class SQLiteOperator {
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread());
+                .subscribeOn(Schedulers.io());
     }
 }
