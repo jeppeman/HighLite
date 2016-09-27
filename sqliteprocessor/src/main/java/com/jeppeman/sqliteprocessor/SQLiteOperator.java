@@ -26,27 +26,37 @@ import rx.schedulers.Schedulers;
  * @author jesper
  */
 @SuppressWarnings({"unchecked", "unused"})
-public final class SQLiteOperator {
+public final class SQLiteOperator<T> {
 
     private static final Map<Class<?>, Constructor> CTOR_CACHE = new LinkedHashMap<>();
 
-    private SQLiteOperator() {
+    private final Class<T> mClass;
+    private final Context mContext;
+    private String mRawQueryClause;
+    private Object[] mRawQueryArgs;
+    private SQLiteQuery mQuery;
 
+    private SQLiteOperator(final @NonNull Context context, final @NonNull Class<T> cls) {
+        mClass = cls;
+        mContext = context;
     }
 
-    static <T> SQLiteDAO<T> getGeneratedObject(
-            final @NonNull Class<T> cls,
-            final @Nullable T generator) {
+    public static SQLiteOperator from(final @NonNull Context context,
+                                      final @NonNull Class<?> cls) {
+        return new SQLiteOperator(context, cls);
+    }
+
+    SQLiteDAO<T> getGeneratedObject(final @Nullable T generator) {
         Constructor<SQLiteDAO<T>> generatedCtor = null;
         try {
-            generatedCtor = CTOR_CACHE.get(cls);
+            generatedCtor = CTOR_CACHE.get(mClass);
             if (generatedCtor != null) return generatedCtor.newInstance(generator);
 
             final Class<SQLiteDAO<T>> clazz = (Class<SQLiteDAO<T>>)
-                    Class.forName(cls.getCanonicalName() + "_DAO");
+                    Class.forName(mClass.getCanonicalName() + "_DAO");
 
-            generatedCtor = clazz.getConstructor(cls);
-            CTOR_CACHE.put(cls, generatedCtor);
+            generatedCtor = clazz.getConstructor(mClass);
+            CTOR_CACHE.put(mClass, generatedCtor);
 
             return generatedCtor.newInstance(generator);
         } catch (InstantiationException e) {
@@ -56,7 +66,7 @@ public final class SQLiteOperator {
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("Generated class not found", e);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException("Unable to find ctor for " + cls.getName() + "_DAO", e);
+            throw new RuntimeException("Unable to find ctor for " + mClass.getName() + "_DAO", e);
         } catch (InvocationTargetException e) {
             final Throwable cause = e.getCause();
             if (cause instanceof RuntimeException) {
@@ -67,6 +77,21 @@ public final class SQLiteOperator {
             }
             throw new RuntimeException("Unable to create binding instance.", cause);
         }
+    }
+
+    public SQLiteOperator withRawQuery(final @NonNull String rawQueryClause,
+                                       final @Nullable Object... rawQueryArgs) {
+        mQuery = null;
+        mRawQueryClause = rawQueryClause;
+        mRawQueryArgs = rawQueryArgs;
+        return this;
+    }
+
+    public SQLiteOperator withQuery(final @NonNull SQLiteQuery query) {
+        mRawQueryClause = null;
+        mRawQueryArgs = null;
+        mQuery = query;
+        return this;
     }
 
     /**
@@ -81,22 +106,44 @@ public final class SQLiteOperator {
      */
     @WorkerThread
     @Nullable
-    public static <T> T getSingleBlocking(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull String rawQueryClause,
-                                          final @Nullable Object... rawQueryArgs) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final String[] rawQueryArgsAsStringArray;
-        if (rawQueryArgs != null) {
-            rawQueryArgsAsStringArray = new String[rawQueryArgs.length];
-            for (int i = 0; i < rawQueryArgs.length; i++) {
-                rawQueryArgsAsStringArray[i] = String.valueOf(rawQueryArgs[i]);
+    public T getSingleBlocking(final @Nullable Object id) {
+        final SQLiteDAO<T> generated = getGeneratedObject(null);
+        if (mRawQueryClause != null) {
+            final String[] rawQueryArgsAsStringArray;
+            if (mRawQueryArgs != null) {
+                rawQueryArgsAsStringArray = new String[mRawQueryArgs.length];
+                for (int i = 0; i < mRawQueryArgs.length; i++) {
+                    rawQueryArgsAsStringArray[i] = String.valueOf(mRawQueryArgs[i]);
+                }
+            } else {
+                rawQueryArgsAsStringArray = null;
             }
-        } else {
-            rawQueryArgsAsStringArray = null;
+
+            return generated.getSingle(mContext, mRawQueryClause, rawQueryArgsAsStringArray);
+        } else if (mQuery != null) {
+            final String[] whereArgsAsStringArray;
+            if (mQuery.mWhereArgs != null) {
+                whereArgsAsStringArray = new String[mQuery.mWhereArgs.length];
+                for (int i = 0; i < mQuery.mWhereArgs.length; i++) {
+                    whereArgsAsStringArray[i] = String.valueOf(mQuery.mWhereArgs[i]);
+                }
+            } else {
+                whereArgsAsStringArray = null;
+            }
+
+            return generated.getSingle(mContext, mQuery.mWhereClause, whereArgsAsStringArray,
+                    mQuery.mGroupByClause, mQuery.mHavingClause, mQuery.mOrderByClause);
+        } else if (id != null) {
+            return generated.getSingle(mContext, id);
         }
 
-        return generated.getSingle(context, rawQueryClause, rawQueryArgsAsStringArray);
+        throw new RuntimeException("No ");
+    }
+
+    @WorkerThread
+    @Nullable
+    public T getSingleBlocking() {
+        return getSingleBlocking(null);
     }
 
     /**
@@ -110,109 +157,18 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where an instance of type {@link T} based on the raw query
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Single<T> getSingle(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull String rawQueryClause,
-                                          final @Nullable Object... rawQueryArgs) {
+    public Single<T> getSingle(final @Nullable Object id) {
         return Single.fromCallable(new Callable<T>() {
             @Override
             public T call() throws Exception {
-                return getSingleBlocking(context, cls, rawQueryClause, rawQueryArgs);
+                return getSingleBlocking(id);
             }
         }).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.io());
     }
 
-    /**
-     * Fetches a single object of type {@link T}, blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param query   query specifying which row to fetch
-     * @param <T>     type to fetch
-     * @return an instance of type {@link T} with database fields mapped to class fields
-     * annotated with {@link SQLiteField} based on the query supplied if found, else null
-     */
-    @WorkerThread
-    @Nullable
-    public static <T> T getSingleBlocking(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull SQLiteQuery query) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final String[] whereArgsAsStringArray;
-        if (query.mWhereArgs != null) {
-            whereArgsAsStringArray = new String[query.mWhereArgs.length];
-            for (int i = 0; i < query.mWhereArgs.length; i++) {
-                whereArgsAsStringArray[i] = String.valueOf(query.mWhereArgs[i]);
-            }
-        } else {
-            whereArgsAsStringArray = null;
-        }
-        return generated.getSingle(context, query.mWhereClause, whereArgsAsStringArray,
-                query.mGroupByClause, query.mHavingClause, query.mOrderByClause);
-    }
-
-    /**
-     * Fetches a single object of type {@link T}, non-blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param query   query specifying which row to fetch
-     * @param <T>     type to fetch
-     * @return an {@link Observable} where an instance of type {@link T} is passed as the
-     * item in {@link Subscriber#onNext(Object)}
-     */
-    public static <T> Single<T> getSingle(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull SQLiteQuery query) {
-        return Single.fromCallable(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return getSingleBlocking(context, cls, query);
-            }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
-    }
-
-    /**
-     * Fetches a single object with id of type {@link T}, blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param id      id of the row to fetch
-     * @param <T>     type to fetch
-     * @return an instance of type {@link T} with database fields mapped to class fields
-     * annotated with {@link SQLiteField}
-     */
-    @WorkerThread
-    @Nullable
-    public static <T> T getSingleBlocking(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull Object id) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        return generated.getSingle(context, id);
-    }
-
-    /**
-     * Fetches a single object with id of type {@link T}, non-blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param id      id of the row to fetch
-     * @param <T>     type to fetch
-     * @return an {@link Observable} where an instance of type {@link T} is passed as the
-     * item in {@link Subscriber#onNext(Object)}
-     */
-    public static <T> Single<T> getSingle(final @NonNull Context context,
-                                          final @NonNull Class<T> cls,
-                                          final @NonNull Object id) {
-        return Single.fromCallable(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return getSingleBlocking(context, cls, id);
-            }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
+    public Single<T> getSingle() {
+        return getSingle(null);
     }
 
     /**
@@ -226,22 +182,36 @@ public final class SQLiteOperator {
      * @return a {@link List} of type {@link T} based on the raw query supplied
      */
     @WorkerThread
-    public static <T> List<T> getListBlocking(final @NonNull Context context,
-                                              final @NonNull Class<T> cls,
-                                              final @NonNull String rawQueryClause,
-                                              final @Nullable Object... rawQueryArgs) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        final String[] rawQueryArgsAsStringArray;
-        if (rawQueryArgs != null) {
-            rawQueryArgsAsStringArray = new String[rawQueryArgs.length];
-            for (int i = 0; i < rawQueryArgs.length; i++) {
-                rawQueryArgsAsStringArray[i] = String.valueOf(rawQueryArgs[i]);
+    public List<T> getListBlocking() {
+        final SQLiteDAO<T> generated = getGeneratedObject(null);
+        if (mRawQueryClause != null) {
+            final String[] rawQueryArgsAsStringArray;
+            if (mRawQueryArgs != null) {
+                rawQueryArgsAsStringArray = new String[mRawQueryArgs.length];
+                for (int i = 0; i < mRawQueryArgs.length; i++) {
+                    rawQueryArgsAsStringArray[i] = String.valueOf(mRawQueryArgs[i]);
+                }
+            } else {
+                rawQueryArgsAsStringArray = null;
             }
-        } else {
-            rawQueryArgsAsStringArray = null;
-        }
 
-        return generated.getList(context, rawQueryClause, rawQueryArgsAsStringArray);
+            return generated.getList(mContext, mRawQueryClause, rawQueryArgsAsStringArray);
+        } else if (mQuery != null) {
+            final String[] whereArgsAsStringArray;
+            if (mQuery.mWhereArgs != null) {
+                whereArgsAsStringArray = new String[mQuery.mWhereArgs.length];
+                for (int i = 0; i < mQuery.mWhereArgs.length; i++) {
+                    whereArgsAsStringArray[i] = String.valueOf(mQuery.mWhereArgs[i]);
+                }
+            } else {
+                whereArgsAsStringArray = null;
+            }
+            return generated.getList(mContext, mQuery.mWhereClause, whereArgsAsStringArray,
+                    mQuery.mGroupByClause, mQuery.mHavingClause, mQuery.mOrderByClause,
+                    mQuery.mLimitClause);
+        } else {
+            return generated.getList(mContext, null, null, null, null, null, null);
+        }
     }
 
     /**
@@ -255,122 +225,11 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where a {@link List} of type {@link T} based on the raw query
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Observable<T> getList(final @NonNull Context context,
-                                            final @NonNull Class<T> cls,
-                                            final @NonNull String rawQueryClause,
-                                            final @Nullable Object... rawQueryArgs) {
+    public Observable<T> getList() {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
-                final List<T> instanceList = getListBlocking(context, cls, rawQueryClause,
-                        rawQueryArgs);
-                for (final T item : instanceList) {
-                    subscriber.onNext(item);
-                }
-                subscriber.onCompleted();
-            }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
-    }
-
-    /**
-     * Fetches a {@link List} of {@link T} filtered by an {@link SQLiteQuery, blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param query   query specifying which rows to fetch
-     * @param <T>     type to fetch
-     * @return a {@link List} of {@link T} filtered by {@link SQLiteQuery}
-     */
-    @WorkerThread
-    public static <T> List<T> getListBlocking(
-            final @NonNull Context context,
-            final @NonNull Class<T> cls,
-            final @Nullable SQLiteQuery query) {
-        final List<T> instanceList;
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        if (query == null) {
-            instanceList = generated.getList(context, null, null, null, null, null, null);
-        } else {
-            final String[] whereArgsAsStringArray;
-            if (query.mWhereArgs != null) {
-                whereArgsAsStringArray = new String[query.mWhereArgs.length];
-                for (int i = 0; i < query.mWhereArgs.length; i++) {
-                    whereArgsAsStringArray[i] = String.valueOf(query.mWhereArgs[i]);
-                }
-            } else {
-                whereArgsAsStringArray = null;
-            }
-            instanceList = generated.getList(context, query.mWhereClause, whereArgsAsStringArray,
-                    query.mGroupByClause, query.mHavingClause, query.mOrderByClause,
-                    query.mLimitClause);
-        }
-
-        return instanceList;
-    }
-
-    /**
-     * Fetches a {@link List} of {@link T} filtered by an {@link SQLiteQuery, non-blocking
-     * operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param query   query specifying which rows to fetch
-     * @param <T>     type to fetch
-     * @return an {@link Observable} where a {@link List} of type {@link T} is passed as the
-     * item in {@link Subscriber#onNext(Object)}
-     */
-    public static <T> Observable<T> getList(
-            final @NonNull Context context,
-            final @NonNull Class<T> cls,
-            final @Nullable SQLiteQuery query) {
-
-        return Observable.create(new Observable.OnSubscribe<T>() {
-            @Override
-            public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final List<T> instanceList = getListBlocking(context, cls, query);
-                for (final T item : instanceList) {
-                    subscriber.onNext(item);
-                }
-                subscriber.onCompleted();
-            }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
-    }
-
-    /**
-     * Fetches a full {@link List} of {@link T}, blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param <T>     type to fetch
-     * @return a {@link List} of {@link T} from all table records
-     */
-    @WorkerThread
-    public static <T> List<T> getFullListBlocking(
-            final @NonNull Context context,
-            final @NonNull Class<T> cls) {
-        final SQLiteDAO<T> generated = getGeneratedObject(cls, null);
-        return generated.getList(context, null, null, null, null, null, null);
-    }
-
-    /**
-     * Fetches a full {@link List} of {@link T}, non-blocking operation.
-     *
-     * @param context the context from which the call is being made
-     * @param cls     class object of the type to fetch
-     * @param <T>     type to fetch
-     * @return an {@link Observable} where a {@link List} of type {@link T} from all table records
-     * is passed as the item in {@link Subscriber#onNext(Object)}
-     */
-    public static <T> Observable<T> getFullList(
-            final @NonNull Context context,
-            final @NonNull Class<T> cls) {
-
-        return Observable.create(new Observable.OnSubscribe<T>() {
-            @Override
-            public void call(final @NonNull Subscriber<? super T> subscriber) {
-                final List<T> instanceList = getFullListBlocking(context, cls);
+                final List<T> instanceList = getListBlocking();
                 for (final T item : instanceList) {
                     subscriber.onNext(item);
                 }
@@ -388,12 +247,10 @@ public final class SQLiteOperator {
      * @param <T>             type of the object to insert
      */
     @WorkerThread
-    public static <T> void insertBlocking(final @NonNull Context context,
-                                          final @NonNull T... objectsToInsert) {
+    public void insertBlocking(final @NonNull T... objectsToInsert) {
         for (final T objectToInsert : objectsToInsert) {
-            final SQLiteDAO<T> generated = getGeneratedObject(
-                    (Class<T>) objectToInsert.getClass(), objectToInsert);
-            generated.insert(context);
+            final SQLiteDAO<T> generated = getGeneratedObject(objectToInsert);
+            generated.insert(mContext);
         }
     }
 
@@ -406,12 +263,11 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where the objectToInsert parameter is passed as the item
      * in {@link Subscriber#onNext(Object)}
      */
-    public static <T> Completable insert(final @NonNull Context context,
-                                         final @NonNull T... objectsToInsert) {
+    public Completable insert(final @NonNull T... objectsToInsert) {
         return Completable.fromCallable(new Callable() {
             @Override
             public Object call() throws Exception {
-                insertBlocking(context, objectsToInsert);
+                insertBlocking(objectsToInsert);
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -426,11 +282,9 @@ public final class SQLiteOperator {
      * @param <T>            type of the object to update
      */
     @WorkerThread
-    public static <T> void updateBlocking(final @NonNull Context context,
-                                          final @NonNull T objectToUpdate) {
-        final SQLiteDAO<T> generated = getGeneratedObject((Class<T>) objectToUpdate.getClass(),
-                objectToUpdate);
-        generated.update(context);
+    public void updateBlocking(final @NonNull T objectToUpdate) {
+        final SQLiteDAO<T> generated = getGeneratedObject(objectToUpdate);
+        generated.update(mContext);
     }
 
     /**
@@ -442,12 +296,11 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where the objectToUpdate parameter is passed as the item
      * in {@link Subscriber#onNext(Object)}
      */
-    private <T> Completable update(final @NonNull Context context,
-                                   final @NonNull T objectToUpdate) {
+    private Completable update(final @NonNull T objectToUpdate) {
         return Completable.fromCallable(new Callable() {
             @Override
             public Object call() throws Exception {
-                updateBlocking(context, objectToUpdate);
+                updateBlocking(objectToUpdate);
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())
@@ -462,12 +315,10 @@ public final class SQLiteOperator {
      * @param <T>             type of the object to delete
      */
     @WorkerThread
-    public static <T> void deleteBlocking(final @NonNull Context context,
-                                          final @NonNull T... objectsToDelete) {
+    public void deleteBlocking(final @NonNull T... objectsToDelete) {
         for (final T objectToDelete : objectsToDelete) {
-            final SQLiteDAO<T> generated = getGeneratedObject(
-                    (Class<T>) objectToDelete.getClass(), objectToDelete);
-            generated.delete(context);
+            final SQLiteDAO<T> generated = getGeneratedObject(objectToDelete);
+            generated.delete(mContext);
         }
     }
 
@@ -480,12 +331,11 @@ public final class SQLiteOperator {
      * @return an {@link Observable} where null is passed as the item in
      * {@link Subscriber#onNext(Object)}
      */
-    public static <T> Completable delete(final @NonNull Context context,
-                                         final @NonNull T... objectsToDelete) {
+    public Completable delete(final @NonNull T... objectsToDelete) {
         return Completable.fromCallable(new Callable() {
             @Override
             public Object call() throws Exception {
-                deleteBlocking(context, objectsToDelete);
+                deleteBlocking(objectsToDelete);
                 return null;
             }
         }).observeOn(AndroidSchedulers.mainThread())

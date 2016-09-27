@@ -40,6 +40,8 @@ public class Main2Activity extends AppCompatActivity {
                     }
                 });
 
+        SQLiteOperator.of(this, MyLittleClass.class);
+
         SQLiteOperator.getList(this, MyLittleClass.class, SQLiteQuery.builder().where("id = ?", 1).build())
                 .subscribe(new Subscriber<MyLittleClass>() {
                     @Override
