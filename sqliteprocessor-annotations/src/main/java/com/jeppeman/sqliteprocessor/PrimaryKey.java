@@ -12,6 +12,6 @@ import java.lang.annotation.Target;
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
-@Target({ElementType.FIELD, ElementType.METHOD })
+@Target({ElementType.FIELD, ElementType.METHOD})
 public @interface PrimaryKey {
 }

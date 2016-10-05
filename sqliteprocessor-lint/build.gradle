@@ -1,5 +1,16 @@
 apply plugin: 'java'
 
+sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
+targetCompatibility = rootProject.ext.targetCompatibilityVersion
+
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile deps.lint
+    compile deps.lintapi
+    compile deps.lintchecks
+}
+
+jar {
+    manifest {
+        attributes 'Lint-Registry': 'com.jeppeman.sqliteprocessor.LintRegistry'
+    }
 }

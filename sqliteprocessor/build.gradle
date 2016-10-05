@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.kageiit.lintrules'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -11,6 +12,11 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
     }
+
+    lintOptions {
+        textReport true
+        textOutput 'stdout'
+    }
 }
 
 dependencies {
@@ -19,6 +25,8 @@ dependencies {
     testCompile deps.junit
     testCompile deps.robolectric
     testCompile project(':sqliteprocessor-compiler')
+
+    lintRules project(':sqliteprocessor-lint')
 
     compile deps.supportAnnotations
     provided deps.supportv4
