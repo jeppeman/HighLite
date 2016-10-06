@@ -13,7 +13,7 @@ public class Main2Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
-        SQLiteOperator.from(this, Integer.class);
+//        SQLiteOperator.from(this, Integer.class);
 
         SQLiteOperator.from(this, MyLittleClass.class);
 //        SQLiteOperator.getSingle(this, MyLittleClass.class, 1)

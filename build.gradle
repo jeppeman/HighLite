@@ -48,6 +48,7 @@ ext {
     buildToolsVersion = '24.0.1'
     sourceCompatibilityVersion = JavaVersion.VERSION_1_7
     targetCompatibilityVersion = JavaVersion.VERSION_1_7
+
 }
 
 ext.deps = [
@@ -60,12 +61,14 @@ ext.deps = [
         appcompat         : 'com.android.support:appcompat-v7:24.2.0',
         compiletesting    : 'com.google.testing.compile:compile-testing:0.9',
         robolectric       : 'org.robolectric:robolectric:3.1',
+        mockito           : 'org.mockito:mockito-core:1.+',
         junit             : 'junit:junit:4.12',
         autoservice       : 'com.google.auto.service:auto-service:1.0-rc2',
         autocommon        : 'com.google.auto:auto-common:0.6',
         lint              : 'com.android.tools.lint:lint:24.3.1',
         lintapi           : 'com.android.tools.lint:lint-api:24.3.1',
-        lintchecks        : 'com.android.tools.lint:lint-checks:24.3.1'
+        lintchecks        : 'com.android.tools.lint:lint-checks:24.3.1',
+        linttests         : 'com.android.tools.lint:lint-tests:24.3.1'
 ]
 
 task clean(type: Delete) {
