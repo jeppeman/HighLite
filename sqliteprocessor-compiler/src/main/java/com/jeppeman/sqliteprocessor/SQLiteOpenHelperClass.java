@@ -56,46 +56,50 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final String cursorVarName = table.tableName() + "Cursor",
                 dbColsVarName = table.tableName() + "Cols";
 
-        final CodeBlock.Builder addColumnStatements = CodeBlock.builder();
-        if (table.autoAddColumns()) {
-            addColumnStatements
-                    .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
-                            + "null)", CURSOR, cursorVarName, table.tableName())
-                    .add("\n")
-                    .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
-                    .add("\n")
-                    .addStatement("final $T<String> $L = new $T<>()", LIST, dbColsVarName,
-                            ARRAY_LIST)
-                    .add("\n")
-                    .beginControlFlow("do")
-                    .addStatement("$L.add($L.getString(COL_NAME_INDEX))", dbColsVarName,
-                            cursorVarName)
-                    .endControlFlow("while ($L.moveToNext())", cursorVarName)
-                    .add("\n")
-                    .addStatement("$L.close()", cursorVarName)
-                    .add("\n");
-            for (final Element enclosed : element.getEnclosedElements()) {
-                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-                if (field == null) continue;
+//        final CodeBlock.Builder addColumnStatements = CodeBlock.builder();
+//        if (table.autoAddColumns()) {
+//            addColumnStatements
+//                    .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
+//                            + "null)", CURSOR, cursorVarName, table.tableName())
+//                    .add("\n")
+//                    .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
+//                    .add("\n")
+//                    .addStatement("final $T<String> $L = new $T<>()", LIST, dbColsVarName,
+//                            ARRAY_LIST)
+//                    .add("\n")
+//                    .beginControlFlow("do")
+//                    .addStatement("$L.add($L.getString(COL_NAME_INDEX))", dbColsVarName,
+//                            cursorVarName)
+//                    .endControlFlow("while ($L.moveToNext())", cursorVarName)
+//                    .add("\n")
+//                    .addStatement("$L.close()", cursorVarName)
+//                    .add("\n");
+//            for (final Element enclosed : element.getEnclosedElements()) {
+//                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+//                if (field == null) continue;
+//
+//                addColumnStatements.beginControlFlow("if (!$L.contains($S))", dbColsVarName,
+//                        getDBFieldName(enclosed, field))
+//                        .addStatement("database.execSQL($S)", getAddColumnStatement(enclosed,
+// field,
+//                                table))
+//                        .endControlFlow()
+//                        .add("\n");
+//            }
+//        }
 
-                addColumnStatements.beginControlFlow("if (!$L.contains($S))", dbColsVarName,
-                        getDBFieldName(enclosed, field))
-                        .addStatement("database.execSQL($S)", getAddColumnStatement(enclosed, field,
-                                table))
-                        .endControlFlow()
-                        .add("\n");
-            }
-        }
-
-        final CodeBlock.Builder dropColumnStatements = CodeBlock.builder();
-        if (table.autoDeleteColumns()) {
+        final CodeBlock.Builder recreateStatement = CodeBlock.builder();
+        if (table.autoAddColumns() && table.autoDeleteColumns()) {
             final StringBuilder columnsToSave = new StringBuilder(),
                     columnsToSaveWithTypes = new StringBuilder();
             for (final Element enclosed : element.getEnclosedElements()) {
                 final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
                 if (field == null) continue;
 
-                columnsToSaveWithTypes.append(getDBFieldName(enclosed, field));
+                final String fieldName = getDBFieldName(enclosed, field);
+                columnsToSaveWithTypes.append("`");
+                columnsToSaveWithTypes.append(fieldName);
+                columnsToSaveWithTypes.append("`");
                 columnsToSaveWithTypes.append(" ");
                 columnsToSaveWithTypes.append(getFieldType(enclosed, field));
 
@@ -103,9 +107,17 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 if (primaryKey != null) {
                     columnsToSaveWithTypes.append(" PRIMARY KEY");
                     columnsToSaveWithTypes.append(
-                            enclosed.getAnnotation(AutoIncrement.class) != null
+                            primaryKey.autoIncrement()
                                     ? " AUTOINCREMENT"
                                     : "");
+                }
+
+                final ForeignKey foreignKey = enclosed.getAnnotation(ForeignKey.class);
+                if (foreignKey != null) {
+                    columnsToSaveWithTypes.append(", ");
+                    columnsToSaveWithTypes.append(
+                            String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
+                                    fieldName, foreignKey.table(), foreignKey.fieldReference()));
                 }
 
                 columnsToSaveWithTypes.append(", ");
@@ -113,40 +125,74 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 columnsToSave.append(getDBFieldName(enclosed, field));
                 columnsToSave.append(",");
             }
-            dropColumnStatements.add(
+            recreateStatement.add(
                     getRecreateTableStatement("database", table.tableName(),
                             columnsToSave.substring(0, columnsToSave.length() - 1),
                             columnsToSaveWithTypes.substring(0,
-                                    columnsToSaveWithTypes.length() - 2)));
+                                    columnsToSaveWithTypes.length() - 2)))
+                    .add("\n");
+        } else if (!table.autoDeleteColumns()) {
+            final String colsWithTypesVar = table.tableName() + "colsWithTypesBuilder",
+                    colsVar = table.tableName() + "ColsBuilder";
+            recreateStatement
+                    .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
+                            + "null)", CURSOR, cursorVarName, table.tableName())
+                    .add("\n")
+                    .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
+                    .add("\n")
+                    .addStatement("final $T<String, String> $L = new $T<>()", MAP, dbColsVarName,
+                            LINKED_HASHMAP)
+                    .add("\n")
+                    .beginControlFlow("do")
+                    .addStatement("$L.put($L.getString(COL_NAME_INDEX), "
+                                    + "$L.getString(COL_TYPE_INDEX))", dbColsVarName, cursorVarName,
+                            cursorVarName)
+                    .endControlFlow("while ($L.moveToNext())", cursorVarName)
+                    .add("\n")
+                    .addStatement("$L.close()", cursorVarName)
+                    .add("\n")
+                    .add("final StringBuilder $L = new StringBuilder(), ", colsWithTypesVar)
+                    .add("$L = new StringBuilder();\n", colsVar)
+                    .beginControlFlow("for (final Map.Entry<String, String> entry : $L.entrySet())",
+                            dbColsVarName)
+                    .addStatement("$L.append(String.format(\"`%s` %s\", entry.getKey(), "
+                            + "entry.getValue()))", colsWithTypesVar)
+                    .addStatement("$L.append($S)", colsWithTypesVar, ", ")
+                    .addStatement("$L.append(String.format(\"`%s`\", entry.getKey()))", colsVar)
+                    .addStatement("$L.append($S)", colsVar, ", ")
+                    .endControlFlow();
+
+            recreateStatement
+                    .add(getRecreateTableStatement("database", table.tableName()))
+                    .add("\n");
         }
 
         return CodeBlock.builder()
                 .add(getCreateBlock(element, table))
-                .add(addColumnStatements.build())
-                .add(dropColumnStatements.build())
+                .add(recreateStatement.build())
                 .build();
     }
 
-    private String getAddColumnStatement(final Element element,
-                                         final SQLiteField field,
-                                         final SQLiteTable table) {
-        final PrimaryKey primaryKey = element.getAnnotation(PrimaryKey.class);
-        final StringBuilder builder = new StringBuilder("");
-        if (primaryKey != null) {
-            builder.append(" PRIMARY KEY");
-            builder.append(element.getAnnotation(AutoIncrement.class) != null
-                    ? " AUTOINCREMENT" : "");
-        }
-
-        return "ALTER TABLE `"
-                + table.tableName()
-                + "` ADD COLUMN `"
-                + getDBFieldName(element, field)
-                + "` "
-                + getFieldType(element, field)
-                + builder.toString()
-                + ";";
-    }
+//    private String getAddColumnStatement(final Element element,
+//                                         final SQLiteField field,
+//                                         final SQLiteTable table) {
+//        final PrimaryKey primaryKey = element.getAnnotation(PrimaryKey.class);
+//        final StringBuilder builder = new StringBuilder("");
+//        if (primaryKey != null) {
+//            builder.append(" PRIMARY KEY");
+//            builder.append(primaryKey.autoIncrement()
+//                    ? " AUTOINCREMENT" : "");
+//        }
+//
+//        return "ALTER TABLE `"
+//                + table.tableName()
+//                + "` ADD COLUMN `"
+//                + getDBFieldName(element, field)
+//                + "` "
+//                + getFieldType(element, field)
+//                + builder.toString()
+//                + ";";
+//    }
 
     private CodeBlock getRecreateTableStatement(final String dbVarName,
                                                 final String tableName,
@@ -168,6 +214,24 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
+    private CodeBlock getRecreateTableStatement(final String dbVarName, final String tableName) {
+        return CodeBlock.builder()
+                .addStatement("$L.execSQL($S)", dbVarName, "BEGIN TRANSACTION;")
+                .addStatement("$L.execSQL(String.format(\"CREATE TABLE $L_backup($L);\", "
+                                + "$LcolsWithTypesBuilder.toString()))", dbVarName,
+                        tableName, "%s", tableName)
+                .addStatement("$L.execSQL(String.format(\"INSERT INTO $L_backup SELECT "
+                                + "%s FROM $L;\", $LColsBuilder.toString()))", dbVarName,
+                        tableName, tableName, tableName)
+//                        String.format(CodeBlock.of("").toString(), tableName, tableName))
+                .addStatement("$L.execSQL($S)", dbVarName,
+                        String.format("DROP TABLE %s;", tableName))
+                .addStatement("$L.execSQL($S)", dbVarName,
+                        String.format("ALTER TABLE %s_backup RENAME TO %s;", tableName, tableName))
+                .addStatement("$L.execSQL($S)", dbVarName, "COMMIT;")
+                .build();
+    }
+
     private String getCreateStatement(final Element element, final SQLiteTable table) {
         final StringBuilder builder = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
                 .append(table.tableName())
@@ -177,15 +241,25 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            builder.append(getDBFieldName(enclosed, field));
+            final String fieldName = getDBFieldName(enclosed, field);
+            builder.append("`");
+            builder.append(fieldName);
+            builder.append("`");
             builder.append(" ");
             builder.append(getFieldType(enclosed, field));
 
             final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
             if (primaryKey != null) {
                 builder.append(" PRIMARY KEY");
-                builder.append(enclosed.getAnnotation(AutoIncrement.class) != null
+                builder.append(primaryKey.autoIncrement()
                         ? " AUTOINCREMENT" : "");
+            }
+
+            final ForeignKey foreignKey = enclosed.getAnnotation(ForeignKey.class);
+            if (foreignKey != null) {
+                builder.append(", ");
+                builder.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
+                        fieldName, foreignKey.table(), foreignKey.fieldReference()));
             }
 
             builder.append(", ");
@@ -198,6 +272,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return FieldSpec.builder(TypeName.INT,
                 "COL_NAME_INDEX", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .initializer("1")
+                .build();
+    }
+
+    private FieldSpec buildColTypeIndexField() {
+        return FieldSpec.builder(TypeName.INT,
+                "COL_TYPE_INDEX", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                .initializer("2")
                 .build();
     }
 
@@ -361,6 +442,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .superclass(SQLITE_OPEN_HELPER)
                 .addFields(Arrays.asList(
                         buildColNameIndexField(),
+                        buildColTypeIndexField(),
                         buildDbNameField(),
                         buildDbVersionField()
                 ))

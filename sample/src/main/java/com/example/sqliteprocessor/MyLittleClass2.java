@@ -1,6 +1,5 @@
 package com.example.sqliteprocessor;
 
-import com.jeppeman.sqliteprocessor.AutoIncrement;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
 import com.jeppeman.sqliteprocessor.SQLiteField;
 import com.jeppeman.sqliteprocessor.SQLiteFieldType;
@@ -16,8 +15,7 @@ import java.util.List;
 public class MyLittleClass2 {
 
     @SQLiteField
-    @PrimaryKey
-    @AutoIncrement
+    @PrimaryKey(autoIncrement = true)
     int id;
 
     @SQLiteField

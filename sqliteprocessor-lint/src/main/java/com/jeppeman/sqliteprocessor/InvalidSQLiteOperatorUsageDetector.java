@@ -22,9 +22,9 @@ public class InvalidSQLiteOperatorUsageDetector extends Detector implements Dete
     private static final String ISSUE_BODY = "%s must be annotated with @SQLiteTable to be used"
             + " with SQLiteOperator.from";
 
-    static final Issue ISSUE = Issue.create(ISSUE_ID, ISSUE_TITLE, ISSUE_BODY, Category.CORRECTNESS,
-            6, Severity.ERROR, new Implementation(InvalidSQLiteOperatorUsageDetector.class,
-                    Scope.JAVA_FILE_SCOPE));
+    public static final Issue ISSUE = Issue.create(ISSUE_ID, ISSUE_TITLE, ISSUE_BODY,
+            Category.CORRECTNESS, 6, Severity.ERROR,
+            new Implementation(InvalidSQLiteOperatorUsageDetector.class, Scope.JAVA_FILE_SCOPE));
 
     @Override
     public boolean appliesTo(@NonNull Context context, @NonNull File file) {

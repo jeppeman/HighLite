@@ -70,9 +70,9 @@ class FromMethodVisitor extends ForwardingAstVisitor {
                     return true;
                 }
             } else {
-                // TODO: Submit bug report to google about having to do this instead of
-                // TODO: mContext.getType(arg) when JavaParser is LombokPsiParser and
-                // TODO: PsiElement is of type PsiTypeElement
+                // Submit bug report to google about having to do this instead of
+                // mContext.getType(arg) when JavaParser is LombokPsiParser and
+                // PsiElement is of type PsiTypeElement
                 final Pattern pattern = Pattern.compile("<.+>");
                 final String s = mContext.getType(arg).getName();
                 final Matcher m = pattern.matcher(s);

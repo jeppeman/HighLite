@@ -6,18 +6,25 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A field annotated with {@link PrimaryKey} will have the property PRIMARY KEY written
+ * A field annotated with {@link ForeignKey} will have the property FOREIGN KEY written
  * to its corresponding database field.
  *
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
 @Target({ElementType.FIELD, ElementType.METHOD})
-public @interface PrimaryKey {
+public @interface ForeignKey {
     /**
-     * Wheather to auto increment this key or not
+     * The table in which the foreign key resides
      *
-     * @return true if auto increment otherwise false
+     * @return
      */
-    boolean autoIncrement() default false;
+    String table();
+
+    /**
+     * The name of the field which this key references
+     *
+     * @return
+     */
+    String fieldReference();
 }

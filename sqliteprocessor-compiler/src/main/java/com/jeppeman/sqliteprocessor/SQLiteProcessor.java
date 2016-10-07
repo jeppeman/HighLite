@@ -144,7 +144,7 @@ public class SQLiteProcessor extends AbstractProcessor {
     private Set<Class<? extends Annotation>> getSupportedAnnotations() {
         final Set<Class<? extends Annotation>> annotations = new LinkedHashSet<>();
 
-        annotations.add(AutoIncrement.class);
+        annotations.add(ForeignKey.class);
         annotations.add(PrimaryKey.class);
         annotations.add(SQLiteField.class);
         annotations.add(SQLiteGetter.class);

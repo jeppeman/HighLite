@@ -1,7 +1,7 @@
 @SQLiteDatabaseHolder(databases = {
         @SQLiteDatabaseDescriptor(
                 dbName = "testDatabase",
-                dbVersion = 12,
+                dbVersion = 2,
                 tables = {
                         MyLittleClass.class,
                         MyLittleClass2.class
@@ -9,7 +9,7 @@
         ),
         @SQLiteDatabaseDescriptor(
                 dbName = "bautaDase",
-                dbVersion = 3,
+                dbVersion = 1,
                 tables = {
                         MyLittleClass3.class
                 }

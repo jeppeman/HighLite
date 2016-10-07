@@ -1,4 +1,4 @@
-package com.jeppeman.sqliteprocessor;
+package com.jeppeman.sqliteprocessor.tests;
 
 import com.android.annotations.Nullable;
 import com.android.tools.lint.checks.infrastructure.LintDetectorTest;
@@ -6,6 +6,7 @@ import com.android.tools.lint.detector.api.Detector;
 import com.android.tools.lint.detector.api.Issue;
 import com.android.utils.SdkUtils;
 import com.google.common.collect.ImmutableList;
+import com.jeppeman.sqliteprocessor.InvalidSQLiteOperatorUsageDetector;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -27,7 +28,7 @@ public class InvalidSQLiteOperatorUsageDetectorTest extends LintDetectorTest {
     @Override
     protected void setUp() throws Exception {
         Properties p = new Properties(System.getProperties());
-        InputStream is = ClassLoader.getSystemResourceAsStream("sdktools.properties");
+        InputStream is = getClass().getClassLoader().getResourceAsStream("sdktools.properties");
         p.load(is);
         p.setProperty("com.android.tools.lint.bindir", p.getProperty("sdkToolsDir"));
         System.setProperties(p);
@@ -75,7 +76,15 @@ public class InvalidSQLiteOperatorUsageDetectorTest extends LintDetectorTest {
         return ImmutableList.of(InvalidSQLiteOperatorUsageDetector.ISSUE);
     }
 
-    public void testStuff() throws Exception {
-        assertEquals(NO_WARNINGS, lintFiles("SQLiteOperator.java", "TestTable.java"));
+    public void testCorrectUsage() throws Exception {
+        assertEquals(NO_WARNINGS, lintFiles("CorrectSQLiteOperatorUsage.java",
+                "SQLiteOperator.java", "TestTable.java"));
+    }
+
+    public void testIncorrectUsage() throws Exception {
+        final String output = lintFiles("IncorrectSQLiteOperatorUsage.java", "SQLiteOperator.java",
+                "TestTable.java");
+        assertNotSame(NO_WARNINGS, output);
+        assertTrue(output.contains("1 errors, 0 warnings"));
     }
 }

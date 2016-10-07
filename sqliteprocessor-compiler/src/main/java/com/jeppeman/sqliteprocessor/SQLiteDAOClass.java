@@ -76,8 +76,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            if (enclosed.getAnnotation(PrimaryKey.class) != null
-                    && enclosed.getAnnotation(AutoIncrement.class) != null) {
+            final PrimaryKey pk = enclosed.getAnnotation(PrimaryKey.class);
+            if (pk != null && pk.autoIncrement()) {
                 continue;
             }
 
@@ -205,7 +205,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         }
 
         final CodeBlock.Builder setIdAfterInsertion = CodeBlock.builder();
-        if (primaryKeyElement.getAnnotation(AutoIncrement.class) != null) {
+        if (primaryKeyElement.getAnnotation(PrimaryKey.class).autoIncrement()) {
             setIdAfterInsertion.addStatement("mTarget.$L = ($T)id",
                     primaryKeyElement.getSimpleName(), ClassName.get(primaryKeyElement.asType()));
         }
@@ -221,7 +221,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildUpdateMethod() {
+    private MethodSpec buildUpdateByObjectsMethod() {
         final Element primaryKeyElement = getPrimaryKeyField();
 
         if (primaryKeyElement == null) {
@@ -241,6 +241,21 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 + "new $T[] { $T.valueOf(mTarget.$L) })",
                         "context", mTable.tableName(), pkFieldName + " = ?", STRING, STRING,
                         primaryKeyElement.getSimpleName())
+                .build();
+    }
+
+    private MethodSpec buildUpdateByQueryMethod() {
+        return MethodSpec.methodBuilder("updateByQuery")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(STRING, "whereClause", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
+                .addStatement("final $T cursor = getWritableDatabase($L)"
+                                + ".rawQuery(whereClause, whereArgs)",
+                        CURSOR, "context")
+                .addStatement("cursor.moveToFirst()")
+                .addStatement("cursor.close()")
                 .build();
     }
 
@@ -264,6 +279,20 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 + ".delete($S, $S, new $T[] { $T.valueOf(mTarget.$L) })",
                         "context", mTable.tableName(), pkFieldName + " = ?", STRING, STRING,
                         primaryKeyElement.getSimpleName())
+                .build();
+    }
+
+    private MethodSpec buildDeleteByQueryMethod() {
+        return MethodSpec.methodBuilder("deleteByQuery")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(STRING, "whereClause", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
+                .addStatement("final $T cursor = getWritableDatabase($L)"
+                        + ".rawQuery(whereClause, whereArgs)", CURSOR, "context")
+                .addStatement("cursor.moveToFirst()")
+                .addStatement("cursor.close()")
                 .build();
     }
 
@@ -472,8 +501,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         buildGetWritableDatabaseMethod(),
                         buildInstantiateObjectMethod(),
                         buildInsertMethod(),
-                        buildUpdateMethod(),
+                        buildUpdateByObjectsMethod(),
+                        buildUpdateByQueryMethod(),
                         buildDeleteMethod(),
+                        buildDeleteByQueryMethod(),
                         buildGetSingleByRawQueryMethod(),
                         buildGetSingleMethod(),
                         buildGetSingleByIdMethod(),

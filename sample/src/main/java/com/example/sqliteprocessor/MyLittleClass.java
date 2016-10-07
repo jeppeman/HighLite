@@ -2,7 +2,7 @@ package com.example.sqliteprocessor;
 
 import android.database.sqlite.SQLiteDatabase;
 
-import com.jeppeman.sqliteprocessor.AutoIncrement;
+import com.jeppeman.sqliteprocessor.ForeignKey;
 import com.jeppeman.sqliteprocessor.OnCreate;
 import com.jeppeman.sqliteprocessor.OnUpgrade;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
@@ -15,12 +15,12 @@ import java.util.List;
 /**
  * @author jesper
  */
-@SQLiteTable(tableName = "myLittleTable", autoCreate = false, autoAddColumns = false)
+@SQLiteTable(tableName = "myLittleTable")
 public class MyLittleClass {
 
     @OnCreate
     public static void onCreate(SQLiteDatabase database) {
-
+        int x = 9;
     }
 
     @OnUpgrade
@@ -29,8 +29,7 @@ public class MyLittleClass {
     }
 
     @SQLiteField
-    @PrimaryKey
-    @AutoIncrement
+    @PrimaryKey(autoIncrement = true)
     int id;
 
     @SQLiteField
@@ -45,17 +44,7 @@ public class MyLittleClass {
     @SQLiteField
     Boolean yo;
 
-//    @SQLiteGetter
-//    @PrimaryKey
-//    @AutoIncrement
-//    public int getId() {
-//        return id;
-//    }
-//
-//    @SQLiteSetter
-//    @PrimaryKey
-//    @AutoIncrement
-//    public void setId(final int id) {
-//        this.id = id;
-//    }
+    @SQLiteField
+    @ForeignKey(table = "test", fieldReference = "id")
+    int foreign;
 }
