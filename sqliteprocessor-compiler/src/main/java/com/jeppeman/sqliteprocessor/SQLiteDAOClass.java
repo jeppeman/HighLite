@@ -82,7 +82,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             }
 
             final String fieldType = getFieldType(enclosed, field),
-                    fieldName = getDBFieldName(enclosed, field);
+                    fieldName = "`" + getDBFieldName(enclosed, field) + "`";
 
             final CodeBlock.Builder putStatement = CodeBlock.builder();
             if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
@@ -230,8 +230,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class));
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
         return MethodSpec.methodBuilder("update")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
@@ -268,8 +268,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class));
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
 
         return MethodSpec.methodBuilder("delete")
                 .addAnnotation(Override.class)
@@ -305,8 +305,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class));
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
 
         return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)

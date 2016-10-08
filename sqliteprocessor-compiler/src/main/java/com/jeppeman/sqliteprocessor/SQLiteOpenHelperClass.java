@@ -54,7 +54,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
     private CodeBlock getUpgradeBlock(final Element element, final SQLiteTable table) {
         final String cursorVarName = table.tableName() + "Cursor",
-                dbColsVarName = table.tableName() + "Cols";
+                dbColsVarName = table.tableName() + "Cols",
+                createSqlCursorVarName = table.tableName() + "Cursor",
+                createSqlStatementVarName = table.tableName() + "Create";
 
 //        final CodeBlock.Builder addColumnStatements = CodeBlock.builder();
 //        if (table.autoAddColumns()) {
@@ -118,6 +120,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     columnsToSaveWithTypes.append(
                             String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                                     fieldName, foreignKey.table(), foreignKey.fieldReference()));
+                    if (foreignKey.cascadeOnDelete()) {
+                        columnsToSaveWithTypes.append(" ON DELETE CASCADE");
+                    }
+
+                    if (foreignKey.cascadeOnUpdate()) {
+                        columnsToSaveWithTypes.append(" ON UPDATE CASCADE");
+                    }
                 }
 
                 columnsToSaveWithTypes.append(", ");
@@ -135,6 +144,18 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final String colsWithTypesVar = table.tableName() + "colsWithTypesBuilder",
                     colsVar = table.tableName() + "ColsBuilder";
             recreateStatement
+                    .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
+                                    + "sqlite_master WHERE `type` = 'table' AND `name` = '$L';\", "
+                                    + "null)",
+                            CURSOR, createSqlCursorVarName, table.tableName())
+                    .addStatement("$T $L = $S", STRING, createSqlStatementVarName, "")
+                    .addStatement("if (!$L.moveToFirst()) return", cursorVarName + "x")
+                    .add("\n")
+                    .beginControlFlow("do")
+                    .addStatement("$L += $L.getString(0)", createSqlStatementVarName,
+                            createSqlCursorVarName)
+                    .endControlFlow("while ($L.moveToNext())", cursorVarName + "x")
+                    .add("\n")
                     .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
                             + "null)", CURSOR, cursorVarName, table.tableName())
                     .add("\n")
@@ -145,8 +166,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .add("\n")
                     .beginControlFlow("do")
                     .addStatement("$L.put($L.getString(COL_NAME_INDEX), "
-                                    + "$L.getString(COL_TYPE_INDEX))", dbColsVarName, cursorVarName,
-                            cursorVarName)
+                                    + "$L.getString(COL_TYPE_INDEX))", dbColsVarName,
+                            cursorVarName, cursorVarName)
                     .endControlFlow("while ($L.moveToNext())", cursorVarName)
                     .add("\n")
                     .addStatement("$L.close()", cursorVarName)
@@ -260,6 +281,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 builder.append(", ");
                 builder.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                         fieldName, foreignKey.table(), foreignKey.fieldReference()));
+                if (foreignKey.cascadeOnDelete()) {
+                    builder.append(" ON DELETE CASCADE");
+                }
+
+                if (foreignKey.cascadeOnUpdate()) {
+                    builder.append(" ON UPDATE CASCADE");
+                }
             }
 
             builder.append(", ");
@@ -282,6 +310,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
+    private FieldSpec buildColPKIndexField() {
+        return FieldSpec.builder(TypeName.INT,
+                "COL_PK_INDEX", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                .initializer("5")
+                .build();
+    }
+
     private FieldSpec buildDbNameField() {
         return FieldSpec.builder(STRING, "DATABASE_NAME", Modifier.PRIVATE,
                 Modifier.STATIC, Modifier.FINAL)
@@ -300,6 +335,33 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return MethodSpec.constructorBuilder()
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addStatement("super(context, $L, null, $L)", "DATABASE_NAME", "DATABASE_VERSION")
+                .build();
+    }
+
+    private MethodSpec buildOnOpenMethod() {
+        final CodeBlock.Builder code = CodeBlock.builder();
+        boolean foundForeignKey = false;
+        for (final Map.Entry<SQLiteTable, Element> tableElementEntry
+                : mTableElementMap.entrySet()) {
+            for (final Element enclosed : tableElementEntry.getValue().getEnclosedElements()) {
+                if (enclosed.getAnnotation(ForeignKey.class) == null) continue;
+
+                code.beginControlFlow("if (!database.isReadOnly())")
+                        .addStatement("database.execSQL($S)", "PRAGMA foreign_keys=ON;")
+                        .endControlFlow();
+                foundForeignKey = true;
+                break;
+            }
+
+            if (foundForeignKey) break;
+        }
+
+        return MethodSpec.methodBuilder("onOpen")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(AnnotationSpec.builder(Override.class).build())
+                .addParameter(SQLITE_DATABASE, "database", Modifier.FINAL)
+                .addStatement("super.onOpen(database)")
+                .addCode(code.build())
                 .build();
     }
 
@@ -443,11 +505,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .addFields(Arrays.asList(
                         buildColNameIndexField(),
                         buildColTypeIndexField(),
+                        buildColPKIndexField(),
                         buildDbNameField(),
                         buildDbVersionField()
                 ))
                 .addMethods(Arrays.asList(
                         buildCtor(),
+                        buildOnOpenMethod(),
                         buildOnCreateMethod(),
                         buildOnUpgradeMethod()
                 ))

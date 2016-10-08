@@ -20,7 +20,7 @@ public class MyLittleClass {
 
     @OnCreate
     public static void onCreate(SQLiteDatabase database) {
-        int x = 9;
+        int x = 10;
     }
 
     @OnUpgrade
@@ -45,6 +45,10 @@ public class MyLittleClass {
     Boolean yo;
 
     @SQLiteField
-    @ForeignKey(table = "test", fieldReference = "id")
+    @ForeignKey(
+            table = "test",
+            fieldReference = "id",
+            cascadeOnDelete = true,
+            cascadeOnUpdate = true)
     int foreign;
 }

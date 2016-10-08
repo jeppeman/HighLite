@@ -27,4 +27,16 @@ public @interface ForeignKey {
      * @return
      */
     String fieldReference();
+
+    /**
+     *
+     * @return
+     */
+    boolean cascadeOnDelete() default false;
+
+    /**
+     *
+     * @return
+     */
+    boolean  cascadeOnUpdate() default false;
 }

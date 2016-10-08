@@ -45,6 +45,8 @@ abstract class JavaWritableClass {
             "SQLiteDatabase");
     protected static final ClassName SQLITE_OPEN_HELPER = ClassName.get("android.database.sqlite",
             "SQLiteOpenHelper");
+    protected static final ClassName COLUMN_META = ClassName.get("com.jeppeman.sqliteprocessor",
+            "ColumnMeta");
     protected static final ClassName CLASS_NOT_FOUND_EXCEPTION =
             ClassName.get(ClassNotFoundException.class);
 
