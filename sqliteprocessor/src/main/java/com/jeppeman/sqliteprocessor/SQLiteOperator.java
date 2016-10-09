@@ -81,11 +81,11 @@ public final class SQLiteOperator<T> {
      * @return an {@link Observable} where an instance of type {@link T} based on the raw query
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public GetSingleStatement<T> getSingle(final @Nullable Object id) {
-        return new GetSingleStatement<>(mContext, getGeneratedObject(null), id);
+    public GetSingleOperation<T> getSingle(final @Nullable Object id) {
+        return new GetSingleOperation<>(mContext, getGeneratedObject(null), id);
     }
 
-    public GetSingleStatement<T> getSingle() {
+    public GetSingleOperation<T> getSingle() {
         return getSingle(null);
     }
 
@@ -100,8 +100,8 @@ public final class SQLiteOperator<T> {
      * @return an {@link Observable} where a {@link List} of type {@link T} based on the raw query
      * is passed as the item in {@link Subscriber#onNext(Object)}
      */
-    public GetListStatement<T> getList() {
-        return new GetListStatement<>(mContext, getGeneratedObject(null));
+    public GetListOperation<T> getList() {
+        return new GetListOperation<>(mContext, getGeneratedObject(null));
     }
 
     /**
@@ -113,21 +113,21 @@ public final class SQLiteOperator<T> {
      * @return an {@link Observable} where the objectToInsert parameter is passed as the item
      * in {@link Subscriber#onNext(Object)}
      */
-    public InsertStatement<T> insert(final @NonNull T... objectsToInsert) {
+    public InsertOperation<T> insert(final @NonNull T... objectsToInsert) {
         final SQLiteDAO<T>[] generatedObjects = new SQLiteDAO[objectsToInsert.length];
         for (int i = 0; i < objectsToInsert.length; i++) {
             generatedObjects[i] = getGeneratedObject(objectsToInsert[i]);
         }
-        return new InsertStatement<>(mContext, generatedObjects);
+        return new InsertOperation<>(mContext, generatedObjects);
     }
 
     /**
      * Updates a database record based on an object of type {@link T}, blocking operation.
      *
      * @param objectsToUpdate the object to update
-     * @return an {@link UpdateStatement}
+     * @return an {@link UpdateOperation}
      */
-    public UpdateStatement<T> update(final @Nullable T... objectsToUpdate) {
+    public UpdateOperation<T> update(final @Nullable T... objectsToUpdate) {
         final SQLiteDAO generated = getGeneratedObject(null);
         SQLiteDAO<T>[] generatedObjects = null;
         if (objectsToUpdate != null) {
@@ -137,7 +137,7 @@ public final class SQLiteOperator<T> {
             }
         }
 
-        return new UpdateStatement<>(mContext, generated, generatedObjects);
+        return new UpdateOperation<>(mContext, generated, generatedObjects);
     }
 
     /**
@@ -149,7 +149,7 @@ public final class SQLiteOperator<T> {
      * @return an {@link Observable} where null is passed as the item in
      * {@link Subscriber#onNext(Object)}
      */
-    public DeleteStatement<T> delete(final @Nullable T... objectsToDelete) {
+    public DeleteOperation<T> delete(final @Nullable T... objectsToDelete) {
         final SQLiteDAO generated = getGeneratedObject(null);
         SQLiteDAO<T>[] generatedObjects = null;
         if (objectsToDelete != null) {
@@ -159,6 +159,6 @@ public final class SQLiteOperator<T> {
             }
         }
 
-        return new DeleteStatement<>(mContext, generated, generatedObjects);
+        return new DeleteOperation<>(mContext, generated, generatedObjects);
     }
 }

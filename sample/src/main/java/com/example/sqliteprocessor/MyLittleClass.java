@@ -45,6 +45,12 @@ public class MyLittleClass {
     Boolean yo;
 
     @SQLiteField
+    String newString;
+
+    @SQLiteField
+    String newerString;
+
+    @SQLiteField
     @ForeignKey(
             table = "test",
             fieldReference = "id",

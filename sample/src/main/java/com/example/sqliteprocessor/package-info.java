@@ -4,6 +4,7 @@
                 dbVersion = 2,
                 tables = {
                         MyLittleClass.class,
+                        TestTable.class,
                         MyLittleClass2.class
                 }
         ),

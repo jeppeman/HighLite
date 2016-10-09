@@ -10,6 +10,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.lang.model.element.Element;
@@ -55,7 +56,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
     private CodeBlock getUpgradeBlock(final Element element, final SQLiteTable table) {
         final String cursorVarName = table.tableName() + "Cursor",
                 dbColsVarName = table.tableName() + "Cols",
-                createSqlCursorVarName = table.tableName() + "Cursor",
+                colsToSaveVarName = table.tableName() + "ColsToSave",
+                createSqlCursorVarName = table.tableName() + "CreateCursor",
                 createSqlStatementVarName = table.tableName() + "Create";
 
 //        final CodeBlock.Builder addColumnStatements = CodeBlock.builder();
@@ -91,49 +93,54 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 //        }
 
         final CodeBlock.Builder recreateStatement = CodeBlock.builder();
-        if (table.autoAddColumns() && table.autoDeleteColumns()) {
-            final StringBuilder columnsToSave = new StringBuilder(),
-                    columnsToSaveWithTypes = new StringBuilder();
-            for (final Element enclosed : element.getEnclosedElements()) {
-                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-                if (field == null) continue;
+        final Map<String, String> columnsMap = new LinkedHashMap<>();
+        final StringBuilder columnsToSave = new StringBuilder(),
+                columnsToSaveWithTypes = new StringBuilder();
+        for (final Element enclosed : element.getEnclosedElements()) {
+            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            if (field == null) continue;
 
-                final String fieldName = getDBFieldName(enclosed, field);
-                columnsToSaveWithTypes.append("`");
-                columnsToSaveWithTypes.append(fieldName);
-                columnsToSaveWithTypes.append("`");
-                columnsToSaveWithTypes.append(" ");
-                columnsToSaveWithTypes.append(getFieldType(enclosed, field));
+            final StringBuilder fieldCreator = new StringBuilder();
+            final String fieldName = getDBFieldName(enclosed, field);
+            fieldCreator.append("`");
+            fieldCreator.append(fieldName);
+            fieldCreator.append("`");
+            fieldCreator.append(" ");
+            fieldCreator.append(getFieldType(enclosed, field));
 
-                final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
-                if (primaryKey != null) {
-                    columnsToSaveWithTypes.append(" PRIMARY KEY");
-                    columnsToSaveWithTypes.append(
-                            primaryKey.autoIncrement()
-                                    ? " AUTOINCREMENT"
-                                    : "");
-                }
-
-                final ForeignKey foreignKey = enclosed.getAnnotation(ForeignKey.class);
-                if (foreignKey != null) {
-                    columnsToSaveWithTypes.append(", ");
-                    columnsToSaveWithTypes.append(
-                            String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
-                                    fieldName, foreignKey.table(), foreignKey.fieldReference()));
-                    if (foreignKey.cascadeOnDelete()) {
-                        columnsToSaveWithTypes.append(" ON DELETE CASCADE");
-                    }
-
-                    if (foreignKey.cascadeOnUpdate()) {
-                        columnsToSaveWithTypes.append(" ON UPDATE CASCADE");
-                    }
-                }
-
-                columnsToSaveWithTypes.append(", ");
-
-                columnsToSave.append(getDBFieldName(enclosed, field));
-                columnsToSave.append(",");
+            final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
+            if (primaryKey != null) {
+                fieldCreator.append(" PRIMARY KEY");
+                fieldCreator.append(
+                        primaryKey.autoIncrement()
+                                ? " AUTOINCREMENT"
+                                : "");
             }
+
+            final ForeignKey foreignKey = enclosed.getAnnotation(ForeignKey.class);
+            if (foreignKey != null) {
+                fieldCreator.append(", ");
+                fieldCreator.append(
+                        String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
+                                fieldName, foreignKey.table(), foreignKey.fieldReference()));
+                if (foreignKey.cascadeOnDelete()) {
+                    fieldCreator.append(" ON DELETE CASCADE");
+                }
+
+                if (foreignKey.cascadeOnUpdate()) {
+                    fieldCreator.append(" ON UPDATE CASCADE");
+                }
+            }
+
+            columnsToSaveWithTypes.append(fieldCreator);
+            columnsToSaveWithTypes.append(", ");
+
+            columnsToSave.append(fieldName);
+            columnsToSave.append(",");
+            columnsMap.put(fieldName, fieldCreator.toString());
+        }
+
+        if (table.autoAddColumns() && table.autoDeleteColumns()) {
             recreateStatement.add(
                     getRecreateTableStatement("database", table.tableName(),
                             columnsToSave.substring(0, columnsToSave.length() - 1),
@@ -141,50 +148,83 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                                     columnsToSaveWithTypes.length() - 2)))
                     .add("\n");
         } else if (!table.autoDeleteColumns()) {
-            final String colsWithTypesVar = table.tableName() + "colsWithTypesBuilder",
-                    colsVar = table.tableName() + "ColsBuilder";
+            final String currentFieldsVar = table.tableName() + "CurrentFields";
+            final CodeBlock.Builder currentFieldsPopulator = CodeBlock.builder();
+            for (final Map.Entry<String, String> entry : columnsMap.entrySet()) {
+                currentFieldsPopulator.addStatement("$L.put($S, $S)", currentFieldsVar,
+                        entry.getKey(), entry.getValue());
+            }
+
             recreateStatement
                     .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
                                     + "sqlite_master WHERE `type` = 'table' AND `name` = '$L';\", "
                                     + "null)",
                             CURSOR, createSqlCursorVarName, table.tableName())
                     .addStatement("$T $L = $S", STRING, createSqlStatementVarName, "")
-                    .addStatement("if (!$L.moveToFirst()) return", cursorVarName + "x")
+                    .addStatement("if (!$L.moveToFirst()) return", createSqlCursorVarName)
                     .add("\n")
                     .beginControlFlow("do")
                     .addStatement("$L += $L.getString(0)", createSqlStatementVarName,
                             createSqlCursorVarName)
-                    .endControlFlow("while ($L.moveToNext())", cursorVarName + "x")
+                    .endControlFlow("while ($L.moveToNext())", createSqlCursorVarName)
                     .add("\n")
+                    .addStatement("final $T<String, String> $L = new $T<>()", MAP, currentFieldsVar,
+                            LINKED_HASHMAP)
+                    .add(currentFieldsPopulator.build())
                     .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
                             + "null)", CURSOR, cursorVarName, table.tableName())
                     .add("\n")
                     .addStatement("if (!$L.moveToFirst()) return", cursorVarName)
                     .add("\n")
-                    .addStatement("final $T<String, String> $L = new $T<>()", MAP, dbColsVarName,
-                            LINKED_HASHMAP)
+                    .addStatement("final $T<$T> $L = new $T<>()", LIST, STRING, dbColsVarName,
+                            ARRAY_LIST)
                     .add("\n")
                     .beginControlFlow("do")
-                    .addStatement("$L.put($L.getString(COL_NAME_INDEX), "
-                                    + "$L.getString(COL_TYPE_INDEX))", dbColsVarName,
-                            cursorVarName, cursorVarName)
+                    .addStatement("$L.add($L.getString(COL_NAME_INDEX))", dbColsVarName,
+                            cursorVarName)
                     .endControlFlow("while ($L.moveToNext())", cursorVarName)
                     .add("\n")
                     .addStatement("$L.close()", cursorVarName)
                     .add("\n")
-                    .add("final StringBuilder $L = new StringBuilder(), ", colsWithTypesVar)
-                    .add("$L = new StringBuilder();\n", colsVar)
-                    .beginControlFlow("for (final Map.Entry<String, String> entry : $L.entrySet())",
-                            dbColsVarName)
-                    .addStatement("$L.append(String.format(\"`%s` %s\", entry.getKey(), "
-                            + "entry.getValue()))", colsWithTypesVar)
-                    .addStatement("$L.append($S)", colsWithTypesVar, ", ")
-                    .addStatement("$L.append(String.format(\"`%s`\", entry.getKey()))", colsVar)
-                    .addStatement("$L.append($S)", colsVar, ", ")
-                    .endControlFlow();
+                    .addStatement("$L = $L.substring(0, $L.length() - 1) + $S",
+                            createSqlStatementVarName, createSqlStatementVarName,
+                            createSqlStatementVarName, ", ")
+                    .addStatement("$T $L = new $T()", STRING_BUILDER, colsToSaveVarName,
+                            STRING_BUILDER)
+                    .beginControlFlow("for (final $T.Entry<$T, $T> entry : $L.entrySet())", MAP,
+                            STRING, STRING, currentFieldsVar)
+                    .beginControlFlow("if ($L.contains(entry.getKey()))", dbColsVarName)
+                    .addStatement("$L.append($S)", colsToSaveVarName, "`")
+                    .addStatement("$L.append(entry.getKey())", colsToSaveVarName)
+                    .addStatement("$L.append($S)", colsToSaveVarName, "`")
+                    .addStatement("$L.append($S)", colsToSaveVarName, ", ")
+                    .addStatement("continue")
+                    .endControlFlow()
+                    .add("\n")
+                    .addStatement("$L += entry.getValue() + $S", createSqlStatementVarName, ", ")
+                    .endControlFlow()
+                    .beginControlFlow("if ($L.length() > 0)", colsToSaveVarName)
+                    .addStatement("$L = new $T($L.substring(0, $L.length() - 2))",
+                            colsToSaveVarName, STRING_BUILDER, colsToSaveVarName, colsToSaveVarName)
+                    .endControlFlow()
+                    .addStatement("$L = $L.substring(0, $L.length() - 2) + $S",
+                            createSqlStatementVarName, createSqlStatementVarName,
+                            createSqlStatementVarName, ");");
+//                    .add("final StringBuilder $L = new StringBuilder(), ", colsWithTypesVar)
+//                    .add("$L = new StringBuilder();\n", colsVar)
+//                    .beginControlFlow("for (final Map.Entry<String, String> entry : $L.entrySet()
+// )",
+//                            dbColsVarName)
+//                    .addStatement("$L.append(String.format(\"`%s` %s\", entry.getKey(), "
+//                            + "entry.getValue()))", colsWithTypesVar)
+//                    .addStatement("$L.append($S)", colsWithTypesVar, ", ")
+//                    .addStatement("$L.append(String.format(\"`%s`\", entry.getKey()))", colsVar)
+//                    .addStatement("$L.append($S)", colsVar, ", ")
+//                    .endControlFlow();
 
             recreateStatement
-                    .add(getRecreateTableStatement("database", table.tableName()))
+                    .add(getRecreateTableStatementSaveColumns("database", table.tableName(),
+                            createSqlStatementVarName, colsToSaveVarName))
                     .add("\n");
         }
 
@@ -235,15 +275,17 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
-    private CodeBlock getRecreateTableStatement(final String dbVarName, final String tableName) {
+    private CodeBlock getRecreateTableStatementSaveColumns(final String dbVarName,
+                                                           final String tableName,
+                                                           final String colsWithTypesVarName,
+                                                           final String colsVarName) {
         return CodeBlock.builder()
                 .addStatement("$L.execSQL($S)", dbVarName, "BEGIN TRANSACTION;")
-                .addStatement("$L.execSQL(String.format(\"CREATE TABLE $L_backup($L);\", "
-                                + "$LcolsWithTypesBuilder.toString()))", dbVarName,
-                        tableName, "%s", tableName)
+                .addStatement("$L.execSQL($L.replace($S, $S))", dbVarName, colsWithTypesVarName,
+                        tableName, tableName + "_backup")
                 .addStatement("$L.execSQL(String.format(\"INSERT INTO $L_backup SELECT "
-                                + "%s FROM $L;\", $LColsBuilder.toString()))", dbVarName,
-                        tableName, tableName, tableName)
+                                + "%s FROM $L;\", $L))", dbVarName,
+                        tableName, tableName, colsVarName)
 //                        String.format(CodeBlock.of("").toString(), tableName, tableName))
                 .addStatement("$L.execSQL($S)", dbVarName,
                         String.format("DROP TABLE %s;", tableName))

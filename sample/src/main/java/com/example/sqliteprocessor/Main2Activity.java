@@ -17,12 +17,18 @@ public class Main2Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
+//        TestTable table = new TestTable();
+//        table.id = 7;
+//        SQLiteOperator.from(this, TestTable.class)
+//                .insert(table)
+//                .executeBlocking();
+
         MyLittleClass m = new MyLittleClass();
         m.name = "asdf";
         m.nameList = Arrays.asList("a, ", "c", "b");
+        m.foreign = 7;
         SQLiteOperator.from(this, MyLittleClass.class)
                 .insert(m)
-                .prepareStatement()
                 .execute()
                 .subscribe(new Completable.CompletableSubscriber() {
                     @Override

@@ -30,6 +30,7 @@ abstract class JavaWritableClass {
     protected static final ClassName OBJECT_OS = ClassName.get(ObjectOutputStream.class);
     protected static final ClassName OBJECT_IS = ClassName.get(ObjectInputStream.class);
     protected static final ClassName STRING = ClassName.get(String.class);
+    protected static final ClassName STRING_BUILDER = ClassName.get(StringBuilder.class);
     protected static final ClassName LIST = ClassName.get(List.class);
     protected static final ClassName MAP = ClassName.get(Map.class);
     protected static final ClassName HASHMAP = ClassName.get(HashMap.class);
