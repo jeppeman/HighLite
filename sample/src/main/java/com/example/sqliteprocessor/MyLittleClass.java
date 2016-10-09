@@ -20,7 +20,7 @@ public class MyLittleClass {
 
     @OnCreate
     public static void onCreate(SQLiteDatabase database) {
-        int x = 2;
+        int x = 1;
     }
 
     @OnUpgrade
@@ -43,13 +43,13 @@ public class MyLittleClass {
             cascadeOnUpdate = true)
     int foreign;
 
-//    @SQLiteField
-//    @ForeignKey(
-//            table = "test2",
-//            fieldReference = "id",
-//            cascadeOnDelete = true,
-//            cascadeOnUpdate = true)
-//    int foreign2;
+    @SQLiteField
+    @ForeignKey(
+            table = "test2",
+            fieldReference = "id",
+            cascadeOnDelete = true,
+            cascadeOnUpdate = true)
+    int foreign2;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
     Short shortz;

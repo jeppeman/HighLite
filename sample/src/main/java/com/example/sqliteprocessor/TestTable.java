@@ -1,5 +1,6 @@
 package com.example.sqliteprocessor;
 
+import com.jeppeman.sqliteprocessor.ForeignKey;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
 import com.jeppeman.sqliteprocessor.SQLiteField;
 import com.jeppeman.sqliteprocessor.SQLiteTable;
@@ -12,9 +13,13 @@ import com.jeppeman.sqliteprocessor.SQLiteTable;
 public class TestTable {
 
     @SQLiteField
-    @PrimaryKey
+    @PrimaryKey(autoIncrement = true)
     int id;
 
     @SQLiteField
     String oldString;
+
+    @SQLiteField
+    @ForeignKey(table = "myLittleTable2", fieldReference = "id")
+    int foreigners;
 }

@@ -5,6 +5,8 @@ import android.support.v7.app.AppCompatActivity;
 
 import com.jeppeman.sqliteprocessor.SQLiteOperator;
 
+import rx.Subscriber;
+
 public class Main2Activity extends AppCompatActivity {
 
     @Override
@@ -12,13 +14,27 @@ public class Main2Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
-        MyLittleClass2 table = new MyLittleClass2();
-        table.namezz = "xxx";
-        SQLiteOperator.from(this, MyLittleClass2.class)
-                .insert(table)
-                .executeBlocking();
+        final SQLiteOperator<MyLittleClass2> operator = SQLiteOperator.from(this,
+                MyLittleClass2.class);
+        operator
+                .getList()
+                .execute()
+                .subscribe(new Subscriber<MyLittleClass2>() {
+                    @Override
+                    public void onCompleted() {
 
+                    }
 
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onNext(MyLittleClass2 myLittleClass2) {
+
+                    }
+                });
 
 //        MyLittleClass m = new MyLittleClass();
 //        m.name = "asdf";

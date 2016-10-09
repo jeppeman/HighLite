@@ -62,7 +62,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 createSqlStatementVarName = table.tableName() + "Create",
                 foreignKeysSplitVarName = table.tableName() + "ForeignKeysSplit",
                 foreignKeysVarName = table.tableName() + "ForeignKeys",
-                shouldRecreateVarName = table.tableName() + "ShouldRecreate";
+                shouldRecreateVarName = table.tableName() + "ShouldRecreate",
+                tableExistsVarName = table.tableName() + "Exists";
 
         final String currentFieldsVar = table.tableName() + "CurrentFields";
         final CodeBlock.Builder currentFieldsPopulator = CodeBlock.builder();
@@ -75,12 +76,16 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         }
 
         return CodeBlock.builder()
+                .addStatement("boolean $L = $L", tableExistsVarName, table.autoCreate()
+                        ? "true"
+                        : "false")
                 .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
                                 + "sqlite_master WHERE `type` = 'table' AND `name` = '$L';\", "
                                 + "null)",
                         CURSOR, createSqlCursorVarName, table.tableName())
                 .addStatement("$T $L = $S", STRING, createSqlStatementVarName, "")
                 .beginControlFlow("if ($L.moveToFirst())", createSqlCursorVarName)
+                .addStatement("$L = true", tableExistsVarName)
                 .beginControlFlow("do")
                 .addStatement("$L += $L.getString(0)", createSqlStatementVarName,
                         createSqlCursorVarName)
@@ -129,7 +134,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 colsToSaveVarName = table.tableName() + "ColsToSave",
                 createSqlStatementVarName = table.tableName() + "Create",
                 foreignKeysVarName = table.tableName() + "ForeignKeys",
-                shouldRecreateVarName = table.tableName() + "ShouldRecreate";
+                shouldRecreateVarName = table.tableName() + "ShouldRecreate",
+                tableExistsVarName = table.tableName() + "Exists";
 
         final CodeBlock.Builder recreateStatement = CodeBlock.builder();
         final Map<String, String> columnsMap = new LinkedHashMap<>(),
@@ -180,24 +186,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         final CodeBlock initialRecreationBlock = getInitialRecreationBlock(table, columnsMap,
                 foreignKeysMap);
-        final CodeBlock.Builder checkIfTableExists = CodeBlock.builder();
-
-//        if (!table.autoCreate()) {
-//            checkIfTableExists
-//                    .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
-//                                + "sqlite_master WHERE `type` = 'table' AND `name` = '$L';\", "
-//                                    + "null)",
-//                            CURSOR, createSqlCursorVarName, table.tableName())
-//                    .addStatement("$T $L = $S", STRING, createSqlStatementVarName, "")
-//                    .beginControlFlow("if ($L.moveToFirst())", createSqlCursorVarName)
-//                    .beginControlFlow("do")
-//                    .addStatement("$L += $L.getString(0)", createSqlStatementVarName,
-//                            createSqlCursorVarName)
-//                    .endControlFlow("while ($L.moveToNext())", createSqlCursorVarName)
-//                    .endControlFlow()
-//                    .addStatement("$L.close()", createSqlCursorVarName)
-//                    .add("\n")
-//        }
 
         if (table.autoAddColumns() && table.autoDeleteColumns()) {
             recreateStatement
@@ -228,7 +216,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                             createSqlStatementVarName, createSqlStatementVarName,
                             foreignKeysVarName, createSqlStatementVarName,
                             foreignKeysVarName, ");")
-                    .beginControlFlow("if ($L)", shouldRecreateVarName)
+                    .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
                     .add(getRecreateStatement("database", table.tableName(),
                             createSqlStatementVarName, colsToSaveVarName))
                     .endControlFlow()
@@ -268,7 +256,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                             createSqlStatementVarName, createSqlStatementVarName,
                             foreignKeysVarName, createSqlStatementVarName,
                             foreignKeysVarName, ");")
-                    .beginControlFlow("if ($L)", shouldRecreateVarName)
+                    .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
                     .add(getRecreateStatement("database", table.tableName(),
                             createSqlStatementVarName, colsToSaveVarName))
                     .endControlFlow()
@@ -300,7 +288,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                             createSqlStatementVarName, createSqlStatementVarName,
                             foreignKeysVarName, createSqlStatementVarName,
                             foreignKeysVarName, ");")
-                    .beginControlFlow("if ($L)", shouldRecreateVarName)
+                    .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
                     .add(getRecreateStatement("database", table.tableName(),
                             createSqlStatementVarName, colsToSaveVarName))
                     .endControlFlow()
@@ -412,17 +400,50 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         boolean foundForeignKey = false;
         for (final Map.Entry<SQLiteTable, Element> tableElementEntry
                 : mTableElementMap.entrySet()) {
-            for (final Element enclosed : tableElementEntry.getValue().getEnclosedElements()) {
-                if (enclosed.getAnnotation(ForeignKey.class) == null) continue;
 
-                code.beginControlFlow("if (!database.isReadOnly())")
-                        .addStatement("database.execSQL($S)", "PRAGMA foreign_keys=ON;")
-                        .endControlFlow();
-                foundForeignKey = true;
-                break;
+            final CodeBlock.Builder onOpenStatements = CodeBlock.builder();
+            int onOpenCounter = 0;
+            for (final Element enclosed : tableElementEntry.getValue().getEnclosedElements()) {
+                if (!foundForeignKey && enclosed.getAnnotation(ForeignKey.class) != null) {
+
+                    code.beginControlFlow("if (!database.isReadOnly())")
+                            .addStatement("database.execSQL($S)", "PRAGMA foreign_keys=ON;")
+                            .endControlFlow();
+                    foundForeignKey = true;
+                }
+
+                final Element element = tableElementEntry.getValue();
+
+                if (enclosed.getAnnotation(OnOpen.class) == null) continue;
+
+                if (++onOpenCounter > 1) {
+                    throw new ProcessingException(enclosed,
+                            String.format("Only one method per class may be annotated with %s",
+                                    OnOpen.class.getCanonicalName()));
+                }
+
+                if (!enclosed.getModifiers().contains(Modifier.STATIC)) {
+                    throw new ProcessingException(enclosed,
+                            String.format("%s annotated methods need to be static",
+                                    OnOpen.class.getCanonicalName()));
+                }
+
+                final ExecutableElement executableElement = (ExecutableElement) enclosed;
+                if (executableElement.getParameters().size() != 1
+                        || !SQLITE_DATABASE.equals(
+                        ClassName.get(executableElement.getParameters().get(0).asType()))) {
+                    throw new ProcessingException(enclosed,
+                            String.format("%s annotated methods needs to have exactly "
+                                            + "one parameter, being of type %s",
+                                    OnOpen.class.getCanonicalName(),
+                                    SQLITE_DATABASE.toString()));
+                }
+
+                onOpenStatements.addStatement("$T.$L(database)", ClassName.get(element.asType()),
+                        enclosed.getSimpleName());
             }
 
-            if (foundForeignKey) break;
+            code.add(onOpenStatements.build());
         }
 
         return MethodSpec.methodBuilder("onOpen")

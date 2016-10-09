@@ -11,7 +11,6 @@ import rx.Completable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-@SuppressWarnings("unchecked")
 public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
 
     private final Context mContext;

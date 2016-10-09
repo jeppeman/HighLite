@@ -11,7 +11,6 @@ import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-@SuppressWarnings("unchecked")
 public class GetSingleOperation<T> extends QueryableOperation<GetSingleOperation<T>> {
 
     private final Context mContext;
