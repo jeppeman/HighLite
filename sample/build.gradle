@@ -28,6 +28,7 @@ android {
 dependencies {
     testCompile deps.junit
     compile deps.appcompat
+    compile deps.android
 
 //    compile 'com.jeppeman:sqliteprocessor:1.0-SNAPSHOT'
 //    apt 'com.jeppeman:sqliteprocessor-compiler:1.0-SNAPSHOT'

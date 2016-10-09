@@ -18,6 +18,8 @@ import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypesException;
@@ -30,6 +32,7 @@ import javax.tools.Diagnostic;
  * @author jesper
  */
 @AutoService(Processor.class)
+@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class SQLiteProcessor extends AbstractProcessor {
 
     private Messager mMessager;
@@ -141,7 +144,7 @@ public class SQLiteProcessor extends AbstractProcessor {
     private Set<Class<? extends Annotation>> getSupportedAnnotations() {
         final Set<Class<? extends Annotation>> annotations = new LinkedHashSet<>();
 
-        annotations.add(AutoIncrement.class);
+        annotations.add(ForeignKey.class);
         annotations.add(PrimaryKey.class);
         annotations.add(SQLiteField.class);
         annotations.add(SQLiteGetter.class);
@@ -151,6 +154,7 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteDatabaseDescriptor.class);
         annotations.add(OnCreate.class);
         annotations.add(OnUpgrade.class);
+        annotations.add(OnOpen.class);
 
         return annotations;
     }

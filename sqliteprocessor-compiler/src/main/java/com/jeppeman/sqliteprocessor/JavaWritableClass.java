@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,9 +30,11 @@ abstract class JavaWritableClass {
     protected static final ClassName OBJECT_OS = ClassName.get(ObjectOutputStream.class);
     protected static final ClassName OBJECT_IS = ClassName.get(ObjectInputStream.class);
     protected static final ClassName STRING = ClassName.get(String.class);
+    protected static final ClassName STRING_BUILDER = ClassName.get(StringBuilder.class);
     protected static final ClassName LIST = ClassName.get(List.class);
     protected static final ClassName MAP = ClassName.get(Map.class);
     protected static final ClassName HASHMAP = ClassName.get(HashMap.class);
+    protected static final ClassName LINKED_HASHMAP = ClassName.get(LinkedHashMap.class);
     protected static final ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
     protected static final ClassName CONTEXT = ClassName.get("android.content", "Context");
     protected static final ClassName CURSOR = ClassName.get("android.database", "Cursor");
@@ -43,6 +46,8 @@ abstract class JavaWritableClass {
             "SQLiteDatabase");
     protected static final ClassName SQLITE_OPEN_HELPER = ClassName.get("android.database.sqlite",
             "SQLiteOpenHelper");
+    protected static final ClassName COLUMN_META = ClassName.get("com.jeppeman.sqliteprocessor",
+            "ColumnMeta");
     protected static final ClassName CLASS_NOT_FOUND_EXCEPTION =
             ClassName.get(ClassNotFoundException.class);
 

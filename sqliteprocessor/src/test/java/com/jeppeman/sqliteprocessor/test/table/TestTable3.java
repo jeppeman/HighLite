@@ -1,6 +1,5 @@
 package com.jeppeman.sqliteprocessor.test.table;
 
-import com.jeppeman.sqliteprocessor.AutoIncrement;
 import com.jeppeman.sqliteprocessor.PrimaryKey;
 import com.jeppeman.sqliteprocessor.SQLiteField;
 import com.jeppeman.sqliteprocessor.SQLiteTable;
@@ -12,7 +11,6 @@ import com.jeppeman.sqliteprocessor.SQLiteTable;
 public class TestTable3 {
 
     @SQLiteField
-    @AutoIncrement
-    @PrimaryKey
+    @PrimaryKey(autoIncrement = true)
     public long xx;
 }

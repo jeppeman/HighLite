@@ -12,6 +12,12 @@ import java.lang.annotation.Target;
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
-@Target({ElementType.FIELD, ElementType.METHOD })
+@Target({ElementType.FIELD, ElementType.METHOD})
 public @interface PrimaryKey {
+    /**
+     * Wheather to auto increment this key or not
+     *
+     * @return true if auto increment otherwise false
+     */
+    boolean autoIncrement() default false;
 }
