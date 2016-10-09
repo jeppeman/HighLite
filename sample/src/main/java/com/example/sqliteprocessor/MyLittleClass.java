@@ -20,7 +20,7 @@ public class MyLittleClass {
 
     @OnCreate
     public static void onCreate(SQLiteDatabase database) {
-        int x = 10;
+        int x = 2;
     }
 
     @OnUpgrade
@@ -34,6 +34,22 @@ public class MyLittleClass {
 
     @SQLiteField
     String name;
+
+    @SQLiteField
+    @ForeignKey(
+            table = "test",
+            fieldReference = "id",
+            cascadeOnDelete = true,
+            cascadeOnUpdate = true)
+    int foreign;
+
+//    @SQLiteField
+//    @ForeignKey(
+//            table = "test2",
+//            fieldReference = "id",
+//            cascadeOnDelete = true,
+//            cascadeOnUpdate = true)
+//    int foreign2;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
     Short shortz;
@@ -49,12 +65,4 @@ public class MyLittleClass {
 
     @SQLiteField
     String newerString;
-
-    @SQLiteField
-    @ForeignKey(
-            table = "test",
-            fieldReference = "id",
-            cascadeOnDelete = true,
-            cascadeOnUpdate = true)
-    int foreign;
 }

@@ -8,10 +8,13 @@ import com.jeppeman.sqliteprocessor.SQLiteTable;
  * Created by jesper on 2016-10-09.
  */
 
-@SQLiteTable(tableName = "test")
+@SQLiteTable(tableName = "test", autoDeleteColumns = true)
 public class TestTable {
 
     @SQLiteField
     @PrimaryKey
     int id;
+
+    @SQLiteField
+    String oldString;
 }
