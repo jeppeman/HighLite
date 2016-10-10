@@ -66,7 +66,7 @@ public final class SQLiteOperator<T> {
             if (cause instanceof Error) {
                 throw (Error) cause;
             }
-            throw new RuntimeException("Unable to create binding instance.", cause);
+            throw new RuntimeException("Unable to create DAO instance.", cause);
         }
     }
 

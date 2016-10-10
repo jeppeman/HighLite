@@ -20,8 +20,8 @@ public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
     private final SQLiteDAO<T>[] mObjectsToUpdate;
 
     UpdateOperation(final @NonNull Context context,
-                           final @Nullable SQLiteDAO<T> generated,
-                           final @Nullable SQLiteDAO<T>[] objectsToUpdate) {
+                    final @Nullable SQLiteDAO<T> generated,
+                    final @Nullable SQLiteDAO<T>[] objectsToUpdate) {
         mContext = context;
         mGenerated = generated;
         mObjectsToUpdate = objectsToUpdate;

@@ -76,9 +76,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         }
 
         return CodeBlock.builder()
-                .addStatement("boolean $L = $L", tableExistsVarName, table.autoCreate()
-                        ? "true"
-                        : "false")
+                .addStatement("boolean $L", tableExistsVarName)
                 .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
                                 + "sqlite_master WHERE `type` = 'table' AND `name` = '$L';\", "
                                 + "null)",
@@ -90,6 +88,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .addStatement("$L += $L.getString(0)", createSqlStatementVarName,
                         createSqlCursorVarName)
                 .endControlFlow("while ($L.moveToNext())", createSqlCursorVarName)
+                .nextControlFlow("else")
+                .addStatement("$L = false", tableExistsVarName)
                 .endControlFlow()
                 .addStatement("$L.close()", createSqlCursorVarName)
                 .add("\n")

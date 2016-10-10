@@ -92,8 +92,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .addStatement("oos.writeObject(mTarget.$L)", enclosed.getSimpleName())
                         .addStatement("$L.put($S, baos.toByteArray())", contentValsVar,
                                 fieldName)
-                        .endControlFlow()
-                        .beginControlFlow("catch ($T e)", IO_EXCEPTION)
+                        .nextControlFlow("catch ($T e)", IO_EXCEPTION)
                         .addStatement("throw new $T(e)", RUNTIME_EXCEPTION)
                         .endControlFlow();
             } else {
@@ -332,7 +331,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".rawQuery(rawQueryClause, rawQueryArgs)",
                         CURSOR, cursorVarName, "context")
-                .addStatement("if (!$L.moveToFirst()) return null", cursorVarName)
+                .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
+                .addStatement("$L.close()", cursorVarName)
+                .addStatement("return null")
+                .endControlFlow()
                 .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -355,7 +357,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
                                 + "orderBy, $S)",
                         CURSOR, cursorVarName, "context", mTable.tableName(), 1)
-                .addStatement("if (!$L.moveToFirst()) return null", cursorVarName)
+                .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
+                .addStatement("$L.close()", cursorVarName)
+                .addStatement("return null")
+                .endControlFlow()
                 .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -376,7 +381,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".rawQuery(rawQueryClause, rawQueryArgs)",
                         CURSOR, cursorVarName, "context")
-                .addStatement("if (!$L.moveToFirst()) return ret", cursorVarName)
+                .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
+                .addStatement("$L.close()", cursorVarName)
+                .addStatement("return ret")
+                .endControlFlow()
                 .beginControlFlow("do")
                 .addStatement("ret.add(instantiateObject(cursor))")
                 .endControlFlow("while(cursor.moveToNext())")
@@ -404,7 +412,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
                                 + "orderBy, limit)",
                         CURSOR, cursorVarName, "context", mTable.tableName())
-                .addStatement("if (!$L.moveToFirst()) return ret", cursorVarName)
+                .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
+                .addStatement("$L.close()", cursorVarName)
+                .addStatement("return ret")
+                .endControlFlow()
                 .beginControlFlow("do")
                 .addStatement("ret.add(instantiateObject(cursor))")
                 .endControlFlow("while(cursor.moveToNext())")
@@ -452,8 +463,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .addStatement("final $T ois = new $T(bis)", OBJECT_IS, OBJECT_IS)
                         .addStatement("ret.$L = ($T)ois.readObject()", fieldName,
                                 ClassName.get(enclosed.asType()))
-                        .endControlFlow()
-                        .beginControlFlow("catch ($T | $T e)", IO_EXCEPTION,
+                        .nextControlFlow("catch ($T | $T e)", IO_EXCEPTION,
                                 CLASS_NOT_FOUND_EXCEPTION)
                         .addStatement("throw new $T(e)", RUNTIME_EXCEPTION)
                         .endControlFlow()

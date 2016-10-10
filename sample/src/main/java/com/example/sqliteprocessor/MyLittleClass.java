@@ -20,7 +20,7 @@ public class MyLittleClass {
 
     @OnCreate
     public static void onCreate(SQLiteDatabase database) {
-        int x = 1;
+        int x = 3;
     }
 
     @OnUpgrade
