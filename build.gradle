@@ -34,7 +34,7 @@ subprojects { ->
             }
         }
         dependencies {
-            classpath 'com.android.tools.build:gradle:2.2.0'
+            classpath 'com.android.tools.build:gradle:2.2.1'
             classpath 'com.neenbedankt.gradle.plugins:android-apt:1.8'
             classpath 'gradle.plugin.com.kageiit:lintrules:1.1.2'
         }

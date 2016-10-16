@@ -78,9 +78,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return CodeBlock.builder()
                 .addStatement("boolean $L", tableExistsVarName)
                 .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
-                                + "sqlite_master WHERE `type` = 'table' AND `name` = '$L';\", "
-                                + "null)",
-                        CURSOR, createSqlCursorVarName, table.tableName())
+                                + "sqlite_master WHERE `type` = ? AND `name` = ?;\", "
+                                + "new $T[] { $S, $S })",
+                        CURSOR, createSqlCursorVarName, STRING, "table", table.tableName())
                 .addStatement("$T $L = $S", STRING, createSqlStatementVarName, "")
                 .beginControlFlow("if ($L.moveToFirst())", createSqlCursorVarName)
                 .addStatement("$L = true", tableExistsVarName)
@@ -96,9 +96,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .addStatement("final $T<String, String[]> $L = new $T<>()", MAP,
                         currentFieldsVar, LINKED_HASHMAP)
                 .add(currentFieldsPopulator.build())
+                .add("\n")
                 .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
                         + "null)", CURSOR, cursorVarName, table.tableName())
-                .add("\n")
                 .addStatement("final $T<$T> $L = new $T<>()", LIST, STRING, dbColsVarName,
                         ARRAY_LIST)
                 .add("\n")

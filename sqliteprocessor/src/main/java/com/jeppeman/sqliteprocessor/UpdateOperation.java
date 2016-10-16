@@ -31,7 +31,7 @@ public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
     public void executeBlocking() {
         if (mObjectsToUpdate != null) {
             for (final SQLiteDAO<T> objectToUpdate : mObjectsToUpdate) {
-                objectToUpdate.insert(mContext);
+                objectToUpdate.update(mContext);
             }
         } else if (mQuery != null && mGenerated != null) {
             final String[] whereArgsAsStringArray;

@@ -19,7 +19,7 @@ public class TestTable2 {
 
     @OnUpgrade
     public static void onCreate(SQLiteDatabase database, int oldVersion, int newVersion) {
-
+        int x = 1;
     }
 
     @OnOpen
