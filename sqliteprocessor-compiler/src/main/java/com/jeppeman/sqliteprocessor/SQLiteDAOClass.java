@@ -27,15 +27,18 @@ import javax.lang.model.util.Elements;
  */
 final class SQLiteDAOClass extends JavaWritableClass {
 
+    private final String mHelperPackage;
     private final String mDatabaseName;
     private final SQLiteTable mTable;
     private final Element mElement;
     private final Elements mElementUtils;
 
-    SQLiteDAOClass(final String databaseName,
+    SQLiteDAOClass(final String helperPackage,
+                   final String databaseName,
                    final SQLiteTable table,
                    final Element element,
                    final Elements elementUtils) {
+        mHelperPackage = helperPackage;
         mDatabaseName = databaseName;
         mTable = table;
         mElement = element;
@@ -54,7 +57,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
     }
 
     private ClassName getHelperClassName() {
-        return ClassName.get(getPackageName(),
+        return ClassName.get(mHelperPackage,
                 String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
                         + mDatabaseName.substring(1) + "Helper");
     }
@@ -178,7 +181,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addModifiers(Modifier.PRIVATE)
                 .returns(SQLITE_DATABASE)
-                .addStatement("return new $T(context).getReadableDatabase()",
+                .addStatement("return $T.getInstance(context).getReadableDatabase()",
                         getHelperClassName())
                 .build();
     }
@@ -189,7 +192,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addModifiers(Modifier.PRIVATE)
                 .returns(SQLITE_DATABASE)
-                .addStatement("return new $T(context).getWritableDatabase()",
+                .addStatement("return $T.getInstance(context).getWritableDatabase()",
                         getHelperClassName())
                 .build();
     }

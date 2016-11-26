@@ -53,59 +53,63 @@ public class SQLiteProcessor extends AbstractProcessor {
                            final RoundEnvironment roundEnv) {
 
         for (final Element element
-                : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseHolder.class)) {
+                : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseDescriptor.class)) {
 
-            final SQLiteDatabaseHolder dbAnno = element.getAnnotation(SQLiteDatabaseHolder.class);
+            final SQLiteDatabaseDescriptor descriptor =
+                    element.getAnnotation(SQLiteDatabaseDescriptor.class);
+            List<? extends TypeMirror> mirrors = new ArrayList<>();
+            try {
+                descriptor.tables();
+            } catch (MirroredTypesException e) {
+                mirrors = e.getTypeMirrors();
+            }
 
-            for (final SQLiteDatabaseDescriptor descriptor : dbAnno.databases()) {
-                List<? extends TypeMirror> mirrors = new ArrayList<>();
-                try {
-                    descriptor.tables();
-                } catch (MirroredTypesException e) {
-                    mirrors = e.getTypeMirrors();
+            for (final TypeMirror typeMirror : mirrors) {
+                final Element mirrorElem = mTypeUtils.asElement(typeMirror);
+                if (mirrorElem.getAnnotation(SQLiteTable.class) == null) {
+                    error(element, typeMirror.toString()
+                            + " must be annotated with " + SQLiteTable.class.getName());
+                    return true;
                 }
+            }
 
-                for (final TypeMirror typeMirror : mirrors) {
-                    final Element mirrorElem = mTypeUtils.asElement(typeMirror);
-                    if (mirrorElem.getAnnotation(SQLiteTable.class) == null) {
-                        error(element, typeMirror.toString()
-                                + " must be annotated with " + SQLiteTable.class.getName());
-                        return true;
-                    }
-                }
+            final Map<SQLiteTable, Element> tablesForDatabase =
+                    getTableElementMappingForDatabase(roundEnv, mirrors);
 
-                final Map<SQLiteTable, Element> tablesForDatabase =
-                        getTableElementMappingForDatabase(roundEnv, mirrors);
+            final String packageName = mElementUtils
+                    .getPackageOf(element)
+                    .getQualifiedName()
+                    .toString();
+            try {
+                final JavaFile helperFile = new SQLiteOpenHelperClass(element, packageName,
+                        descriptor.dbName(),
+                        tablesForDatabase, descriptor.dbVersion(), mElementUtils,
+                        mTypeUtils).writeJava();
+                helperFile.writeTo(mFiler);
+            } catch (IOException e) {
+                error(element, "Unable to generate helper file for %s: %s",
+                        element.asType().toString(), e.getMessage());
+                return true;
+            } catch (ProcessingException e) {
+                error(e.getElement(), "Unable to generate helper file for %s: %s",
+                        descriptor.dbName(), e.getMessage());
+                return true;
+            }
 
+            for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
                 try {
-                    final JavaFile helperFile = new SQLiteOpenHelperClass(descriptor.dbName(),
-                            tablesForDatabase, descriptor.dbVersion(), mElementUtils,
-                            mTypeUtils).writeJava();
-                    helperFile.writeTo(mFiler);
+                    final JavaFile daoFile = new SQLiteDAOClass(packageName,
+                            descriptor.dbName(),
+                            entry.getKey(), entry.getValue(), mElementUtils).writeJava();
+                    daoFile.writeTo(mFiler);
                 } catch (IOException e) {
-                    error(element, "Unable to generate helper file for %s: %s",
+                    error(element, "Unable to generate DAO file for %s: %s",
                             element.asType().toString(), e.getMessage());
                     return true;
                 } catch (ProcessingException e) {
-                    error(e.getElement(), "Unable to generate helper file for %s: %s",
-                            descriptor.dbName(), e.getMessage());
+                    error(e.getElement(), "Unable to generate DAO file for %s: %s",
+                            entry.getValue().asType().toString(), e.getMessage());
                     return true;
-                }
-
-                for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
-                    try {
-                        final JavaFile daoFile = new SQLiteDAOClass(descriptor.dbName(),
-                                entry.getKey(), entry.getValue(), mElementUtils).writeJava();
-                        daoFile.writeTo(mFiler);
-                    } catch (IOException e) {
-                        error(element, "Unable to generate DAO file for %s: %s",
-                                element.asType().toString(), e.getMessage());
-                        return true;
-                    } catch (ProcessingException e) {
-                        error(e.getElement(), "Unable to generate DAO file for %s: %s",
-                                entry.getValue().asType().toString(), e.getMessage());
-                        return true;
-                    }
                 }
             }
         }
@@ -150,7 +154,6 @@ public class SQLiteProcessor extends AbstractProcessor {
         annotations.add(SQLiteGetter.class);
         annotations.add(SQLiteSetter.class);
         annotations.add(SQLiteTable.class);
-        annotations.add(SQLiteDatabaseHolder.class);
         annotations.add(SQLiteDatabaseDescriptor.class);
         annotations.add(OnCreate.class);
         annotations.add(OnUpgrade.class);
