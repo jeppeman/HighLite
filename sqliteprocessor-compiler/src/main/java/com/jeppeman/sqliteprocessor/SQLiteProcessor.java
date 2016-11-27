@@ -52,11 +52,23 @@ public class SQLiteProcessor extends AbstractProcessor {
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
 
+        final List<String> databases = new ArrayList<>();
+        final Map<Element, JavaFile> helperFiles = new LinkedHashMap<>();
+        final Map<Element, JavaFile> daoFiles = new LinkedHashMap<>();
         for (final Element element
                 : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseDescriptor.class)) {
 
             final SQLiteDatabaseDescriptor descriptor =
                     element.getAnnotation(SQLiteDatabaseDescriptor.class);
+
+            if (databases.contains(descriptor.dbName())) {
+                error(element, "The database " + descriptor.dbName() + " has already "
+                        + "been defined");
+                return true;
+            } else {
+                databases.add(descriptor.dbName());
+            }
+
             List<? extends TypeMirror> mirrors = new ArrayList<>();
             try {
                 descriptor.tables();
@@ -80,39 +92,47 @@ public class SQLiteProcessor extends AbstractProcessor {
                     .getPackageOf(element)
                     .getQualifiedName()
                     .toString();
-            try {
-                final JavaFile helperFile = new SQLiteOpenHelperClass(element, packageName,
+
+            helperFiles.put(element, new SQLiteOpenHelperClass(element, packageName,
+                    descriptor.dbName(),
+                    tablesForDatabase, descriptor.dbVersion(), mElementUtils,
+                    mTypeUtils).writeJava());
+
+            for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
+                daoFiles.put(entry.getValue(), new SQLiteDAOClass(packageName,
                         descriptor.dbName(),
-                        tablesForDatabase, descriptor.dbVersion(), mElementUtils,
-                        mTypeUtils).writeJava();
-                helperFile.writeTo(mFiler);
+                        entry.getKey(), entry.getValue(), mElementUtils).writeJava());
+            }
+        }
+
+        for (final Map.Entry<Element, JavaFile> helperFile : helperFiles.entrySet()) {
+            try {
+                helperFile.getValue().writeTo(mFiler);
             } catch (IOException e) {
-                error(element, "Unable to generate helper file for %s: %s",
-                        element.asType().toString(), e.getMessage());
+                error(helperFile.getKey(), "Unable to generate helper file for %s: %s",
+                        helperFile.getKey().asType().toString(), e.getMessage());
                 return true;
             } catch (ProcessingException e) {
                 error(e.getElement(), "Unable to generate helper file for %s: %s",
-                        descriptor.dbName(), e.getMessage());
+                        helperFile.getKey().asType().toString(), e.getMessage());
                 return true;
             }
+        }
 
-            for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
-                try {
-                    final JavaFile daoFile = new SQLiteDAOClass(packageName,
-                            descriptor.dbName(),
-                            entry.getKey(), entry.getValue(), mElementUtils).writeJava();
-                    daoFile.writeTo(mFiler);
-                } catch (IOException e) {
-                    error(element, "Unable to generate DAO file for %s: %s",
-                            element.asType().toString(), e.getMessage());
-                    return true;
-                } catch (ProcessingException e) {
-                    error(e.getElement(), "Unable to generate DAO file for %s: %s",
-                            entry.getValue().asType().toString(), e.getMessage());
-                    return true;
-                }
+        for (final Map.Entry<Element, JavaFile> daoFile : daoFiles.entrySet()) {
+            try {
+                daoFile.getValue().writeTo(mFiler);
+            } catch (IOException e) {
+                error(daoFile.getKey(), "Unable to generate DAO file for %s: %s",
+                        daoFile.getKey().asType().toString(), e.getMessage());
+                return true;
+            } catch (ProcessingException e) {
+                error(e.getElement(), "Unable to generate DAO file for %s: %s",
+                        daoFile.getKey().asType().toString(), e.getMessage());
+                return true;
             }
         }
+
 
         return true;
     }

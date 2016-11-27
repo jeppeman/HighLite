@@ -464,7 +464,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .addStatement("final $T bis = new $T(cursor.getBlob(i))", BYTE_ARRAY_IS,
                                 BYTE_ARRAY_IS)
                         .addStatement("final $T ois = new $T(bis)", OBJECT_IS, OBJECT_IS)
-                        .addStatement("ret.$L = ($T)ois.readObject()", fieldName,
+                        .addStatement("ret.$L = ($T) ois.readObject()", fieldName,
                                 ClassName.get(enclosed.asType()))
                         .nextControlFlow("catch ($T | $T e)", IO_EXCEPTION,
                                 CLASS_NOT_FOUND_EXCEPTION)
