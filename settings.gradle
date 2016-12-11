@@ -1,7 +1,7 @@
-rootProject.name = "sqliteprocessor-parent"
+rootProject.name = "liteomatic-parent"
 include ':sample'
-include ':sqliteprocessor-annotations'
-include ':sqliteprocessor-compiler'
-include ':sqliteprocessor-lint'
-include ':sqliteprocessor'
+include ':liteomatic-annotations'
+include ':liteomatic-compiler'
+include ':liteomatic-lint'
+include ':liteomatic'
 

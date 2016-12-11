@@ -1,0 +1,55 @@
+apply plugin: 'java'
+
+sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
+targetCompatibility = rootProject.ext.targetCompatibilityVersion
+
+dependencies {
+    compile deps.lintapi
+    compile deps.lintchecks
+
+    testCompile deps.junit
+    testCompile deps.lint
+    testCompile deps.linttests
+    testCompile deps.android
+    testCompile deps.mockito
+    testCompile project(':liteomatic-annotations')
+}
+
+task createProperties(dependsOn: processResources) << {
+    Properties properties = new Properties()
+    File localProps = project.rootProject.file('local.properties')
+    def sdkToolsDir
+    if (localProps.exists()) {
+        properties.load(localProps.newDataInputStream())
+        sdkToolsDir = properties.getProperty('sdk.dir') + "/tools"
+    } else {
+        sdkToolsDir = ""
+    }
+
+    File file = new File("$buildDir/resources/main/")
+    if (!file.exists()) {
+        file.mkdirs()
+    }
+
+    File props = new File(file, 'sdktools.properties')
+
+    if (!props.exists()) {
+        props.createNewFile()
+    }
+
+    props.withWriter { w ->
+        Properties p = new Properties()
+        p['sdkToolsDir'] = sdkToolsDir
+        p.store w, null
+    }
+}
+
+testClasses {
+    dependsOn createProperties
+}
+
+jar {
+    manifest {
+        attributes 'Lint-Registry': 'com.jeppeman.liteomatic.LintRegistry'
+    }
+}

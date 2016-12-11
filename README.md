@@ -1,7 +1,7 @@
-SQLiteProcessor
+LiteOmatic
 ===
 
-SQLiteProcessor is an SQLite library for Android that makes use of annotation processing to generate boilerplate for your SQLite operations.
+LiteOmatic is an SQLite library for Android that makes use of annotation processing to generate boilerplate for your SQLite operations.
 
 Some features:
 
@@ -11,37 +11,20 @@ Some features:
 
 How to use
 ---
-Annotate a class or a package with ```@SQLiteDatabaseHolder``` as follows:
+Annotate a class with ```@SQLiteDatabaseDescriptor``` as follows:
 ```java
-@SQLiteDatabaseHolder(databases = {
-        @SQLiteDatabaseDescriptor(
-                dbName = "myDatabase",
-                dbVersion = 1,
-                tables = {
-                        MyClass.class,
-                        MyClass2.class
-                }
-        )
-})
+
+@SQLiteDatabaseDescriptor(
+    dbName = "myDatabase",
+    dbVersion = 1,
+    tables = {
+        MyClass.class,
+        MyClass2.class
+    }
+)
 public class ExampleApp extends Application {
 
 }
-```
-
-or
-
-```java
-@SQLiteDatabaseHolder(databases = {
-        @SQLiteDatabaseDescriptor(
-                dbName = "myDatabase",
-                dbVersion = 1,
-                tables = {
-                        MyClass.class,
-                        MyClass2.class
-                }
-        )
-})
-package com.example.sqliteprocessor
 ```
 
 The classes in the ```tables``` property must be classes annotated with ```@SQLiteTable``` as  follows:

@@ -1,0 +1,17 @@
+apply plugin: 'java'
+
+sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
+targetCompatibility = rootProject.ext.targetCompatibilityVersion
+
+dependencies {
+    compile project(':liteomatic-annotations')
+
+    compile deps.autoservice
+    compile deps.autocommon
+    compile deps.javapoet
+
+    testCompile deps.junit
+    testCompile deps.compiletesting
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
