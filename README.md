@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jeppeman/LiteOmatic.svg?branch=master)](https://travis-ci.org/jeppeman/LiteOmatic)
+
 LiteOmatic
 ===
 
