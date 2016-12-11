@@ -1,2 +1,2 @@
 Tests for new API
-More LINT warnings (Rx not in classpath)
+More LINT warnings (Rx not in classpath, not calling execute or executeBlocking)

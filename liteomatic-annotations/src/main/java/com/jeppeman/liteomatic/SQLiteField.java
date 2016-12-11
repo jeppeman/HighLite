@@ -21,10 +21,24 @@ public @interface SQLiteField {
     String value() default "";
 
     /**
-     * The SQlite type of the field
+     * The SQLite type of the field
      *
      * @return the SQLite type of the field
      * @see {@link SQLiteFieldType}
      */
     SQLiteFieldType fieldType() default SQLiteFieldType.UNSPECIFIED;
+
+    /**
+     * DO NOT SET THIS TO TRUE, THIS IS ONLY USED IN ORDER TO TEST COLUMN ADDITION FOR onUpgrade
+     *
+     * @return whether this is field is used for onUpgrade column addition testing purposes
+     */
+    boolean isUpgradeAddColumnTest() default false;
+
+    /**
+     * DO NOT SET THIS TO TRUE, THIS IS ONLY USED IN ORDER TO TEST COLUMN DELETION FOR onUpgrade
+     *
+     * @return whether this is field is used for onUpgrade column deletion testing purposes
+     */
+    boolean isUpgradeDeleteColumnTest() default false;
 }

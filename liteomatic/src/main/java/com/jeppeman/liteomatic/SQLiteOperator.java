@@ -1,6 +1,8 @@
 package com.jeppeman.liteomatic;
 
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -19,7 +21,8 @@ import java.util.Map;
 @SuppressWarnings({"unchecked", "unused"})
 public final class SQLiteOperator<T> {
 
-    private static final Map<Class<?>, Constructor> CTOR_CACHE = new LinkedHashMap<>();
+    private static final Map<Class<?>, Constructor> DAO_CTOR_CACHE = new LinkedHashMap<>();
+    private static final Map<Class<?>, SQLiteOpenHelper> HELPER_CACHE = new LinkedHashMap<>();
 
     private final Class<T> mClass;
     private final Context mContext;
@@ -34,17 +37,61 @@ public final class SQLiteOperator<T> {
         return new SQLiteOperator<>(context, cls);
     }
 
-    private SQLiteDAO<T> getGeneratedObject(final @Nullable T generator) {
+    public static SQLiteDatabase getReadableDatabase(final @NonNull Context context,
+                                                     final @NonNull Class<?> cls) {
+        return getGeneratedHelper(context, cls).getReadableDatabase();
+    }
+
+    public static SQLiteDatabase getWritableDatabase(final @NonNull Context context,
+                                                     final @NonNull Class<?> cls) {
+        return getGeneratedHelper(context, cls).getWritableDatabase();
+    }
+
+    private static SQLiteOpenHelper getGeneratedHelper(final @NonNull Context context,
+                                                       final @NonNull Class<?> cls) {
+        SQLiteOpenHelper helper;
+        try {
+            helper = HELPER_CACHE.get(cls);
+            if (helper != null) return helper;
+
+            final Class<? extends SQLiteOpenHelper> clazz = (Class<? extends SQLiteOpenHelper>)
+                    Class.forName(cls.getCanonicalName() + "Helper");
+
+            helper = (SQLiteOpenHelper) clazz.getMethod("getInstance", Context.class)
+                    .invoke(null, context);
+            HELPER_CACHE.put(cls, helper);
+
+            return helper;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Illegal access, unable to invoke getInstance method ", e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Generated helper class not found", e);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException("Unable to find method getInstance for " + cls.getName()
+                    + "Helper", e);
+        } catch (InvocationTargetException e) {
+            final Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            throw new RuntimeException("Unable to create Helper instance.", cause);
+        }
+    }
+
+    private SQLiteDAO<T> getGeneratedDAO(final @Nullable T generator) {
         Constructor<SQLiteDAO<T>> generatedCtor = null;
         try {
-            generatedCtor = CTOR_CACHE.get(mClass);
+            generatedCtor = DAO_CTOR_CACHE.get(mClass);
             if (generatedCtor != null) return generatedCtor.newInstance(generator);
 
             final Class<SQLiteDAO<T>> clazz = (Class<SQLiteDAO<T>>)
                     Class.forName(mClass.getCanonicalName() + "_DAO");
 
             generatedCtor = clazz.getConstructor(mClass);
-            CTOR_CACHE.put(mClass, generatedCtor);
+            DAO_CTOR_CACHE.put(mClass, generatedCtor);
 
             return generatedCtor.newInstance(generator);
         } catch (InstantiationException e) {
@@ -76,7 +123,7 @@ public final class SQLiteOperator<T> {
      * @return an executable {@link GetSingleOperation<T>}
      */
     public GetSingleOperation<T> getSingle(final @Nullable Object id) {
-        return new GetSingleOperation<>(mContext, getGeneratedObject(null), id);
+        return new GetSingleOperation<>(mContext, getGeneratedDAO(null), id);
     }
 
     /**
@@ -97,7 +144,7 @@ public final class SQLiteOperator<T> {
      * @return an executable {@link GetListOperation<T>}
      */
     public GetListOperation<T> getList() {
-        return new GetListOperation<>(mContext, getGeneratedObject(null));
+        return new GetListOperation<>(mContext, getGeneratedDAO(null));
     }
 
     /**
@@ -110,7 +157,7 @@ public final class SQLiteOperator<T> {
     public InsertOperation<T> insert(final @NonNull T... objectsToInsert) {
         final SQLiteDAO<T>[] generatedObjects = new SQLiteDAO[objectsToInsert.length];
         for (int i = 0; i < objectsToInsert.length; i++) {
-            generatedObjects[i] = getGeneratedObject(objectsToInsert[i]);
+            generatedObjects[i] = getGeneratedDAO(objectsToInsert[i]);
         }
         return new InsertOperation<>(mContext, generatedObjects);
     }
@@ -124,12 +171,12 @@ public final class SQLiteOperator<T> {
      * @return an executable {@link UpdateOperation<T>}
      */
     public UpdateOperation<T> update(final @Nullable T... objectsToUpdate) {
-        final SQLiteDAO generated = getGeneratedObject(null);
+        final SQLiteDAO generated = getGeneratedDAO(null);
         SQLiteDAO<T>[] generatedObjects = null;
         if (objectsToUpdate != null) {
             generatedObjects = new SQLiteDAO[objectsToUpdate.length];
             for (int i = 0; i < objectsToUpdate.length; i++) {
-                generatedObjects[i] = getGeneratedObject(objectsToUpdate[i]);
+                generatedObjects[i] = getGeneratedDAO(objectsToUpdate[i]);
             }
         }
 
@@ -145,12 +192,12 @@ public final class SQLiteOperator<T> {
      * @return an executable {@link InsertOperation<T>}
      */
     public DeleteOperation<T> delete(final @Nullable T... objectsToDelete) {
-        final SQLiteDAO generated = getGeneratedObject(null);
+        final SQLiteDAO generated = getGeneratedDAO(null);
         SQLiteDAO<T>[] generatedObjects = null;
         if (objectsToDelete != null) {
             generatedObjects = new SQLiteDAO[objectsToDelete.length];
             for (int i = 0; i < objectsToDelete.length; i++) {
-                generatedObjects[i] = getGeneratedObject(objectsToDelete[i]);
+                generatedObjects[i] = getGeneratedDAO(objectsToDelete[i]);
             }
         }
 
