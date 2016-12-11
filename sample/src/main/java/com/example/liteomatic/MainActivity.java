@@ -14,7 +14,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        SQLiteOperator.from(this, String.class);
         final SQLiteOperator<MyLittleClass2> operator = SQLiteOperator.from(this,
                 MyLittleClass2.class);
         operator

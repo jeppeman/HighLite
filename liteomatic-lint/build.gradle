@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'checkstyle'
 
 sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
 targetCompatibility = rootProject.ext.targetCompatibilityVersion
@@ -13,6 +14,12 @@ dependencies {
     testCompile deps.android
     testCompile deps.mockito
     testCompile project(':liteomatic-annotations')
+}
+
+checkstyle {
+    configFile rootProject.file('checkstyle.xml')
+    showViolations true
+    sourceSets = [sourceSets.main]
 }
 
 task createProperties(dependsOn: processResources) << {

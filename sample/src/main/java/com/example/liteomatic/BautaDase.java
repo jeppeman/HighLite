@@ -16,6 +16,10 @@ import com.jeppeman.liteomatic.SQLiteDatabaseDescriptor;
 )
 public class BautaDase {
 
+    private BautaDase() {
+
+    }
+
     @OnOpen
     public static void onOpen(SQLiteDatabase database) {
         int x = 2;

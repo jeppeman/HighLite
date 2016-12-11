@@ -7,10 +7,6 @@ import com.jeppeman.liteomatic.OnOpen;
 import com.jeppeman.liteomatic.OnUpgrade;
 import com.jeppeman.liteomatic.SQLiteDatabaseDescriptor;
 
-/**
- * Created by jesper on 2016-11-26.
- */
-
 @SQLiteDatabaseDescriptor(
         dbName = "testDatabase",
         dbVersion = 11,
@@ -21,6 +17,10 @@ import com.jeppeman.liteomatic.SQLiteDatabaseDescriptor;
                 TestTable2.class
         })
 public class TestDatabase {
+
+    private TestDatabase() {
+
+    }
 
     @OnOpen
     public static void onOpen(SQLiteDatabase database) {
