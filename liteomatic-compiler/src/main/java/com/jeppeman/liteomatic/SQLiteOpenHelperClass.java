@@ -104,6 +104,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .endControlFlow()
                 .addStatement("$L.close()", createSqlCursorVarName)
                 .add("\n")
+                .beginControlFlow("if ($L)", tableExistsVarName)
                 .addStatement("final $T<String, String[]> $L = new $T<>()", MAP,
                         currentFieldsVar, LINKED_HASHMAP)
                 .add(currentFieldsPopulator.build())
@@ -154,7 +155,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+
+            if (field == null || field.isUpgradeDeleteColumnTest()) continue;
 
             final StringBuilder fieldCreator = new StringBuilder();
             final String fieldName = getDBFieldName(enclosed, field);
@@ -339,7 +341,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+            if (field == null || field.isUpgradeAddColumnTest()) continue;
 
             final String fieldName = getDBFieldName(enclosed, field);
             createStatement.append("`");
@@ -593,6 +595,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
             code.addStatement("/****** BEGIN $L ******/", table.tableName());
             code.add(getUpgradeBlock(element, table));
+            code.endControlFlow();
             code.addStatement("/******  END $L  ******/", table.tableName());
         }
 
@@ -632,7 +635,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
 
         return JavaFile.builder(mPackageName, typeSpec)
-                .addFileComment("Generated code from LiteOmaticProcessor. Do not modify!")
+                .addFileComment("Generated code from LiteOmatic. Do not modify!")
                 .build();
     }
 }

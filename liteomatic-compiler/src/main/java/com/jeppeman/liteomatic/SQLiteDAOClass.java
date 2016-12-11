@@ -77,7 +77,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final CodeBlock.Builder putStatements = CodeBlock.builder();
         for (final Element enclosed : mElement.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+            if (field == null || field.isUpgradeAddColumnTest()) continue;
 
             final PrimaryKey pk = enclosed.getAnnotation(PrimaryKey.class);
             if (pk != null && pk.autoIncrement()) {
@@ -128,7 +128,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
         for (int i = 0; i < mElement.getEnclosedElements().size(); i++) {
             final Element enclosed = mElement.getEnclosedElements().get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+            if (field == null
+                    || field.isUpgradeAddColumnTest()
+                    || field.isUpgradeDeleteColumnTest()) continue;
 
             arrayValues.add(i < mElement.getEnclosedElements().size() - 1
                     ? "$S, "
@@ -155,7 +157,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         for (int i = 0; i < mElement.getEnclosedElements().size(); i++) {
             final Element enclosed = mElement.getEnclosedElements().get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+            if (field == null || field.isUpgradeAddColumnTest()) continue;
 
             final String columnName = field.value() == null || field.value().length() == 0
                     ? enclosed.getSimpleName().toString()
@@ -217,7 +219,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addCode("final long id = ")
-                .addStatement("getWritableDatabase($L).insert($S, null, getContentValues())",
+                .addStatement("getWritableDatabase($L).insertOrThrow($S, null, getContentValues())",
                         "context", mTable.tableName())
                 .addCode(setIdAfterInsertion.build())
                 .build();
@@ -434,7 +436,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final CodeBlock.Builder builder = CodeBlock.builder();
         for (final Element enclosed : mElement.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+            if (field == null || field.isUpgradeAddColumnTest()) continue;
 
             final Name fieldName = enclosed.getSimpleName();
             final TypeName typeName = ClassName.get(enclosed.asType());
@@ -528,7 +530,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
 
         return JavaFile.builder(getPackageName(), typeSpec)
-                .addFileComment("Generated code from LiteOmaticProcessor. Do not modify!")
+                .addFileComment("Generated code from LiteOmatic. Do not modify!")
                 .build();
     }
 }

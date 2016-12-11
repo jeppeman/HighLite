@@ -12,5 +12,8 @@ public class TestTable3 {
 
     @SQLiteField
     @PrimaryKey(autoIncrement = true)
-    public long xx;
+    long xx;
+
+    @SQLiteField
+    String str;
 }

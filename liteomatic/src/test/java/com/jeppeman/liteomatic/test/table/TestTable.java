@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * @author jesper
  */
-@SQLiteTable(tableName = "testTable")
+@SQLiteTable(tableName = "testTable", autoDeleteColumns = true)
 public class TestTable {
 
     @SQLiteField
@@ -27,4 +27,10 @@ public class TestTable {
 
     @SQLiteField
     public TestSerializable testSerializable;
+
+    @SQLiteField(isUpgradeAddColumnTest = true)
+    public int upgradeAddTester;
+
+    @SQLiteField(isUpgradeDeleteColumnTest = true)
+    public String upgradeDeleteTester;
 }
