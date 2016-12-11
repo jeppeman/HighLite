@@ -7,11 +7,7 @@ import android.support.annotation.Nullable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-
-import rx.Observable;
-import rx.Subscriber;
 
 /**
  * Performs database operations by delegating calls to a generated DAO. Operations can
@@ -21,21 +17,21 @@ import rx.Subscriber;
  * @author jesper
  */
 @SuppressWarnings({"unchecked", "unused"})
-public final class LiteOmator<T> {
+public final class SQLiteOperator<T> {
 
     private static final Map<Class<?>, Constructor> CTOR_CACHE = new LinkedHashMap<>();
 
     private final Class<T> mClass;
     private final Context mContext;
 
-    private LiteOmator(final @NonNull Context context, final @NonNull Class<T> cls) {
+    private SQLiteOperator(final @NonNull Context context, final @NonNull Class<T> cls) {
         mClass = cls;
         mContext = context;
     }
 
-    public static <T> LiteOmator<T> from(final @NonNull Context context,
-                                         final @NonNull Class<T> cls) {
-        return new LiteOmator<>(context, cls);
+    public static <T> SQLiteOperator<T> from(final @NonNull Context context,
+                                             final @NonNull Class<T> cls) {
+        return new SQLiteOperator<>(context, cls);
     }
 
     private SQLiteDAO<T> getGeneratedObject(final @Nullable T generator) {
@@ -72,47 +68,44 @@ public final class LiteOmator<T> {
     }
 
     /**
-     * Fetches an object of type {@link T} based on a raw query, non-blocking operation.
+     * Generates an executable getSingle operation which fetches a record from a table and maps it
+     * to an object of type {@link T}.
      *
-     * @param context        the context from which the call is being made
-     * @param cls            class object of the type to fetch
-     * @param rawQueryClause an SQLite command with where ? is a parameter
-     * @param rawQueryArgs   parameter values for the query clause
-     * @param <T>            type to fetch
-     * @return an {@link Observable} where an instance of type {@link T} based on the raw query
-     * is passed as the item in {@link Subscriber#onNext(Object)}
+     * @param id the id of the object to be returned by the operation. This corresponds to the ID
+     *           of a table record.
+     * @return an executable {@link GetSingleOperation<T>}
      */
     public GetSingleOperation<T> getSingle(final @Nullable Object id) {
         return new GetSingleOperation<>(mContext, getGeneratedObject(null), id);
     }
 
+    /**
+     * Generates an executable getSingle operation which fetches a record from a table and maps it
+     * to an object of type {@link T}. This method requires the returned {@link GetSingleOperation}
+     * to have a query specified.
+     *
+     * @return an executable {@link GetSingleOperation<T>}
+     */
     public GetSingleOperation<T> getSingle() {
         return getSingle(null);
     }
 
     /**
-     * Fetches a {@link List} of type {@link T} based on a raw query, non-blocking operation.
+     * Generates an executable getList operation which fetches one or more records from a table and
+     * maps them to objects of type {@link T}.
      *
-     * @param context        the context from which the call is being made
-     * @param cls            class object of the type to fetch
-     * @param rawQueryClause an SQLite command with where ? is a parameter
-     * @param rawQueryArgs   parameter values for the query clause
-     * @param <T>            type to fetch
-     * @return an {@link Observable} where a {@link List} of type {@link T} based on the raw query
-     * is passed as the item in {@link Subscriber#onNext(Object)}
+     * @return an executable {@link GetListOperation<T>}
      */
     public GetListOperation<T> getList() {
         return new GetListOperation<>(mContext, getGeneratedObject(null));
     }
 
     /**
-     * Inserts an object of type {@link T} into a database, non-blocking operation.
+     * Generates an executable insert operation which inserts one or more records into a table where
+     * fields are mapped from the type {@link T}.
      *
-     * @param context         the context from which the call is being made
-     * @param objectsToInsert the object to insert
-     * @param <T>             type of the object to insert
-     * @return an {@link Observable} where the objectToInsert parameter is passed as the item
-     * in {@link Subscriber#onNext(Object)}
+     * @param objectsToInsert the objects to insert.
+     * @return an executable {@link InsertOperation<T>}
      */
     public InsertOperation<T> insert(final @NonNull T... objectsToInsert) {
         final SQLiteDAO<T>[] generatedObjects = new SQLiteDAO[objectsToInsert.length];
@@ -123,10 +116,12 @@ public final class LiteOmator<T> {
     }
 
     /**
-     * Updates a database record based on an object of type {@link T}, blocking operation.
+     * Generates an executable update operation which updates one or more records in a table where
+     * fields are mapped from the type {@link T}. If no objects are passed as parameters a query
+     * has to be specified.
      *
-     * @param objectsToUpdate the object to update
-     * @return an {@link UpdateOperation}
+     * @param objectsToUpdate the objects to update.
+     * @return an executable {@link UpdateOperation<T>}
      */
     public UpdateOperation<T> update(final @Nullable T... objectsToUpdate) {
         final SQLiteDAO generated = getGeneratedObject(null);
@@ -142,13 +137,12 @@ public final class LiteOmator<T> {
     }
 
     /**
-     * Deletes a database record based on an object of type {@link T}
+     * Generates an executable delete operation which deletes one or more records from a table where
+     * based on the ID:s of the objects passed as parameters. If no objects are given as parameters
+     * a query has to be specified.
      *
-     * @param context         the context from which the call is being made
-     * @param objectsToDelete the object to delete
-     * @param <T>             type of the object to delete
-     * @return an {@link Observable} where null is passed as the item in
-     * {@link Subscriber#onNext(Object)}
+     * @param objectsToDelete the objects to delete.
+     * @return an executable {@link InsertOperation<T>}
      */
     public DeleteOperation<T> delete(final @Nullable T... objectsToDelete) {
         final SQLiteDAO generated = getGeneratedObject(null);

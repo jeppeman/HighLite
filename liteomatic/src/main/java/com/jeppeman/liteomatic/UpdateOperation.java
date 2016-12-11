@@ -11,6 +11,13 @@ import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
+/**
+ * This class updates one or more rows in a table based on a mapping from the type {@link T}. The
+ * updating can be blocking or non-blocking returning {@link rx.Single}s
+ *
+ * @param <T> the type of object to insert
+ * @author jesper
+ */
 public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
 
     private final Context mContext;
@@ -27,6 +34,11 @@ public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
         mObjectsToUpdate = objectsToUpdate;
     }
 
+    /**
+     * Updates one or more records in a table, blocking operation.
+     *
+     * @return the number of records updated
+     */
     @WorkerThread
     public int executeBlocking() {
         if (mObjectsToUpdate != null) {
@@ -48,24 +60,17 @@ public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
 
             return mGenerated.updateByQuery(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray);
-        } else if (mRawQueryClause != null && mGenerated != null) {
-            final String[] rawQueryArgsAsStringArray;
-            if (mRawQueryArgs != null) {
-                rawQueryArgsAsStringArray = new String[mRawQueryArgs.length];
-                for (int i = 0; i < mRawQueryArgs.length; i++) {
-                    rawQueryArgsAsStringArray[i] = String.valueOf(mRawQueryArgs[i]);
-                }
-            } else {
-                rawQueryArgsAsStringArray = null;
-            }
-
-            return mGenerated.updateByQuery(mContext, mRawQueryClause,
-                    rawQueryArgsAsStringArray);
         }
 
         return 0;
     }
 
+    /**
+     * Updates one or more records in a table, non-blocking operation.
+     *
+     * @return a {@link rx.Single<Integer>} where the number of records updated is passed
+     * as the parameter to {@link rx.SingleSubscriber#onSuccess(Object)}
+     */
     public Single<Integer> execute() {
         return Single.fromCallable(new Callable<Integer>() {
             @Override

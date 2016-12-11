@@ -18,7 +18,7 @@ import rx.schedulers.Schedulers;
  * @param <T> the type of object to map rows to
  * @author jesper
  */
-public class GetSingleOperation<T> extends QueryableOperation<GetSingleOperation<T>> {
+public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperation<T>> {
 
     private final Context mContext;
     private final SQLiteDAO<T> mGenerated;

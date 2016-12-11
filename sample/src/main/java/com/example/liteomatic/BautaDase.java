@@ -7,10 +7,6 @@ import com.jeppeman.liteomatic.OnOpen;
 import com.jeppeman.liteomatic.OnUpgrade;
 import com.jeppeman.liteomatic.SQLiteDatabaseDescriptor;
 
-/**
- * Created by jesper on 2016-11-26.
- */
-
 @SQLiteDatabaseDescriptor(
         dbName = "bautaDase",
         dbVersion = 1,

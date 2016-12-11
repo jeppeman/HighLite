@@ -3,18 +3,19 @@ package com.example.liteomatic;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
-import com.jeppeman.liteomatic.LiteOmator;
+import com.jeppeman.liteomatic.SQLiteOperator;
 
 import rx.Subscriber;
 
-public class Main2Activity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main2);
+        setContentView(R.layout.activity_main);
 
-        final LiteOmator<MyLittleClass2> operator = LiteOmator.from(this,
+        SQLiteOperator.from(this, String.class);
+        final SQLiteOperator<MyLittleClass2> operator = SQLiteOperator.from(this,
                 MyLittleClass2.class);
         operator
                 .getList()
@@ -40,7 +41,7 @@ public class Main2Activity extends AppCompatActivity {
 //        m.name = "asdf";
 //        m.nameList = Arrays.asList("a, ", "c", "b");
 //        m.foreign = 7;
-//        LiteOmator.from(this, MyLittleClass.class)
+//        SQLiteOperator.from(this, MyLittleClass.class)
 //                .insert(m)
 //                .execute()
 //                .subscribe(new Completable.CompletableSubscriber() {

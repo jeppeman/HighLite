@@ -12,13 +12,13 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 /**
- * This class fetches multiple rows from a table and maps them to objects of type {@link T}. The
+ * This class fetches one or more rows from a table and maps them to objects of type {@link T}. The
  * fetching can be blocking or non-blocking returning {@link rx.Observable}s
  *
  * @param <T> the type of object to map rows to
  * @author jesper
  */
-public class GetListOperation<T> extends QueryableOperation<GetListOperation<T>> {
+public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<T>> {
 
     private final Context mContext;
     private final SQLiteDAO<T> mGenerated;

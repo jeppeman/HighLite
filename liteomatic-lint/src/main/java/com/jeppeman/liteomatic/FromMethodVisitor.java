@@ -18,7 +18,7 @@ class FromMethodVisitor extends ForwardingAstVisitor {
 
     private static final int PARAM_INDEX = 1;
     private static final String CLASS_LITEOMATOR =
-            "com.jeppeman.liteomatic.LiteOmator";
+            "com.jeppeman.liteomatic.SQLiteOperator";
     private static final String ANNOTATION_TYPE_LONG = "com.jeppeman.liteomatic.SQLiteTable";
     private static final String ANNOTATION_TYPE_SHORT = "SQLiteTable";
     private static final String METHOD_NAME = "from";

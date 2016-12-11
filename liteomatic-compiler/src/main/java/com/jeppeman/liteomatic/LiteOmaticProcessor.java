@@ -32,7 +32,6 @@ import javax.tools.Diagnostic;
  * @author jesper
  */
 @AutoService(Processor.class)
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class LiteOmaticProcessor extends AbstractProcessor {
 
     private Messager mMessager;
@@ -52,9 +51,10 @@ public class LiteOmaticProcessor extends AbstractProcessor {
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
 
-        final List<String> databases = new ArrayList<>();
-        final Map<Element, JavaFile> helperFiles = new LinkedHashMap<>();
-        final Map<Element, JavaFile> daoFiles = new LinkedHashMap<>();
+        final List<String> databases = new ArrayList<>(),
+                tables = new ArrayList<>();
+        final Map<Element, JavaFile> helperFiles = new LinkedHashMap<>(),
+                daoFiles = new LinkedHashMap<>();
         for (final Element element
                 : roundEnv.getElementsAnnotatedWith(SQLiteDatabaseDescriptor.class)) {
 
@@ -77,6 +77,13 @@ public class LiteOmaticProcessor extends AbstractProcessor {
             }
 
             for (final TypeMirror typeMirror : mirrors) {
+                if (tables.contains(typeMirror.toString())) {
+                    error(element, typeMirror.toString() + " is already specified as the table"
+                            + " of a database");
+                }
+
+                tables.add(typeMirror.toString());
+
                 final Element mirrorElem = mTypeUtils.asElement(typeMirror);
                 if (mirrorElem.getAnnotation(SQLiteTable.class) == null) {
                     error(element, typeMirror.toString()
@@ -171,8 +178,6 @@ public class LiteOmaticProcessor extends AbstractProcessor {
         annotations.add(ForeignKey.class);
         annotations.add(PrimaryKey.class);
         annotations.add(SQLiteField.class);
-        annotations.add(SQLiteGetter.class);
-        annotations.add(SQLiteSetter.class);
         annotations.add(SQLiteTable.class);
         annotations.add(SQLiteDatabaseDescriptor.class);
         annotations.add(OnCreate.class);

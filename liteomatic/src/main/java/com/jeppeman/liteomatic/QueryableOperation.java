@@ -1,26 +1,30 @@
 package com.jeppeman.liteomatic;
 
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
+/**
+ * Subclasses of this class have the ability to specify {@link SQLiteQuery}s that are used for their
+ * corresponding database operations.
+ *
+ * @param <T> a class extending this class.
+ * @author jesper
+ */
 @SuppressWarnings("unchecked")
 public abstract class QueryableOperation<T extends QueryableOperation> {
 
-    String mRawQueryClause;
-    Object[] mRawQueryArgs;
     SQLiteQuery mQuery;
 
-    public T withRawQuery(final @NonNull String rawQueryClause,
-                          final @Nullable Object... rawQueryArgs) {
-        mQuery = null;
-        mRawQueryClause = rawQueryClause;
-        mRawQueryArgs = rawQueryArgs;
-        return (T) this;
+    QueryableOperation() {
+
     }
 
+    /**
+     * Attaches an {@link SQLiteQuery} to the operating subclass.
+     *
+     * @param query the {@link SQLiteQuery} to attach.
+     * @return itself
+     */
     public T withQuery(final @NonNull SQLiteQuery query) {
-        mRawQueryClause = null;
-        mRawQueryArgs = null;
         mQuery = query;
         return (T) this;
     }

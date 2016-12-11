@@ -20,7 +20,7 @@ public final class SQLiteQuery {
     String mWhereClause;
     Object[] mWhereArgs;
 
-    SQLiteQuery() {
+    private SQLiteQuery() {
 
     }
 
@@ -36,6 +36,15 @@ public final class SQLiteQuery {
             mQuery = query;
         }
 
+        /**
+         * The where clause for this query.
+         * Example: "field = ? AND timeStamp > ?"
+         *
+         * @param whereClause the where clause where parameters are given as ?
+         * @param whereArgs the parameter values for the where clause where each parameter
+         *                  corresponds to a ? in the clause
+         * @return
+         */
         public Builder where(final @NonNull String whereClause,
                              final @Nullable Object... whereArgs) {
             mQuery.mWhereClause = whereClause;

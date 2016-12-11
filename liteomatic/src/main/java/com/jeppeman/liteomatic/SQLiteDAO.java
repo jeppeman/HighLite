@@ -5,7 +5,7 @@ import android.content.Context;
 import java.util.List;
 
 /**
- * Interface implemented by generated DAO classes to enable to enable the {@link LiteOmator}
+ * Interface implemented by generated DAO classes to enable to enable the {@link SQLiteOperator}
  * to call the methods without invoking via reflection
  *
  * @author jesper

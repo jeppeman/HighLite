@@ -12,7 +12,7 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 /**
- * This class fetches deletes rows from a table. The deletion can be blocking or non-blocking
+ * This class deletes one or more rows from a table. The deletion can be blocking or non-blocking
  * returning {@link rx.Single}s
  *
  * @param <T> the type of object to delete
@@ -34,6 +34,11 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>> {
         mObjectsToDelete = objectsToDelete;
     }
 
+    /**
+     * Deletes one or more records from a table, blocking operation.
+     *
+     * @return the number of records removed
+     */
     @WorkerThread
     public int executeBlocking() {
         if (mObjectsToDelete != null) {
@@ -55,24 +60,17 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>> {
 
             return mGenerated.deleteByQuery(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray);
-        } else if (mRawQueryClause != null && mGenerated != null) {
-            final String[] rawQueryArgsAsStringArray;
-            if (mRawQueryArgs != null) {
-                rawQueryArgsAsStringArray = new String[mRawQueryArgs.length];
-                for (int i = 0; i < mRawQueryArgs.length; i++) {
-                    rawQueryArgsAsStringArray[i] = String.valueOf(mRawQueryArgs[i]);
-                }
-            } else {
-                rawQueryArgsAsStringArray = null;
-            }
-
-            return mGenerated.deleteByQuery(mContext, mRawQueryClause,
-                    rawQueryArgsAsStringArray);
         }
 
         return 0;
     }
 
+    /**
+     * Deletes one or more records from a table, non-blocking operation.
+     *
+     * @return a {@link rx.Single<Integer>} where the number of records deleted is passed
+     * as the parameter to {@link rx.SingleSubscriber#onSuccess(Object)}
+     */
     public Single<Integer> execute() {
         return Single.fromCallable(new Callable<Integer>() {
             @Override
