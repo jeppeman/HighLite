@@ -4,14 +4,7 @@ import com.jeppeman.liteomatic.SQLiteDatabaseDescriptor;
 
 @SQLiteDatabaseDescriptor(
         dbName = "testDatabase",
-        dbVersion = 1,
-        tables = {
-                TestTable.class,
-                TestTable2.class,
-                TestTable3.class,
-                TestTable4.class,
-                TestTable5.class
-        }
+        dbVersion = 1
 )
 public class TestDatabase {
 }

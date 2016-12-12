@@ -6,7 +6,7 @@ import com.jeppeman.liteomatic.PrimaryKey;
 import com.jeppeman.liteomatic.SQLiteField;
 import com.jeppeman.liteomatic.SQLiteTable;
 
-@SQLiteTable(tableName = "testTable4")
+@SQLiteTable(database = TestDatabase.class, tableName = "testTable4")
 public class TestTable4 {
 
     @SQLiteField

@@ -9,10 +9,7 @@ import com.jeppeman.liteomatic.SQLiteDatabaseDescriptor;
 
 @SQLiteDatabaseDescriptor(
         dbName = "bautaDase",
-        dbVersion = 1,
-        tables = {
-                MyLittleClass3.class
-        }
+        dbVersion = 1
 )
 public class BautaDase {
 

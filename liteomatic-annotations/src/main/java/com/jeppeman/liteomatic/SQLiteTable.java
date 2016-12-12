@@ -14,6 +14,15 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.CLASS)
 public @interface SQLiteTable {
+
+    /**
+     * The database that should contain this table, this must be a class annotated with
+     * {@link SQLiteDatabaseDescriptor}
+     *
+     * @return
+     */
+    Class<?> database();
+
     /**
      * The name that the database table will have
      *

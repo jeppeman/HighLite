@@ -1,5 +1,5 @@
 package com.jeppeman.liteomatic;
 
-@SQLiteTable(tableName = "test")
+@SQLiteTable(database = TestDatabase.class, tableName = "test")
 public class TestTable {
 }

@@ -9,7 +9,7 @@ import com.jeppeman.liteomatic.SQLiteTable;
  * Created by jesper on 2016-10-09.
  */
 
-@SQLiteTable(tableName = "test", autoDeleteColumns = true)
+@SQLiteTable(database = TestDatabase.class, tableName = "test", autoDeleteColumns = true)
 public class TestTable {
 
     @SQLiteField

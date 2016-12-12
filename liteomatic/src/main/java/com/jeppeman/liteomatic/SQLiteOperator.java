@@ -55,7 +55,7 @@ public final class SQLiteOperator<T> {
             if (helper != null) return helper;
 
             final Class<? extends SQLiteOpenHelper> clazz = (Class<? extends SQLiteOpenHelper>)
-                    Class.forName(cls.getCanonicalName() + "Helper");
+                    Class.forName(cls.getCanonicalName() + "_OpenHelper");
 
             helper = (SQLiteOpenHelper) clazz.getMethod("getInstance", Context.class)
                     .invoke(null, context);
@@ -68,7 +68,7 @@ public final class SQLiteOperator<T> {
             throw new RuntimeException("Generated helper class not found", e);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("Unable to find method getInstance for " + cls.getName()
-                    + "Helper", e);
+                    + "_OpenHelper", e);
         } catch (InvocationTargetException e) {
             final Throwable cause = e.getCause();
             if (cause instanceof RuntimeException) {

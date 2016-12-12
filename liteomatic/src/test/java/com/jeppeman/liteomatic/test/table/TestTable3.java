@@ -7,7 +7,7 @@ import com.jeppeman.liteomatic.SQLiteTable;
 /**
  * @author jesper
  */
-@SQLiteTable(tableName = "testTable3", autoCreate = false)
+@SQLiteTable(database = TestDatabase.class, tableName = "testTable3", autoCreate = false)
 public class TestTable3 {
 
     @SQLiteField

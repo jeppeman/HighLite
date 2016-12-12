@@ -59,7 +59,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
     private ClassName getHelperClassName() {
         return ClassName.get(mHelperPackage,
                 String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
-                        + mDatabaseName.substring(1) + "Helper");
+                        + mDatabaseName.substring(1) + "_OpenHelper");
     }
 
     private Element getPrimaryKeyField() {
