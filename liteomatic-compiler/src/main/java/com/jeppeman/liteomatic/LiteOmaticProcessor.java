@@ -5,6 +5,7 @@ import com.squareup.javapoet.JavaFile;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -20,7 +21,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.MirroredTypesException;
+import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -49,8 +50,25 @@ public class LiteOmaticProcessor extends AbstractProcessor {
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
 
-        final List<String> databases = new ArrayList<>(),
-                tables = new ArrayList<>();
+        for (final Element element : roundEnv.getElementsAnnotatedWith(PrimaryKey.class)) {
+            if (element.getAnnotation(SQLiteField.class) == null) {
+                error(element, String.format("Fields annotated with %s must also be "
+                                + "annotated with %s", PrimaryKey.class.getCanonicalName(),
+                        SQLiteField.class.getCanonicalName()));
+                return true;
+            }
+        }
+
+        for (final Element element : roundEnv.getElementsAnnotatedWith(ForeignKey.class)) {
+            if (element.getAnnotation(SQLiteField.class) == null) {
+                error(element, String.format("Fields annotated with %s must also be "
+                                + "annotated with %s", ForeignKey.class.getCanonicalName(),
+                        SQLiteField.class.getCanonicalName()));
+                return true;
+            }
+        }
+
+        final List<String> databases = new ArrayList<>();
         final Map<Element, JavaFile> helperFiles = new LinkedHashMap<>(),
                 daoFiles = new LinkedHashMap<>();
         for (final Element element
@@ -67,31 +85,11 @@ public class LiteOmaticProcessor extends AbstractProcessor {
                 databases.add(descriptor.dbName());
             }
 
-            List<? extends TypeMirror> mirrors = new ArrayList<>();
-            try {
-                descriptor.tables();
-            } catch (MirroredTypesException e) {
-                mirrors = e.getTypeMirrors();
+            final AbstractMap.SimpleEntry<Map<SQLiteTable, Element>, Boolean> tablesForDatabase =
+                    getTableElementMappingForDatabase(roundEnv, element);
+            if (tablesForDatabase.getValue()) {
+                return true;
             }
-
-            for (final TypeMirror typeMirror : mirrors) {
-                if (tables.contains(typeMirror.toString())) {
-                    error(element, typeMirror.toString() + " is already specified as the table"
-                            + " of a database");
-                }
-
-                tables.add(typeMirror.toString());
-
-                final Element mirrorElem = mTypeUtils.asElement(typeMirror);
-                if (mirrorElem.getAnnotation(SQLiteTable.class) == null) {
-                    error(element, typeMirror.toString()
-                            + " must be annotated with " + SQLiteTable.class.getName());
-                    return true;
-                }
-            }
-
-            final Map<SQLiteTable, Element> tablesForDatabase =
-                    getTableElementMappingForDatabase(roundEnv, mirrors);
 
             final String packageName = mElementUtils
                     .getPackageOf(element)
@@ -100,10 +98,11 @@ public class LiteOmaticProcessor extends AbstractProcessor {
 
             helperFiles.put(element, new SQLiteOpenHelperClass(element, packageName,
                     descriptor.dbName(),
-                    tablesForDatabase, descriptor.dbVersion(), mElementUtils,
+                    tablesForDatabase.getKey(), descriptor.dbVersion(), mElementUtils,
                     mTypeUtils).writeJava());
 
-            for (final Map.Entry<SQLiteTable, Element> entry : tablesForDatabase.entrySet()) {
+            for (final Map.Entry<SQLiteTable, Element> entry
+                    : tablesForDatabase.getKey().entrySet()) {
                 daoFiles.put(entry.getValue(), new SQLiteDAOClass(packageName,
                         descriptor.dbName(),
                         entry.getKey(), entry.getValue(), mElementUtils).writeJava());
@@ -142,19 +141,44 @@ public class LiteOmaticProcessor extends AbstractProcessor {
         return true;
     }
 
-    private Map<SQLiteTable, Element> getTableElementMappingForDatabase(
+    private AbstractMap.SimpleEntry<Map<SQLiteTable, Element>,
+            Boolean> getTableElementMappingForDatabase(
             final RoundEnvironment roundEnvironment,
-            final List<? extends TypeMirror> tableMirrors) {
-        final Map<SQLiteTable, Element> ret = new LinkedHashMap<>();
+            final Element databaseElement) {
+        final AbstractMap.SimpleEntry<Map<SQLiteTable, Element>, Boolean> ret =
+                new AbstractMap.SimpleEntry<Map<SQLiteTable, Element>, Boolean>(
+                        new LinkedHashMap<SQLiteTable, Element>(), false);
 
+        final List<String> tableNamesAdded = new ArrayList<>();
         for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
             final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
 
-            for (final TypeMirror mirror : tableMirrors) {
-                if (!mTypeUtils.isSameType(mirror, element.asType())) continue;
+            TypeMirror mirror = null;
+            try {
+                tableAnno.database();
+            } catch (MirroredTypeException e) {
+                mirror = e.getTypeMirror();
+            }
 
-                ret.put(tableAnno, element);
-                break;
+            final SQLiteDatabaseDescriptor dbAnno = mTypeUtils.asElement(mirror)
+                    .getAnnotation(SQLiteDatabaseDescriptor.class);
+            if (dbAnno == null) {
+                error(element, String.format("The database class must be annotated with %s",
+                        SQLiteDatabaseDescriptor.class.getCanonicalName()));
+                ret.setValue(true);
+                return ret;
+            }
+
+            if (mTypeUtils.isSameType(mirror, databaseElement.asType())) {
+                if (tableNamesAdded.contains(tableAnno.tableName())) {
+                    error(element, String.format("The table %s was already defined for database %s",
+                            tableAnno.tableName(), dbAnno.dbName()));
+                    ret.setValue(true);
+                    return ret;
+                }
+
+                tableNamesAdded.add(tableAnno.tableName());
+                ret.getKey().put(tableAnno, element);
             }
         }
 

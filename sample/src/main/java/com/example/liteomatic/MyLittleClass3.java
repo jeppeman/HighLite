@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Created by jesper on 2016-08-25.
  */
-@SQLiteTable(tableName = "myLittleTable2")
+@SQLiteTable(database = BautaDase.class, tableName = "myLittleTable2")
 public class MyLittleClass3 {
 
     @SQLiteField

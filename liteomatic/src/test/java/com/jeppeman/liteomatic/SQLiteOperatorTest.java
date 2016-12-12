@@ -47,7 +47,7 @@ public class SQLiteOperatorTest {
 
     @After
     public void finishComponentTesting() throws ClassNotFoundException {
-        resetSingleton(Class.forName(TestDatabase.class.getCanonicalName() + "Helper"),
+        resetSingleton(Class.forName(TestDatabase.class.getCanonicalName() + "_OpenHelper"),
                 "sInstance");
     }
 
@@ -64,8 +64,8 @@ public class SQLiteOperatorTest {
 
     private SQLiteOpenHelper getHelperInstance() throws ClassNotFoundException,
             NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        return (SQLiteOpenHelper) Class.forName(TestDatabase.class.getCanonicalName() + "Helper")
-                .getMethod("getInstance", Context.class).invoke(null, getContext());
+        return (SQLiteOpenHelper) Class.forName(TestDatabase.class.getCanonicalName()
+                + "_OpenHelper").getMethod("getInstance", Context.class).invoke(null, getContext());
     }
 
     @Test

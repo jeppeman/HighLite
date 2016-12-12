@@ -6,6 +6,7 @@ import com.jeppeman.liteomatic.SQLiteFieldType;
 import com.jeppeman.liteomatic.SQLiteTable;
 
 @SQLiteTable(
+        database = TestDatabase.class,
         tableName = "myLittleTable2",
         autoDeleteColumns = true,
         autoAddColumns = false)
@@ -21,6 +22,6 @@ public class MyLittleClass2 {
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
     short shortz;
 
-    @SQLiteField
+    @SQLiteField(fieldType = SQLiteFieldType.INTEGER)
     boolean testBool;
 }

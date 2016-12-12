@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * @author jesper
  */
-@SQLiteTable(tableName = "testTable", autoDeleteColumns = true)
+@SQLiteTable(database = TestDatabase.class, tableName = "testTable", autoDeleteColumns = true)
 public class TestTable {
 
     @SQLiteField

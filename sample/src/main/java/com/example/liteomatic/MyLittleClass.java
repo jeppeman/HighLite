@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * @author jesper
  */
-@SQLiteTable(tableName = "myLittleTable")
+@SQLiteTable(database = TestDatabase.class, tableName = "myLittleTable")
 public class MyLittleClass {
 
     @SQLiteField

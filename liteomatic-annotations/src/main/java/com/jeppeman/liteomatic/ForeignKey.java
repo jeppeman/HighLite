@@ -12,8 +12,9 @@ import java.lang.annotation.Target;
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
-@Target({ElementType.FIELD, ElementType.METHOD})
+@Target(ElementType.FIELD)
 public @interface ForeignKey {
+
     /**
      * The table in which the foreign key resides
      *
@@ -29,14 +30,12 @@ public @interface ForeignKey {
     String fieldReference();
 
     /**
-     *
      * @return
      */
     boolean cascadeOnDelete() default false;
 
     /**
-     *
      * @return
      */
-    boolean  cascadeOnUpdate() default false;
+    boolean cascadeOnUpdate() default false;
 }
