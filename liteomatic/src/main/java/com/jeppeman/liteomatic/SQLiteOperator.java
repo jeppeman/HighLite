@@ -9,6 +9,7 @@ import android.support.annotation.Nullable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -162,6 +163,10 @@ public final class SQLiteOperator<T> {
         return new InsertOperation<>(mContext, generatedObjects);
     }
 
+    public InsertOperation<T> insert(final @NonNull List<T> objectsToInsert) {
+        return insert((T[]) objectsToInsert.toArray());
+    }
+
     /**
      * Generates an executable update operation which updates one or more records in a table where
      * fields are mapped from the type {@link T}. If no objects are passed as parameters a query
@@ -183,6 +188,10 @@ public final class SQLiteOperator<T> {
         return new UpdateOperation<>(mContext, generated, generatedObjects);
     }
 
+    public UpdateOperation<T> update(final @NonNull List<T> objectsToUpdate) {
+        return update((T[]) objectsToUpdate.toArray());
+    }
+
     /**
      * Generates an executable delete operation which deletes one or more records from a table where
      * based on the ID:s of the objects passed as parameters. If no objects are given as parameters
@@ -202,5 +211,9 @@ public final class SQLiteOperator<T> {
         }
 
         return new DeleteOperation<>(mContext, generated, generatedObjects);
+    }
+
+    public DeleteOperation<T> delete(final @NonNull List<T> objectsToDelete) {
+        return delete((T[]) objectsToDelete.toArray());
     }
 }
