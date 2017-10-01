@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-apply plugin: 'android-apt'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -35,5 +34,5 @@ dependencies {
     compile deps.rxjava
     compile deps.rxandroid
     compile project(':liteomatic')
-    apt project(':liteomatic-compiler')
+    annotationProcessor project(':liteomatic-compiler')
 }

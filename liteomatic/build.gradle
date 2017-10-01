@@ -28,7 +28,7 @@ dependencies {
 
     compile project(':liteomatic-annotations')
     compile deps.supportAnnotations
-    provided deps.supportv4
+    provided deps.supportcompat
     provided deps.rxandroid
     provided deps.rxjava
 }
