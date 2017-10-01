@@ -5,39 +5,60 @@ LiteOmatic
 
 LiteOmatic is an SQLite library for Android that makes use of annotation processing to generate boilerplate for your SQLite operations.
 
-Some features:
+Key features:
 
-* No need to define subclasses of SQLiteOpenHelper. Automatic table creation and automatic column addition / deletion
-* Query builder to not have to deal with the null-argument passing to the standard Android SQLite API.
-* Easy to use API with blocking and non-blocking (using RxJava) versions of all database operations such as create, update, delete and fetching.
+* No need to define subclasses of SQLiteOpenHelper; automates table creation, table deletion and table upgrades
+* Query builder that removes the need to have to deal with the null-argument passing to the standard Android SQLite API.
+* Easy to use API with blocking and non-blocking (using RxJava) operations.
+* Fast and thread safe
 
-How to use
+Getting started
+---
+```groovy
+dependencies {
+    compile 'com.jeppeman:liteomatic:1.0-beta1'
+    annotationProcessor 'com.jeppeman:liteomatic-compiler:1.0-beta1'
+}
+
+```
+
+Example usages
 ---
 Annotate a class with ```@SQLiteDatabaseDescriptor``` as follows:
 ```java
 
 @SQLiteDatabaseDescriptor(
     dbName = "myDatabase",
-    dbVersion = 1,
-    tables = {
-        MyClass.class,
-        MyClass2.class
-    }
+    dbVersion = 1
 )
-public class ExampleApp extends Application {
-
+public class MyDatabase {
+    @OnCreate
+    public static void onOpen(SQLiteDatabase db) {
+        ...
+    }
+    
+    // 
+    @OnCreate
+    public static void onCreate(SQLiteDatabase db) {
+        ...
+    }
+    
+    // 
+    @OnUpgrade
+    public static void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        ...
+    }
 }
 ```
 
-The classes in the ```tables``` property must be classes annotated with ```@SQLiteTable``` as  follows:
+Then define a class for a table
 
 ```java
-@SQLiteTable(tableName = "myTable")
+@SQLiteTable(database = MyDatabase.class, tableName = "myTable")
 public class MyClass {
     
     @SQLiteField
     @PrimaryKey
-    @AutoIncrement
     long id; // fields annotated with @SQLiteField need to be package local
     
     @SQLiteField(fieldName = "anotherFieldName")
@@ -48,48 +69,21 @@ public class MyClass {
 }
 ```
 
+Insert an object:
+---
 ```java
-@SQLiteTable(tableName = "myTable2", autoCreate = false, autoAddColumns = false)
-public class MyClass2 {
-
-    @OnCreate
-    public static void onCreate(SQLiteDatabase database) {
-        // If you want to handle creation manually do so here
-    }
-    
-    @OnUpgrade
-    public static void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
-        // If you want to handle upgrading manually do so here
-    }
-    
-    @SQLiteField
-    @PrimaryKey
-    @AutoIncrement
-    long id;
-    
-    @SQLiteField
-    String name;
-    
-    @SQLiteField
-    List<String> names;
-}
-```
-
-This setup would generate code to automatically create the database ```myDatabase``` containing the table ```myTable``` with database fields ```id (INTEGER PRIMARY KEY AUTOINCREMENT)```, ```anotherFieldName (TEXT)``` and ```names (BLOB)```.
-
-Some operation examples:
-
-<b>Insert</b>
-```java
-final MyClass myClass = new MyClass();
-myClass.name = "name";
-myClass.names = Arrays.asList("name1", "name2");
+SQLiteOperator<MyTable> operator = SQLiteOperator.from(getContext(), MyTable.class);
+final MyTable myTableObject = new MyTable();
+myTableObject.name = "name";
+myTableObject.names = Arrays.asList("name1", "name2");
 
 // Blocking
-SQLiteOperator.insertBlocking(context, myClass);
+operator.insert(myTableObject).executeBlocking();
 
 // Non-blocking
-SQLiteOperator.insert(context, myClass)
+operator
+    .insert(myTableObject)
+    .execute()
     .subscribe(new Completable.CompletableSubscriber() {
         @Override
         public void onCompleted() {
@@ -108,48 +102,48 @@ SQLiteOperator.insert(context, myClass)
 });
 ```
 
-<b>Fetch by id and Update</b>
+Fetch by id and update:
+---
 ```java
-// Blocking
-final MyClass myClass = SQLiteOperator.getSingleBlocking(context, MyClass.class, 1);
-myClass.name = "anotherName";
-SQLiteOperator.updateBlocking(context, myClass);
-
-// Non-blocking
-SQLiteOperator.getSingle(context, MyClass.class, 1)
-    .subscribe(new SingleSubscriber<MyClass>() {
-        @Override
-        public void onSuccess(MyClass value) {
-                        
-        }
-
-        @Override
-        public void onError(Throwable error) {
-
-        }
-});
+final MyTable fetchedObject = operator.getSingle(1).executeBlocking();
+fetchedObject.name = "anotherName";
+operator.update(fetchedObject).executeBlocking();
 ```
-<b>Fetch by query</b>
+
+Fetch by query:
+---
 ```java
-// Blocking
-final List<MyClass> list = SQLiteOperator.getListBlocking(context, MyClass.class, SQLiteQuery.builder().where("id = ?", 1).build());
+final List<MyTable> list = operator
+    .getList()
+    .withQuery(
+        SQLiteQuery
+            .builder()
+            .where("`id` = ?", 1)
+            .build()
+    ).executeBlocking();
+```
 
-// Non-blocking
-SQLiteOperator.getList(context, MyClass.class, SQLiteQuery.builder().where("id = ?", 1).build())
-    .subscribe(new Subscriber<MyClass>() {
-        @Override
-        public void onCompleted() {
-                        
-        }
+Fetch by raw query and delete:
+---
+```java
+final List<MyTable> list = operator
+    .getList()
+    .withRawQuery("SELECT * FROM myTable where `id` = ?", 1)
+    .executeBlocking();
 
-        @Override
-        public void onError(Throwable e) {
+operator.delete(list).executeBlocking();
 
-        }
+```
 
-        @Override
-        public void onNext(MyClass myClass) {
-            
-        }
-});
+Delete by query:
+---
+```java
+operator
+    .delete()
+    .withQuery(
+        SQLiteQuery
+            .builder()
+            .where("`id` = ?", 1)
+            .build()
+    ).executeBlocking();
 ```
