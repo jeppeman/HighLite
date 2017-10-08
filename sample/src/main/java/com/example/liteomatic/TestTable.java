@@ -5,21 +5,15 @@ import com.jeppeman.liteomatic.PrimaryKey;
 import com.jeppeman.liteomatic.SQLiteField;
 import com.jeppeman.liteomatic.SQLiteTable;
 
-/**
- * Created by jesper on 2016-10-09.
- */
-
 @SQLiteTable(database = TestDatabase.class, tableName = "test", autoDeleteColumns = true)
 public class TestTable {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     int id;
 
     @SQLiteField
     String oldString;
 
-    @SQLiteField
-    @ForeignKey(table = "myLittleTable2", fieldReference = "id")
+    @SQLiteField(foreignKey = @ForeignKey(table =  MyLittleClass2.class, fieldReference = "idzz"))
     int foreigners;
 }

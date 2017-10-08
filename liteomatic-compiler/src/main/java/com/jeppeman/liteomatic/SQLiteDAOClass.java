@@ -64,8 +64,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private Element getPrimaryKeyField() {
         for (final Element enclosed : mElement.getEnclosedElements()) {
-            final PrimaryKey field = enclosed.getAnnotation(PrimaryKey.class);
-            if (field != null) return enclosed;
+            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            if (field == null) continue;
+
+            final PrimaryKey pk = field.primaryKey();
+            if (pk.enabled()) return enclosed;
         }
 
         return null;
@@ -79,8 +82,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null || field.isUpgradeAddColumnTest()) continue;
 
-            final PrimaryKey pk = enclosed.getAnnotation(PrimaryKey.class);
-            if (pk != null && pk.autoIncrement()) {
+            final PrimaryKey pk = field.primaryKey();
+            if (pk.enabled() && pk.autoIncrement()) {
                 continue;
             }
 
@@ -199,7 +202,45 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildInsertMethod() {
+    private MethodSpec buildSaveMethod() {
+        final Element primaryKeyElement = getPrimaryKeyField();
+        final String cursorVarName = "cursor";
+
+        if (primaryKeyElement == null) {
+            throw new ProcessingException(mElement,
+                    String.format("%s must contain a field annotated with %s",
+                            mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
+        }
+
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
+                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
+
+        return MethodSpec.methodBuilder("save")
+                .addAnnotation(Override.class)
+                .returns(TypeName.INT)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addStatement("final $T $L = getReadableDatabase($L)"
+                                + ".rawQuery($S, new $T[] { $T.valueOf(mTarget.$L) })",
+                        CURSOR, cursorVarName, "context",
+                        String.format("SELECT COUNT(*) FROM %s WHERE %s = ?", mTable.tableName(),
+                                pkFieldName), STRING, STRING, primaryKeyElement.getSimpleName())
+                .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
+                .addStatement("$L.close()", cursorVarName)
+                .addCode(buildInsertBlock())
+                .nextControlFlow("else")
+                .addStatement("$T rowCount = $L.getInt(0)", TypeName.INT, cursorVarName)
+                .addStatement("$L.close()", cursorVarName)
+                .beginControlFlow("if (rowCount == 0)")
+                .addCode(buildInsertBlock())
+                .nextControlFlow("else")
+                .addCode(buildUpdateBlock())
+                .endControlFlow()
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock buildInsertBlock() {
         final Element primaryKeyElement = getPrimaryKeyField();
 
         if (primaryKeyElement == null) {
@@ -209,23 +250,21 @@ final class SQLiteDAOClass extends JavaWritableClass {
         }
 
         final CodeBlock.Builder setIdAfterInsertion = CodeBlock.builder();
-        if (primaryKeyElement.getAnnotation(PrimaryKey.class).autoIncrement()) {
+        if (primaryKeyElement.getAnnotation(SQLiteField.class).primaryKey().autoIncrement()) {
             setIdAfterInsertion.addStatement("mTarget.$L = ($T)id",
                     primaryKeyElement.getSimpleName(), ClassName.get(primaryKeyElement.asType()));
         }
 
-        return MethodSpec.methodBuilder("insert")
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(CONTEXT, "context", Modifier.FINAL)
-                .addCode("final long id = ")
+        return CodeBlock.builder()
+                .add("final long id = ")
                 .addStatement("getWritableDatabase($L).insertOrThrow($S, null, getContentValues())",
                         "context", mTable.tableName())
-                .addCode(setIdAfterInsertion.build())
+                .add(setIdAfterInsertion.build())
+                .addStatement("return 1")
                 .build();
     }
 
-    private MethodSpec buildUpdateByObjectsMethod() {
+    private CodeBlock buildUpdateBlock() {
         final Element primaryKeyElement = getPrimaryKeyField();
 
         if (primaryKeyElement == null) {
@@ -236,11 +275,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
         final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
                 primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
-        return MethodSpec.methodBuilder("update")
-                .returns(TypeName.INT)
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(CONTEXT, "context", Modifier.FINAL)
+        return CodeBlock.builder()
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, getContentValues(), $S, "
                                 + "new $T[] { $T.valueOf(mTarget.$L) })",
@@ -249,8 +284,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildUpdateByQueryMethod() {
-        return MethodSpec.methodBuilder("updateByQuery")
+    private MethodSpec buildSaveByQueryMethod() {
+        return MethodSpec.methodBuilder("saveByQuery")
                 .returns(TypeName.INT)
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
@@ -296,7 +331,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "whereClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
                 .addStatement("return getWritableDatabase($L)"
-                        + ".delete($S, whereClause, whereArgs)",
+                                + ".delete($S, whereClause, whereArgs)",
                         "context", mTable.tableName())
                 .build();
     }
@@ -516,9 +551,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         buildGetReadableDatabaseMethod(),
                         buildGetWritableDatabaseMethod(),
                         buildInstantiateObjectMethod(),
-                        buildInsertMethod(),
-                        buildUpdateByObjectsMethod(),
-                        buildUpdateByQueryMethod(),
+                        buildSaveMethod(),
+                        buildSaveByQueryMethod(),
                         buildDeleteMethod(),
                         buildDeleteByQueryMethod(),
                         buildGetSingleByRawQueryMethod(),

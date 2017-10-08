@@ -16,6 +16,8 @@ import java.util.Map;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -166,8 +168,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             fieldCreator.append(" ");
             fieldCreator.append(getFieldType(enclosed, field));
 
-            final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
-            if (primaryKey != null) {
+            final PrimaryKey primaryKey = field.primaryKey();
+            if (primaryKey.enabled()) {
                 fieldCreator.append(" PRIMARY KEY");
                 fieldCreator.append(
                         primaryKey.autoIncrement()
@@ -175,12 +177,17 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                                 : "");
             }
 
-            final ForeignKey foreignKey = enclosed.getAnnotation(ForeignKey.class);
-            if (foreignKey != null) {
+            final ForeignKey foreignKey = field.foreignKey();
+            if (foreignKey.enabled()) {
+                final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
+                        foreignKey);
+                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(foreignKey);
                 final StringBuilder foreignKeyBuilder = new StringBuilder();
                 foreignKeyBuilder.append(
                         String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
-                                fieldName, foreignKey.table(), foreignKey.fieldReference()));
+                                fieldName, foreignKeyRefTable.tableName(),
+                                getDBFieldName(foreignKeyRefElement,
+                                        foreignKeyRefElement.getAnnotation(SQLiteField.class))));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeyBuilder.append(" ON DELETE CASCADE");
                 }
@@ -333,6 +340,61 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
+    private Element findForeignKeyReferencedField(final Element enclosed,
+                                                  final ForeignKey foreignKey) {
+        TypeMirror mirror = null;
+        try {
+            foreignKey.table();
+        } catch (MirroredTypeException e) {
+            mirror = e.getTypeMirror();
+        }
+
+        final Element tableElem = mTypeUtils.asElement(mirror);
+        if (tableElem.getAnnotation(SQLiteTable.class) == null) {
+            throw new ProcessingException(enclosed,
+                    String.format("Invalid class %s specified as table for @ForeignKey, "
+                                    + "the specified class must be annotated with %s",
+                            tableElem.toString(), SQLiteTable.class.getCanonicalName()));
+        }
+
+        Element fieldRefElement = null;
+        for (final Element enc : tableElem.getEnclosedElements()) {
+            if (!enc.getSimpleName().toString().equals(foreignKey.fieldReference())) {
+                continue;
+            }
+
+            final SQLiteField field = enc.getAnnotation(SQLiteField.class);
+            if (field == null || (!field.primaryKey().enabled() && !field.unique())) {
+                throw new ProcessingException(enclosed,
+                        String.format("Field %s in class %s needs to be declared as primary key or "
+                                + "unique with @SQLiteField to be referenced in "
+                                + "@ForeignKey", enc.toString(), tableElem.toString()));
+            }
+
+            fieldRefElement = enc;
+            break;
+        }
+
+        if (fieldRefElement == null) {
+            throw new ProcessingException(enclosed,
+                    String.format("Field %s in class %s does not exist",
+                            foreignKey.fieldReference(), tableElem.toString()));
+        }
+
+        return fieldRefElement;
+    }
+
+    private SQLiteTable getForeignKeyReferencedTable(final ForeignKey foreignKey) {
+        TypeMirror mirror = null;
+        try {
+            foreignKey.table();
+        } catch (MirroredTypeException ex) {
+            mirror = ex.getTypeMirror();
+        }
+
+        return mTypeUtils.asElement(mirror).getAnnotation(SQLiteTable.class);
+    }
+
     private String getCreateStatement(final Element element, final SQLiteTable table) {
         final StringBuilder createStatement = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
                 .append(table.tableName())
@@ -350,17 +412,26 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             createStatement.append(" ");
             createStatement.append(getFieldType(enclosed, field));
 
-            final PrimaryKey primaryKey = enclosed.getAnnotation(PrimaryKey.class);
-            if (primaryKey != null) {
+            final PrimaryKey primaryKey = field.primaryKey();
+            if (primaryKey.enabled()) {
                 createStatement.append(" PRIMARY KEY");
                 createStatement.append(primaryKey.autoIncrement()
                         ? " AUTOINCREMENT" : "");
             }
 
-            final ForeignKey foreignKey = enclosed.getAnnotation(ForeignKey.class);
-            if (foreignKey != null) {
+            if (field.unique()) {
+                createStatement.append(" UNIQUE");
+            }
+
+            final ForeignKey foreignKey = field.foreignKey();
+            if (foreignKey.enabled()) {
+                final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
+                        foreignKey);
+                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(foreignKey);
                 foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
-                        fieldName, foreignKey.table(), foreignKey.fieldReference()));
+                        fieldName, foreignKeyRefTable.tableName(),
+                        getDBFieldName(foreignKeyRefElement,
+                                foreignKeyRefElement.getAnnotation(SQLiteField.class))));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeys.append(" ON DELETE CASCADE");
                 }
@@ -430,7 +501,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
     private MethodSpec buildOnOpenMethod() {
         final CodeBlock.Builder code = CodeBlock.builder(),
-            onOpenStatement = CodeBlock.builder();
+                onOpenStatement = CodeBlock.builder();
         boolean foundForeignKey = false;
 
         for (final Element enclosed : mElement.getEnclosedElements()) {
@@ -468,7 +539,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 : mTableElementMap.entrySet()) {
 
             for (final Element enclosed : tableElementEntry.getValue().getEnclosedElements()) {
-                if (!foundForeignKey && enclosed.getAnnotation(ForeignKey.class) != null) {
+                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+                if (!foundForeignKey && field != null && field.foreignKey().enabled()) {
 
                     code.beginControlFlow("if (!database.isReadOnly())")
                             .addStatement("database.execSQL($S)", "PRAGMA foreign_keys=ON;")

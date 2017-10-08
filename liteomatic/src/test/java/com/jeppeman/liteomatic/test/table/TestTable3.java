@@ -10,8 +10,7 @@ import com.jeppeman.liteomatic.SQLiteTable;
 @SQLiteTable(database = TestDatabase.class, tableName = "testTable3", autoCreate = false)
 public class TestTable3 {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     long xx;
 
     @SQLiteField

@@ -50,23 +50,16 @@ public class LiteOmaticProcessor extends AbstractProcessor {
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
 
-        for (final Element element : roundEnv.getElementsAnnotatedWith(PrimaryKey.class)) {
-            if (element.getAnnotation(SQLiteField.class) == null) {
-                error(element, String.format("Fields annotated with %s must also be "
-                                + "annotated with %s", PrimaryKey.class.getCanonicalName(),
-                        SQLiteField.class.getCanonicalName()));
+        for (final Element element : roundEnv.getElementsAnnotatedWith(SQLiteField.class)) {
+            final SQLiteField field = element.getAnnotation(SQLiteField.class);
+            if (field.primaryKey().enabled() && field.foreignKey().enabled()) {
+                error(element, String.format("%s can't have both %s and %s set to enabled",
+                        SQLiteField.class.getCanonicalName(), PrimaryKey.class.getCanonicalName(),
+                        ForeignKey.class.getCanonicalName()));
                 return true;
             }
         }
 
-        for (final Element element : roundEnv.getElementsAnnotatedWith(ForeignKey.class)) {
-            if (element.getAnnotation(SQLiteField.class) == null) {
-                error(element, String.format("Fields annotated with %s must also be "
-                                + "annotated with %s", ForeignKey.class.getCanonicalName(),
-                        SQLiteField.class.getCanonicalName()));
-                return true;
-            }
-        }
 
         final List<String> databases = new ArrayList<>();
         final Map<Element, JavaFile> helperFiles = new LinkedHashMap<>(),
@@ -205,6 +198,7 @@ public class LiteOmaticProcessor extends AbstractProcessor {
         annotations.add(OnCreate.class);
         annotations.add(OnUpgrade.class);
         annotations.add(OnOpen.class);
+        annotations.add(SQLiteRelationship.class);
 
         return annotations;
     }

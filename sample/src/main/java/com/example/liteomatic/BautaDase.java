@@ -19,7 +19,7 @@ public class BautaDase {
 
     @OnOpen
     public static void onOpen(SQLiteDatabase database) {
-        int x = 2;
+        int x = 5;
     }
 
     @OnCreate

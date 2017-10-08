@@ -9,15 +9,17 @@ import com.jeppeman.liteomatic.SQLiteTable;
 @SQLiteTable(database = TestDatabase.class, tableName = "testTable4")
 public class TestTable4 {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true), unique = true)
     long id;
 
-    @SQLiteField
-    @ForeignKey(
-            table = "testTable",
+    @SQLiteField(unique = true)
+    public String uniqueField;
+
+    @SQLiteField(foreignKey = @ForeignKey(
+            table = TestTable.class,
             fieldReference = "id",
             cascadeOnUpdate = true,
-            cascadeOnDelete = true)
+            cascadeOnDelete = true),
+            unique = true)
     public long foreignKey;
 }

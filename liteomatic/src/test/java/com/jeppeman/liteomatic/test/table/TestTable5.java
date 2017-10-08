@@ -15,7 +15,6 @@ public class TestTable5 {
         this.primaryString = primaryString;
     }
 
-    @SQLiteField
-    @PrimaryKey
+    @SQLiteField(primaryKey = @PrimaryKey)
     String primaryString;
 }

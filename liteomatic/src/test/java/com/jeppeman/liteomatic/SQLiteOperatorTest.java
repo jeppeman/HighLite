@@ -2,6 +2,7 @@ package com.jeppeman.liteomatic;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -69,18 +70,18 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testInsertAndGetSingleById() throws Exception {
+    public void testSaveAndGetSingleById() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable table = operator.getSingle(1).executeBlocking();
         assertNull(table);
-        operator.insert(new TestTable()).executeBlocking();
+        operator.save(new TestTable()).executeBlocking();
         table = operator.getSingle(1).executeBlocking();
         assertNotNull(table);
         assertEquals(1, table.id);
     }
 
     @Test
-    public void testInsertAndGetSingleByRawQuery() throws Exception {
+    public void testSaveAndGetSingleByRawQuery() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable table = operator
                 .getSingle()
@@ -92,7 +93,7 @@ public class SQLiteOperatorTest {
         newTable.testString = "123";
         newTable.testBoolean = true;
         newTable.testList = Arrays.asList("1", "2", "3");
-        operator.insert(newTable).executeBlocking();
+        operator.save(newTable).executeBlocking();
         table = operator
                 .getSingle()
                 .withRawQuery("SELECT * FROM testTable WHERE id = ?", 1)
@@ -106,7 +107,7 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testInsertAndGetSingleByQueryBuilder() throws Exception {
+    public void testSaveAndGetSingleByQueryBuilder() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable table = operator
                 .getSingle()
@@ -118,7 +119,7 @@ public class SQLiteOperatorTest {
         newTable.testString = "123";
         newTable.testBoolean = true;
         newTable.testList = Arrays.asList("1", "2", "3");
-        operator.insert(newTable).executeBlocking();
+        operator.save(newTable).executeBlocking();
         table = operator
                 .getSingle()
                 .withQuery(SQLiteQuery.builder().where("`id` = ?", 1).build())
@@ -132,7 +133,7 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testInsertAndGetListByRawQueryBlocking() throws Exception {
+    public void testSaveAndGetListByRawQueryBlocking() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         List<TestTable> list = operator
                 .getList()
@@ -145,13 +146,14 @@ public class SQLiteOperatorTest {
         newTable.testString = "123";
         newTable.testBoolean = true;
         newTable.testList = Arrays.asList("1", "2", "3");
-        operator.insert(newTable).executeBlocking();
+        operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
                 .withRawQuery("SELECT * FROM testTable")
                 .executeBlocking();
         assertEquals(1, list.size());
-        operator.insert(newTable).executeBlocking();
+        newTable.id = 0;
+        operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
                 .withRawQuery("SELECT * FROM testTable")
@@ -160,7 +162,7 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testInsertAndGetListByQueryBuilderBlocking() throws Exception {
+    public void testSaveAndGetListByQueryBuilderBlocking() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         List<TestTable> list = operator
                 .getList()
@@ -173,23 +175,23 @@ public class SQLiteOperatorTest {
         newTable.testString = "123";
         newTable.testBoolean = true;
         newTable.testList = Arrays.asList("1", "2", "3");
-        operator.insert(newTable).executeBlocking();
+        operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
                 .withQuery(SQLiteQuery.builder().where("`testFieldName` = ?", "123").build())
                 .executeBlocking();
         assertEquals(1, list.size());
         newTable.testString = "1234";
-        operator.insert(newTable).executeBlocking();
+        operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
                 .withQuery(SQLiteQuery.builder().where("`testFieldName` = ?", "123").build())
                 .executeBlocking();
-        assertEquals(1, list.size());
+        assertEquals(0, list.size());
     }
 
     @Test
-    public void testInsertAndGetFullListBlocking() throws Exception {
+    public void testSaveAndGetFullListBlocking() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         List<TestTable> list = operator.getList().executeBlocking();
         assertNotNull(list);
@@ -199,10 +201,11 @@ public class SQLiteOperatorTest {
         newTable.testString = "123";
         newTable.testBoolean = true;
         newTable.testList = Arrays.asList("1", "2", "3");
-        operator.insert(newTable).executeBlocking();
+        operator.save(newTable).executeBlocking();
         list = operator.getList().executeBlocking();
         assertEquals(1, list.size());
-        operator.insert(newTable).executeBlocking();
+        newTable.id = 0;
+        operator.save(newTable).executeBlocking();
         list = operator.getList().executeBlocking();
         assertEquals(2, list.size());
     }
@@ -210,26 +213,26 @@ public class SQLiteOperatorTest {
     @Test(expected = SQLiteException.class)
     public void testAutoCreateTableDisabled() throws Exception {
         SQLiteOperator.from(getContext(), TestTable3.class)
-                .insert(new TestTable3())
+                .save(new TestTable3())
                 .executeBlocking();
     }
 
     @Test
     public void testPrimaryKeyAsString() throws Exception {
         SQLiteOperator<TestTable5> operator = SQLiteOperator.from(getContext(), TestTable5.class);
-        operator.insert(new TestTable5("test")).executeBlocking();
+        operator.save(new TestTable5("test")).executeBlocking();
         assertNotNull(operator.getSingle("test").executeBlocking());
     }
 
     @Test(expected = RuntimeException.class)
-    public void testInsertWithNonSerializableFields() throws Exception {
+    public void testSaveWithNonSerializableFields() throws Exception {
         final TestTable2 table2 = new TestTable2();
         table2.nonSerializable = new TestNonSerializable();
-        SQLiteOperator.from(getContext(), TestTable2.class).insert(table2).executeBlocking();
+        SQLiteOperator.from(getContext(), TestTable2.class).save(table2).executeBlocking();
     }
 
     @Test
-    public void testInsert() throws Exception {
+    public void testSave() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         final TestTable table = new TestTable();
         table.testString = "123";
@@ -237,9 +240,12 @@ public class SQLiteOperatorTest {
         table.testBoolean = true;
         table.testSerializable = new TestSerializable("test");
         assertEquals(0, table.id);
-        operator.insert(table).executeBlocking();
+        operator.save(table).executeBlocking();
         assertEquals(1, table.id);
-        operator.insert(table).executeBlocking();
+        table.id = 0;
+        operator.save(table).executeBlocking();
+        assertEquals(2, table.id);
+        operator.save(table).executeBlocking();
         assertEquals(2, table.id);
     }
 
@@ -251,10 +257,10 @@ public class SQLiteOperatorTest {
         table.testList = Arrays.asList("1", "2", "3");
         table.testBoolean = true;
         table.testSerializable = new TestSerializable("test");
-        operator.insert(table).executeBlocking();
+        operator.save(table).executeBlocking();
         table.testString = "testString";
         table.testBoolean = false;
-        assertEquals(1, operator.update(table).executeBlocking());
+        assertEquals(1, operator.save(table).executeBlocking());
         TestTable fetched = operator.getSingle(1).executeBlocking();
         assertNotNull(fetched);
         assertEquals(fetched.testString, table.testString);
@@ -265,7 +271,7 @@ public class SQLiteOperatorTest {
     public void testDeleteAndGetSingleById() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable table = new TestTable();
-        operator.insert(table).executeBlocking();
+        operator.save(table).executeBlocking();
         table = operator.getSingle(1).executeBlocking();
         assertNotNull(table);
         assertEquals(1, operator.delete(table).executeBlocking());
@@ -273,30 +279,42 @@ public class SQLiteOperatorTest {
         assertNull(table);
     }
 
-    @Test(expected = SQLiteException.class)
+    @Test(expected = SQLiteConstraintException.class)
     public void testFailingForeignKeyConstraint() {
         SQLiteOperator<TestTable4> operator = SQLiteOperator.from(getContext(), TestTable4.class);
-        operator.insert(new TestTable4()).executeBlocking();
+        operator.save(new TestTable4()).executeBlocking();
+    }
+
+    @Test(expected = SQLiteConstraintException.class)
+    public void testFailingUniqueConstraint() {
+        SQLiteOperator<TestTable4> operator = SQLiteOperator.from(getContext(), TestTable4.class);
+        TestTable4 t1 = new TestTable4();
+        t1.uniqueField = "notUnique";
+        operator.save(t1).executeBlocking();
+        TestTable4 t2 = new TestTable4();
+        t2.uniqueField = "notUnique";
+        operator.save(t2).executeBlocking();
     }
 
     @Test
     public void testRespectedForeignKeyConstraintAndCascade() {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable testTable = new TestTable();
-        operator.insert(testTable).executeBlocking();
+        operator.save(testTable).executeBlocking();
         SQLiteOperator<TestTable4> operator2 = SQLiteOperator.from(getContext(), TestTable4.class);
         TestTable4 testTable4 = new TestTable4();
         testTable4.foreignKey = 1;
-        operator2.insert(testTable4).executeBlocking();
+        operator2.save(testTable4).executeBlocking();
         assertNotNull(operator2.getSingle(1).executeBlocking());
         operator.delete(testTable).executeBlocking();
+        assertNull(operator.getSingle(1).executeBlocking());
         assertNull(operator2.getSingle(1).executeBlocking());
     }
 
     @Test
     public void testOnUpgradeWithAddAndDeleteColumnAndValuePersistence() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
-        operator.insert(new TestTable()).executeBlocking();
+        operator.save(new TestTable()).executeBlocking();
         Cursor testTableCursor = getHelperInstance()
                 .getReadableDatabase()
                 .rawQuery("PRAGMA table_info(testTable)", null);

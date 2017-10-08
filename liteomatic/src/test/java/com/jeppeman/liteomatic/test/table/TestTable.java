@@ -2,6 +2,7 @@ package com.jeppeman.liteomatic.test.table;
 
 import com.jeppeman.liteomatic.PrimaryKey;
 import com.jeppeman.liteomatic.SQLiteField;
+import com.jeppeman.liteomatic.SQLiteRelationship;
 import com.jeppeman.liteomatic.SQLiteTable;
 
 import java.util.List;
@@ -12,8 +13,7 @@ import java.util.List;
 @SQLiteTable(database = TestDatabase.class, tableName = "testTable", autoDeleteColumns = true)
 public class TestTable {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     public long id;
 
     @SQLiteField("testFieldName")
@@ -33,4 +33,7 @@ public class TestTable {
 
     @SQLiteField(isUpgradeDeleteColumnTest = true)
     public String upgradeDeleteTester;
+
+    @SQLiteRelationship(table = TestTable4.class)
+    public List<TestTable4> table4Relation;
 }

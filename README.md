@@ -81,8 +81,7 @@ myTableObject.names = Arrays.asList("name1", "name2");
 operator.insert(myTableObject).executeBlocking();
 
 // Non-blocking
-operator
-    .insert(myTableObject)
+operator.insert(myTableObject)
     .execute()
     .subscribe(new Completable.CompletableSubscriber() {
         @Override

@@ -11,9 +11,8 @@ import java.util.List;
  * @author jesper
  */
 public interface SQLiteDAO<T> {
-    void insert(Context context);
-    int update(Context context);
-    int updateByQuery(Context context, String whereClause, String[] whereArgs);
+    int save(Context context);
+    int saveByQuery(Context context, String whereClause, String[] whereArgs);
     int delete(Context context);
     int deleteByQuery(Context context, String whereClause, String[] whereArgs);
     T getSingle(Context context, Object id);

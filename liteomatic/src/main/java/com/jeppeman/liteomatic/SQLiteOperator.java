@@ -149,47 +149,23 @@ public final class SQLiteOperator<T> {
     }
 
     /**
-     * Generates an executable insert operation which inserts one or more records into a table where
-     * fields are mapped from the type {@link T}.
+     * Generates an executable save operation which inserts or updates one or more records into a
+     * table where fields are mapped from the type {@link T}.
      *
      * @param objectsToInsert the objects to insert.
-     * @return an executable {@link InsertOperation<T>}
+     * @return an executable {@link SaveOperation<T>}
      */
-    public InsertOperation<T> insert(final @NonNull T... objectsToInsert) {
+    public SaveOperation<T> save(final @NonNull T... objectsToInsert) {
+        final SQLiteDAO generated = getGeneratedDAO(null);
         final SQLiteDAO<T>[] generatedObjects = new SQLiteDAO[objectsToInsert.length];
         for (int i = 0; i < objectsToInsert.length; i++) {
             generatedObjects[i] = getGeneratedDAO(objectsToInsert[i]);
         }
-        return new InsertOperation<>(mContext, generatedObjects);
+        return new SaveOperation<>(mContext, generated, generatedObjects);
     }
 
-    public InsertOperation<T> insert(final @NonNull List<T> objectsToInsert) {
-        return insert((T[]) objectsToInsert.toArray());
-    }
-
-    /**
-     * Generates an executable update operation which updates one or more records in a table where
-     * fields are mapped from the type {@link T}. If no objects are passed as parameters a query
-     * has to be specified.
-     *
-     * @param objectsToUpdate the objects to update.
-     * @return an executable {@link UpdateOperation<T>}
-     */
-    public UpdateOperation<T> update(final @Nullable T... objectsToUpdate) {
-        final SQLiteDAO generated = getGeneratedDAO(null);
-        SQLiteDAO<T>[] generatedObjects = null;
-        if (objectsToUpdate != null) {
-            generatedObjects = new SQLiteDAO[objectsToUpdate.length];
-            for (int i = 0; i < objectsToUpdate.length; i++) {
-                generatedObjects[i] = getGeneratedDAO(objectsToUpdate[i]);
-            }
-        }
-
-        return new UpdateOperation<>(mContext, generated, generatedObjects);
-    }
-
-    public UpdateOperation<T> update(final @NonNull List<T> objectsToUpdate) {
-        return update((T[]) objectsToUpdate.toArray());
+    public SaveOperation<T> save(final @NonNull List<T> objectsToInsert) {
+        return save((T[]) objectsToInsert.toArray());
     }
 
     /**

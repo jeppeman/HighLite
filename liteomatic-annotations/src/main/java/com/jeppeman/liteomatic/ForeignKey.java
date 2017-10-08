@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
-@Target(ElementType.FIELD)
+@Target(ElementType.ANNOTATION_TYPE)
 public @interface ForeignKey {
 
     /**
@@ -20,7 +20,7 @@ public @interface ForeignKey {
      *
      * @return
      */
-    String table();
+    Class<?> table();
 
     /**
      * The name of the field which this key references
@@ -38,4 +38,6 @@ public @interface ForeignKey {
      * @return
      */
     boolean cascadeOnUpdate() default false;
+
+    boolean enabled() default true;
 }

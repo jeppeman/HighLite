@@ -29,6 +29,29 @@ public @interface SQLiteField {
     SQLiteFieldType fieldType() default SQLiteFieldType.UNSPECIFIED;
 
     /**
+     * Creates a PRIMARY KEY constraint for the corresponding database column if set to true
+     *
+     * @return the SQLite type of the field
+     */
+    PrimaryKey primaryKey() default @PrimaryKey(enabled = false);
+
+    /**
+     * Creates a UNIQUE constraint for the corresponding database column if set to true
+     *
+     * @return the SQLite type of the field
+     */
+    boolean unique() default false;
+
+    /**
+     * The SQLite type of the field
+     *
+     * @return the SQLite type of the field
+     * @see {@link ForeignKey}
+     */
+    ForeignKey foreignKey() default @ForeignKey(fieldReference = "", table = ForeignKey.class,
+            enabled = false);
+
+    /**
      * DO NOT SET THIS TO TRUE, THIS IS ONLY USED IN ORDER TO TEST COLUMN ADDITION FOR onUpgrade
      *
      * @return whether this is field is used for onUpgrade column addition testing purposes

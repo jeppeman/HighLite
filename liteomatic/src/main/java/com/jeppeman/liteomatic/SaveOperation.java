@@ -12,41 +12,41 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 /**
- * This class updates one or more rows in a table based on a mapping from the type {@link T}. The
- * updating can be blocking or non-blocking returning {@link rx.Single}s
+ * This class saves (inserts or updates) one or more rows in a table based on a mapping from the
+ * type {@link T}. The saving can be blocking or non-blocking returning {@link rx.Single}s
  *
- * @param <T> the type of object to insert
+ * @param <T> the type of object to save
  * @author jesper
  */
-public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
+public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
 
     private final Context mContext;
     @Nullable
     private final SQLiteDAO<T> mGenerated;
     @Nullable
-    private final SQLiteDAO<T>[] mObjectsToUpdate;
+    private final SQLiteDAO<T>[] mObjectsToSave;
 
-    UpdateOperation(final @NonNull Context context,
-                    final @Nullable SQLiteDAO<T> generated,
-                    final @Nullable SQLiteDAO<T>[] objectsToUpdate) {
+    SaveOperation(final @NonNull Context context,
+                  final @Nullable SQLiteDAO<T> generated,
+                  final @Nullable SQLiteDAO<T>[] objectsToSave) {
         mContext = context;
         mGenerated = generated;
-        mObjectsToUpdate = objectsToUpdate;
+        mObjectsToSave = objectsToSave;
     }
 
     /**
-     * Updates one or more records in a table, blocking operation.
+     * Saves one or more records in a table, blocking operation.
      *
-     * @return the number of records updated
+     * @return the number of records saved
      */
     @WorkerThread
     public int executeBlocking() {
-        if (mObjectsToUpdate != null) {
-            int nUpdatedObjects = 0;
-            for (final SQLiteDAO<T> objectToUpdate : mObjectsToUpdate) {
-                nUpdatedObjects += objectToUpdate.update(mContext);
+        if (mObjectsToSave != null) {
+            int nSavedObjects = 0;
+            for (final SQLiteDAO<T> objectToUpdate : mObjectsToSave) {
+                nSavedObjects += objectToUpdate.save(mContext);
             }
-            return nUpdatedObjects;
+            return nSavedObjects;
         } else if (mQuery != null && mGenerated != null) {
             final String[] whereArgsAsStringArray;
             if (mQuery.mWhereArgs != null) {
@@ -58,7 +58,7 @@ public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
                 whereArgsAsStringArray = null;
             }
 
-            return mGenerated.updateByQuery(mContext, mQuery.mWhereClause,
+            return mGenerated.saveByQuery(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray);
         }
 
@@ -66,9 +66,9 @@ public class UpdateOperation<T> extends QueryableOperation<UpdateOperation<T>> {
     }
 
     /**
-     * Updates one or more records in a table, non-blocking operation.
+     * Saves one or more records in a table, non-blocking operation.
      *
-     * @return a {@link rx.Single<Integer>} where the number of records updated is passed
+     * @return a {@link rx.Single<Integer>} where the number of records saved is passed
      * as the parameter to {@link rx.SingleSubscriber#onSuccess(Object)}
      */
     public Single<Integer> execute() {

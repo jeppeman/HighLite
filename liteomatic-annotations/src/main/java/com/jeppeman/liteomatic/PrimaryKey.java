@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
-@Target(ElementType.FIELD)
+@Target(ElementType.ANNOTATION_TYPE)
 public @interface PrimaryKey {
     /**
      * Weather to auto increment this key or not
@@ -20,4 +20,6 @@ public @interface PrimaryKey {
      * @return true if auto increment otherwise false
      */
     boolean autoIncrement() default false;
+
+    boolean enabled() default true;
 }

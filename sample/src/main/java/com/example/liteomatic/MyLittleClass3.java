@@ -13,8 +13,7 @@ import java.util.List;
 @SQLiteTable(database = BautaDase.class, tableName = "myLittleTable2")
 public class MyLittleClass3 {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     int id;
 
     @SQLiteField

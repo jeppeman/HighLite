@@ -14,27 +14,24 @@ import java.util.List;
 @SQLiteTable(database = TestDatabase.class, tableName = "myLittleTable")
 public class MyLittleClass {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     int id;
 
     @SQLiteField
     String name;
 
-    @SQLiteField
-    @ForeignKey(
-            table = "test",
+    @SQLiteField(foreignKey = @ForeignKey(
+            table = TestTable.class,
             fieldReference = "id",
             cascadeOnDelete = true,
-            cascadeOnUpdate = true)
+            cascadeOnUpdate = true))
     int foreign;
 
-    @SQLiteField
-    @ForeignKey(
-            table = "test2",
+    @SQLiteField(foreignKey = @ForeignKey(
+            table = TestTable.class,
             fieldReference = "id",
             cascadeOnDelete = true,
-            cascadeOnUpdate = true)
+            cascadeOnUpdate = true))
     int foreign2;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)

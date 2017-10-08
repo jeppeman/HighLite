@@ -12,8 +12,7 @@ import com.jeppeman.liteomatic.SQLiteTable;
         autoAddColumns = false)
 public class MyLittleClass2 {
 
-    @SQLiteField
-    @PrimaryKey(autoIncrement = true)
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     int id;
 
     @SQLiteField
