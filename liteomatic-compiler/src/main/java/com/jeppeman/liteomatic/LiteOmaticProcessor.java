@@ -20,6 +20,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
@@ -60,7 +61,6 @@ public class LiteOmaticProcessor extends AbstractProcessor {
             }
         }
 
-
         final List<String> databases = new ArrayList<>();
         final Map<Element, JavaFile> helperFiles = new LinkedHashMap<>(),
                 daoFiles = new LinkedHashMap<>();
@@ -96,9 +96,8 @@ public class LiteOmaticProcessor extends AbstractProcessor {
 
             for (final Map.Entry<SQLiteTable, Element> entry
                     : tablesForDatabase.getKey().entrySet()) {
-                daoFiles.put(entry.getValue(), new SQLiteDAOClass(packageName,
-                        descriptor.dbName(),
-                        entry.getKey(), entry.getValue(), mElementUtils).writeJava());
+                daoFiles.put(entry.getValue(), new SQLiteDAOClass(packageName, descriptor.dbName(),
+                        entry.getKey(), entry.getValue(), mElementUtils, mTypeUtils).writeJava());
             }
         }
 
@@ -144,6 +143,8 @@ public class LiteOmaticProcessor extends AbstractProcessor {
 
         final List<String> tableNamesAdded = new ArrayList<>();
         for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
+            if (element.getModifiers().contains(Modifier.ABSTRACT)) continue;
+
             final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
 
             TypeMirror mirror = null;

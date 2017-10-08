@@ -42,6 +42,8 @@ abstract class JavaWritableClass {
             "ContentValues");
     static final ClassName SQLITE_DAO = ClassName.get("com.jeppeman.liteomatic",
             "SQLiteDAO");
+    static final ClassName SQLITE_OPERATOR = ClassName.get("com.jeppeman.liteomatic",
+            "SQLiteOperator");
     static final ClassName SQLITE_DATABASE = ClassName.get("android.database.sqlite",
             "SQLiteDatabase");
     static final ClassName SQLITE_OPEN_HELPER = ClassName.get("android.database.sqlite",

@@ -12,7 +12,7 @@ import java.util.List;
  * @author jesper
  */
 @SQLiteTable(database = TestDatabase.class, tableName = "myLittleTable")
-public class MyLittleClass {
+public abstract class MyLittleClass {
 
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     int id;
@@ -35,7 +35,7 @@ public class MyLittleClass {
     int foreign2;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
-    Short shortz;
+    float shortz;
 
     @SQLiteField("someOtherNameeps")
     List<String> nameList;

@@ -19,7 +19,6 @@ public class TestTable4 {
             table = TestTable.class,
             fieldReference = "id",
             cascadeOnUpdate = true,
-            cascadeOnDelete = true),
-            unique = true)
+            cascadeOnDelete = true))
     public long foreignKey;
 }

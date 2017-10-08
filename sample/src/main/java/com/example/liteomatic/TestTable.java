@@ -14,6 +14,6 @@ public class TestTable {
     @SQLiteField
     String oldString;
 
-    @SQLiteField(foreignKey = @ForeignKey(table =  MyLittleClass2.class, fieldReference = "idzz"))
+    @SQLiteField(foreignKey = @ForeignKey(table =  MyLittleClass2.class, fieldReference = "id"))
     int foreigners;
 }

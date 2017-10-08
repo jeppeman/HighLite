@@ -19,7 +19,7 @@ public class MyLittleClass2 {
     String namezz;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
-    short shortz;
+    float shortz;
 
     @SQLiteField(fieldType = SQLiteFieldType.INTEGER)
     boolean testBool;

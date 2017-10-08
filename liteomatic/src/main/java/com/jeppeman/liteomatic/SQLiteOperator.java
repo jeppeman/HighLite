@@ -174,7 +174,7 @@ public final class SQLiteOperator<T> {
      * a query has to be specified.
      *
      * @param objectsToDelete the objects to delete.
-     * @return an executable {@link InsertOperation<T>}
+     * @return an executable {@link DeleteOperation<T>}
      */
     public DeleteOperation<T> delete(final @Nullable T... objectsToDelete) {
         final SQLiteDAO generated = getGeneratedDAO(null);

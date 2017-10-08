@@ -16,7 +16,10 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 
 /**
  * Generator of data access objects to automatically handle insertion/updates/deletion of records
@@ -32,17 +35,20 @@ final class SQLiteDAOClass extends JavaWritableClass {
     private final SQLiteTable mTable;
     private final Element mElement;
     private final Elements mElementUtils;
+    private final Types mTypeUtils;
 
     SQLiteDAOClass(final String helperPackage,
                    final String databaseName,
                    final SQLiteTable table,
                    final Element element,
-                   final Elements elementUtils) {
+                   final Elements elementUtils,
+                   final Types typeUtils) {
         mHelperPackage = helperPackage;
         mDatabaseName = databaseName;
         mTable = table;
         mElement = element;
         mElementUtils = elementUtils;
+        mTypeUtils = typeUtils;
     }
 
     private String getPackageName() {
@@ -376,7 +382,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
+                .addStatement("$T ret = instantiateObject(cursor, context)",
+                        getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
                 .build();
@@ -402,7 +409,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("$T ret = instantiateObject(cursor)", getClassNameOfElement())
+                .addStatement("$T ret = instantiateObject(cursor, context)",
+                        getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
                 .build();
@@ -427,7 +435,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return ret")
                 .endControlFlow()
                 .beginControlFlow("do")
-                .addStatement("ret.add(instantiateObject(cursor))")
+                .addStatement("ret.add(instantiateObject(cursor, context))")
                 .endControlFlow("while(cursor.moveToNext())")
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -458,7 +466,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return ret")
                 .endControlFlow()
                 .beginControlFlow("do")
-                .addStatement("ret.add(instantiateObject(cursor))")
+                .addStatement("ret.add(instantiateObject(cursor, context))")
                 .endControlFlow("while(cursor.moveToNext())")
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -468,10 +476,34 @@ final class SQLiteDAOClass extends JavaWritableClass {
     private MethodSpec buildInstantiateObjectMethod() {
         final ClassName elementCn = getClassNameOfElement();
 
-        final CodeBlock.Builder builder = CodeBlock.builder();
+        final CodeBlock.Builder sqliteFieldsBuilder = CodeBlock.builder(),
+                relationshipsBuilder = CodeBlock.builder();
         for (final Element enclosed : mElement.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null || field.isUpgradeAddColumnTest()) continue;
+            if (field == null || field.isUpgradeAddColumnTest()) {
+                final SQLiteRelationship relationship = enclosed
+                        .getAnnotation(SQLiteRelationship.class);
+                if (relationship == null) continue;
+
+                TypeMirror mirror = null;
+                try {
+                    relationship.table();
+                } catch (MirroredTypeException ex) {
+                    mirror = ex.getTypeMirror();
+                }
+
+                final TypeName relationClassName = ClassName.get(mTypeUtils.asElement(mirror)
+                        .asType());
+
+                final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
+                        .addStatement("ret.$L = $T.from(context, $T.class)"
+                                        + ".getList().executeBlocking()",
+                                enclosed.getSimpleName(), SQLITE_OPERATOR, relationClassName);
+
+                relationshipsBuilder.add(relationshipBuilder.build());
+
+                continue;
+            }
 
             final Name fieldName = enclosed.getSimpleName();
             final TypeName typeName = ClassName.get(enclosed.asType());
@@ -511,7 +543,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .build();
             }
 
-            builder.beginControlFlow("if (fieldName.equals($S))", enclosed.getSimpleName())
+            sqliteFieldsBuilder.beginControlFlow("if (fieldName.equals($S))",
+                    enclosed.getSimpleName())
                     .add(assignmentStatement)
                     .addStatement("continue")
                     .endControlFlow();
@@ -520,13 +553,15 @@ final class SQLiteDAOClass extends JavaWritableClass {
         return MethodSpec.methodBuilder("instantiateObject")
                 .addModifiers(Modifier.PRIVATE)
                 .addParameter(CURSOR, "cursor", Modifier.FINAL)
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .returns(elementCn)
                 .addStatement("final $T ret = new $T()", elementCn, elementCn)
                 .beginControlFlow("for (int i = 0; i < cursor.getColumnCount(); i++)")
                 .addStatement("final String name = cursor.getColumnName(i)")
                 .addStatement("final String fieldName = COLUMN_FIELD_MAP.get(name)")
-                .addCode(builder.build())
+                .addCode(sqliteFieldsBuilder.build())
                 .endControlFlow()
+                .addCode(relationshipsBuilder.build())
                 .addStatement("return ret")
                 .build();
     }

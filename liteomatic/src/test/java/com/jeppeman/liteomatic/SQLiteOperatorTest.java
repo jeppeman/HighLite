@@ -297,6 +297,25 @@ public class SQLiteOperatorTest {
     }
 
     @Test
+    public void testRelationship() {
+        SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
+        TestTable t1 = new TestTable();
+        operator.save(t1).executeBlocking();
+        SQLiteOperator<TestTable4> operator2 = SQLiteOperator.from(getContext(), TestTable4.class);
+        t1 = operator.getSingle(1).executeBlocking();
+        assertNotNull(t1);
+        assertEquals(0, t1.table4Relation.size());
+        TestTable4 related1 = new TestTable4();
+        related1.foreignKey = t1.id;
+        TestTable4 related2 = new TestTable4();
+        related2.foreignKey = t1.id;
+        operator2.save(related1, related2).executeBlocking();
+        t1 = operator.getSingle(1).executeBlocking();
+        assertNotNull(t1);
+        assertEquals(2, t1.table4Relation.size());
+    }
+
+    @Test
     public void testRespectedForeignKeyConstraintAndCascade() {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable testTable = new TestTable();

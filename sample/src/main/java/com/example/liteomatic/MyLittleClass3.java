@@ -7,9 +7,6 @@ import com.jeppeman.liteomatic.SQLiteTable;
 
 import java.util.List;
 
-/**
- * Created by jesper on 2016-08-25.
- */
 @SQLiteTable(database = BautaDase.class, tableName = "myLittleTable2")
 public class MyLittleClass3 {
 
