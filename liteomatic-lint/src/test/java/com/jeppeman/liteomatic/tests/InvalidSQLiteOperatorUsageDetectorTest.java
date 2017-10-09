@@ -36,7 +36,7 @@ public class InvalidSQLiteOperatorUsageDetectorTest extends LintDetectorTest {
     }
 
     @Override
-    protected InputStream getTestResource(String relativePath, boolean expectExists) {
+    public InputStream getTestResource(String relativePath, boolean expectExists) {
         String path = (PATH_TEST_RESOURCES + relativePath).replace('/', File.separatorChar);
         File file = new File(getTestDataRootDir(), path);
         if (file.exists()) {
