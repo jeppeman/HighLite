@@ -5,12 +5,19 @@ LiteOmatic
 
 LiteOmatic is an SQLite library for Android that makes use of annotation processing to generate boilerplate for your SQLite operations.
 
-Key features:
+<b>Key features:</b>
 
 * No need to define subclasses of SQLiteOpenHelper; automates table creation, table deletion and table upgrades
-* Support for foreign keys and relationships
-* Query builder that removes the need to have to deal with the null-argument passing to the standard Android SQLite API.
-* Easy to use API with blocking and non-blocking (using RxJava) operations.
+* Query builder that eliminates the need to have to deal with the null-argument passing to the standard Android SQLite API.
+* Easy to use API with blocking and non-blocking (using RxJava) operations for get, save and delete.
+* Annotation driven design, which includes support for foreign keys and relationships
+
+<b>Other positives:</b>
+
+* Fast and thread safe
+* Errors in user setup are caught and reported at compile time
+* Lint warnings for errors that can't be caught at compile time
+* Comprehensive test coverage
 
 Getting started
 ---
@@ -22,7 +29,7 @@ dependencies {
 
 ```
 
-Basic setup:
+Basic setup
 ---
 Annotate a class with ```@SQLiteDatabaseDescriptor``` as follows:
 ```java
@@ -33,7 +40,7 @@ Annotate a class with ```@SQLiteDatabaseDescriptor``` as follows:
 )
 public class MyDatabase {
 
-    // Define a method like this if you want to manually handle onOpen.
+    // Optional: define a method like this if you want to manually handle onOpen.
     // Note: PRAGMA foreign_keys = ON is set automatically if any foreign
     // keys are found for any table in the database.
     @OnOpen
@@ -41,14 +48,14 @@ public class MyDatabase {
         ...
     }
     
-    // Define a method like this if you want to manually handle onCreate;
+    // Optional: define a method like this if you want to manually handle onCreate;
     // i.e. if you opt out from automatic table creation on some table
     @OnCreate
     public static void onCreate(SQLiteDatabase db) {
         ...
     }
     
-    // Define a method like this if you want to manually handle onUpgrade;
+    // Optional: define a method like this if you want to manually handle onUpgrade;
     // i.e. if you opt out from automatic upgrades on some table 
     @OnUpgrade
     public static void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -71,7 +78,7 @@ Then define a class for a table
 public class Company {
     
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
-    long id; // fields annotated with @SQLiteField need to be package local
+    long id; // fields annotated with @SQLiteField need to be at least package local
     
     @SQLiteField(fieldName = "companyName")
     String name;
@@ -81,19 +88,22 @@ public class Company {
 }
 ```
 
+That's it, you're now ready to start doing some actual database operations
+
 Operations
 ===
+The operations
 
-Insert an object:
+Insert an object
 ---
 ```java
 SQLiteOperator<Company> operator = SQLiteOperator.from(getContext(), Company.class);
 final Company companyObject = new Company();
 companyObject.name = "My awesome company";
-companyObject.names = Arrays.asList("John", "Bob");
+companyObject.employees = Arrays.asList("John", "Bob");
 
-// Blocking, the save method inserts if the object's id is not present in the table, otherwise updates
-operator.save(companyObject).executeBlocking();
+// Blocking
+operator.save(companyObject).executeBlocking(); // the save method inserts if the object's id is not present in the table, otherwise updates
 
 // Non-blocking
 operator.save(companyObject)
@@ -116,7 +126,7 @@ operator.save(companyObject)
 });
 ```
 
-Fetch by id and update:
+Fetch by id and update
 ---
 ```java
 final Company fetchedObject = operator.getSingle(1).executeBlocking();
@@ -124,7 +134,7 @@ fetchedObject.name = "Mary";
 operator.save(fetchedObject).executeBlocking();
 ```
 
-Fetch by query:
+Fetch by query
 ---
 ```java
 final List<Company> list = operator
@@ -137,19 +147,19 @@ final List<Company> list = operator
     ).executeBlocking();
 ```
 
-Fetch by raw query and delete:
+Fetch by raw query and delete
 ---
 ```java
 final List<Company> list = operator
     .getList()
-    .withRawQuery("SELECT * FROM myTable where `id` = ?", 1)
+    .withRawQuery("SELECT * FROM companies where `id` = ?", 1)
     .executeBlocking();
 
 operator.delete(list).executeBlocking();
 
 ```
 
-Delete by query:
+Delete by query
 ---
 ```java
 operator
@@ -165,7 +175,7 @@ operator
 Foreign keys and relationships
 ===
 
-LiteOmatic supports foreign keys and relationships, here's an example of how you can use it:
+LiteOmatic supports foreign keys and relationships, here's an example of how you can use them:
 
 ```java
 @SQLiteTable(
@@ -175,18 +185,18 @@ LiteOmatic supports foreign keys and relationships, here's an example of how you
 public class Company {
     
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
-    long id; // fields annotated with @SQLiteField need to be package local
+    long id;
     
     @SQLiteField(fieldName = "companyName")
     String name;
     
     @SQLiteRelationship(table = Employee.class)
-    List<Employee> employeeList; // When a company is fetched from the database, it's related employees gets fetched as well
+    List<Employee> employeeList; // When a company is fetched from the database, its related employees gets fetched as well
 }
 
 @SQLiteTable(
         database = MyDatabase.class, 
-        tableName = "myOtherTable"
+        tableName = "employees"
 )
 public class Employee {
     
