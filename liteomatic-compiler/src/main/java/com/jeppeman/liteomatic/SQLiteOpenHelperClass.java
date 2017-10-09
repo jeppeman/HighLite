@@ -177,6 +177,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                                 : "");
             }
 
+            if (field.unique()) {
+                fieldCreator.append(" UNIQUE");
+            }
+
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
