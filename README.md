@@ -7,7 +7,7 @@ HighLite is an SQLite library for Android that makes use of annotation processin
 
 <b>Key features:</b>
 
-* No need to define subclasses of SQLiteOpenHelper; automates table creation, table deletion and table upgrades
+* No need to subclass SQLiteOpenHelper; automates table creation, table deletion and table upgrades
 * Query builder that eliminates the need to have to deal with the null-argument passing to the standard Android SQLite API.
 * Easy to use API with blocking and non-blocking (using RxJava) operations for get, save and delete.
 * Annotation driven design, which includes support for foreign keys and relationships
@@ -19,6 +19,7 @@ HighLite is an SQLite library for Android that makes use of annotation processin
 * Lint warnings for errors that can't be caught at compile time
 * Comprehensive test coverage
 * Type safe operations
+* Supports inheritance of database classes
 
 Getting started
 ---
@@ -50,7 +51,7 @@ public class MyDatabase {
     }
     
     // Optional: define a method like this if you want to manually handle onCreate;
-    // i.e. if you opt out from automatic table creation on some table
+    // i.e. if you opt out from automatic table creation on some table.
     @OnCreate
     public static void onCreate(SQLiteDatabase db) {
         ...
@@ -66,7 +67,7 @@ public class MyDatabase {
 }
 ```
 
-Then define a class for a table
+Then define a class for a table that links to the database class
 
 ```java
 @SQLiteTable(
@@ -133,7 +134,7 @@ Fetch by id and update
 // If you pass an argument to getSingle it will be matched against the table's primary key field,
 // in this case `id` = 1
 final Company fetchedObject = operator.getSingle(1).executeBlocking();
-fetchedObject.name = "Mary";
+fetchedObject.name = "My not so awesome company";
 operator.save(fetchedObject).executeBlocking();
 ```
 
@@ -242,7 +243,7 @@ bob.companyId = company.id;
 employeeOperator.save(john, bob).executeBlocking();
 ```
 
-Now if we fetch the commpany from the database the employees will follow:
+Now if we fetch the company from the database the employees will follow:
 ```java
 Company companyFromDatabase = companyOperator
     .getSingle()
@@ -251,3 +252,6 @@ Company companyFromDatabase = companyOperator
     
 Log.d("employees", companyFromDatabase.employeeList /* <- this is now [john, bob]*/)
 ```
+
+Inheritance
+===
