@@ -59,6 +59,13 @@ public class LiteOmaticProcessor extends AbstractProcessor {
                         ForeignKey.class.getCanonicalName()));
                 return true;
             }
+
+            final SQLiteRelationship relationship = element.getAnnotation(SQLiteRelationship.class);
+            if (relationship != null) {
+                error(element, String.format("Fields are not allowed to be annotated with both"
+                        + "%s and %s", SQLiteField.class.getCanonicalName(),
+                        SQLiteRelationship.class.getCanonicalName()));
+            }
         }
 
         final List<String> databases = new ArrayList<>();
