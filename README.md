@@ -7,10 +7,11 @@ HighLite is an SQLite library for Android that makes use of annotation processin
 
 <b>Key features:</b>
 
-* No need to subclass SQLiteOpenHelper; automates table creation, table deletion and table upgrades
+* Automated table creation and table upgrades (column additions / changes / deletions are automatic) with opt-out possibilities for those who do not want it. 
 * Query builder that eliminates the need to have to deal with the null-argument passing to the standard Android SQLite API.
-* Easy to use API with blocking and non-blocking (using RxJava) operations for get, save and delete.
-* Annotation driven design, which includes support for foreign keys and relationships
+* Easy to use API with simple but flexible operations for get, save and delete.
+* Reactive! Each operation can be Rx-ified for those who use RxJava.
+* Annotation driven design, which includes support for foreign keys and relationships.
 
 <b>Other positives:</b>
 
@@ -20,6 +21,7 @@ HighLite is an SQLite library for Android that makes use of annotation processin
 * Comprehensive test coverage
 * Type safe operations
 * Supports inheritance of database classes
+* No need to subclass SQLiteOpenHelper; all necessary interactions with it are done under the hood.
 
 Getting started
 ---
