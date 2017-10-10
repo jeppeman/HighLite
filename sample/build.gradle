@@ -10,7 +10,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.liteomatic"
+        applicationId "com.example.highlite"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -29,10 +29,10 @@ dependencies {
     compile deps.appcompat
     compile deps.android
 
-//    compile 'com.jeppeman:liteomatic:1.0-SNAPSHOT'
-//    apt 'com.jeppeman:liteomatic-compiler:1.0-SNAPSHOT'
+//    compile 'com.jeppeman:highlite:1.0-SNAPSHOT'
+//    apt 'com.jeppeman:highlite-compiler:1.0-SNAPSHOT'
     compile deps.rxjava
     compile deps.rxandroid
-    compile project(':liteomatic')
-    annotationProcessor project(':liteomatic-compiler')
+    compile project(':highlite')
+    annotationProcessor project(':highlite-compiler')
 }

@@ -1,9 +1,9 @@
-[![Build Status](https://travis-ci.org/jeppeman/LiteOmatic.svg?branch=master)](https://travis-ci.org/jeppeman/LiteOmatic)
+[![Build Status](https://travis-ci.org/jeppeman/HighLite.svg?branch=master)](https://travis-ci.org/jeppeman/HighLite)
 
-LiteOmatic
+HighLite
 ===
 
-LiteOmatic is an SQLite library for Android that makes use of annotation processing to generate boilerplate for your SQLite operations.
+HighLite is an SQLite library for Android that makes use of annotation processing to generate boilerplate for your SQLite operations.
 
 <b>Key features:</b>
 
@@ -24,8 +24,8 @@ Getting started
 ---
 ```groovy
 dependencies {
-    compile 'com.jeppeman:liteomatic:1.0-beta1'
-    annotationProcessor 'com.jeppeman:liteomatic-compiler:1.0-beta1'
+    compile 'com.jeppeman:highlite:1.0-beta1'
+    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta1'
 }
 
 ```
@@ -178,7 +178,7 @@ operator
 Foreign keys and relationships
 ===
 
-LiteOmatic supports foreign keys and relationships, here's an example of how you can use them:
+HighLite supports foreign keys and relationships, here's an example of how you can use them:
 
 ```java
 @SQLiteTable(
