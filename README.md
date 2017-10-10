@@ -14,10 +14,11 @@ LiteOmatic is an SQLite library for Android that makes use of annotation process
 
 <b>Other positives:</b>
 
-* Fast and thread safe
+* Fast! No reflection resolving at runtime, all operations are carried out through compile time generated code
 * Errors in user setup are caught and reported at compile time
 * Lint warnings for errors that can't be caught at compile time
 * Comprehensive test coverage
+* Type safe operations
 
 Getting started
 ---
@@ -129,6 +130,8 @@ operator.save(companyObject)
 Fetch by id and update
 ---
 ```java
+// If you pass an argument to getSingle it will be matched against the table's primary key field,
+// in this case `id` = 1
 final Company fetchedObject = operator.getSingle(1).executeBlocking();
 fetchedObject.name = "Mary";
 operator.save(fetchedObject).executeBlocking();
@@ -237,8 +240,10 @@ bob.name = "Bob";
 bob.salary = 10000f;
 bob.companyId = company.id;
 employeeOperator.save(john, bob).executeBlocking();
+```
 
-// Now let's fetch the company from the database
+Now if we fetch the commpany from the database the employees will follow:
+```java
 Company companyFromDatabase = companyOperator
     .getSingle()
     .withRawQuery("SELECT * FROM companies WHERE `name` = ?", "My awesome company")
