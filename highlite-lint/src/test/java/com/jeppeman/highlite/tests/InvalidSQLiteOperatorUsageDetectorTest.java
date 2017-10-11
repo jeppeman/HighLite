@@ -67,6 +67,11 @@ public class InvalidSQLiteOperatorUsageDetectorTest extends LintDetectorTest {
     }
 
     @Override
+    protected boolean allowCompilationErrors() {
+        return true;
+    }
+
+    @Override
     protected Detector getDetector() {
         return new InvalidSQLiteOperatorUsageDetector();
     }
