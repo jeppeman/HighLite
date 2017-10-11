@@ -33,7 +33,7 @@ task createProperties(dependsOn: processResources) << {
         sdkToolsDir = ""
     }
 
-    File file = new File("$buildDir/resources/main/")
+    File file = new File("$buildDir/classes/test/com/jeppeman/highlite/tests")
     if (!file.exists()) {
         file.mkdirs()
     }

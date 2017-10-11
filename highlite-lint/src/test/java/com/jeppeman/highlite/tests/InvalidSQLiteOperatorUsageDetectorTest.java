@@ -28,7 +28,7 @@ public class InvalidSQLiteOperatorUsageDetectorTest extends LintDetectorTest {
     @Override
     protected void setUp() throws Exception {
         Properties p = new Properties(System.getProperties());
-        InputStream is = getClass().getClassLoader().getResourceAsStream("sdktools.properties");
+        InputStream is = getClass().getResourceAsStream("sdktools.properties");
         p.load(is);
         p.setProperty("com.android.tools.lint.bindir", p.getProperty("sdkToolsDir"));
         System.setProperties(p);
