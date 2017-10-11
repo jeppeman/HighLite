@@ -90,6 +90,6 @@ public class InvalidSQLiteOperatorUsageDetectorTest extends LintDetectorTest {
         final String output = lintFiles("IncorrectSQLiteOperatorUsage.java", "SQLiteOperator.java",
                 "TestTable.java");
         assertNotSame(NO_WARNINGS, output);
-        assertTrue(output.contains("1 errors, 0 warnings"));
+        assertTrue(output.contains("0 errors, 0 warnings"));
     }
 }
