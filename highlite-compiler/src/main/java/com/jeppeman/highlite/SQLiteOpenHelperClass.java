@@ -181,6 +181,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 fieldCreator.append(" UNIQUE");
             }
 
+            if (field.notNull()) {
+                fieldCreator.append(" NOT NULL");
+            }
+
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
@@ -399,10 +403,23 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return mTypeUtils.asElement(mirror).getAnnotation(SQLiteTable.class);
     }
 
+    private String getIndent(final int n) {
+        final StringBuilder builder = new StringBuilder("  ");
+
+        for (int i = 0; i < n; i++) {
+            builder.append("  ");
+        }
+
+        return builder.toString();
+    }
+
     private String getCreateStatement(final Element element, final SQLiteTable table) {
-        final StringBuilder createStatement = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
+        final StringBuilder createStatement = new StringBuilder("\n")
+                .append(getIndent(1))
+                .append("CREATE TABLE IF NOT EXISTS ")
                 .append(table.tableName())
-                .append(" ("),
+                .append(" (\n")
+                .append(getIndent(2)),
                 foreignKeys = new StringBuilder();
 
         for (final Element enclosed : element.getEnclosedElements()) {
@@ -427,6 +444,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 createStatement.append(" UNIQUE");
             }
 
+            if (field.notNull()) {
+                createStatement.append(" NOT NULL");
+            }
+
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
@@ -447,8 +468,20 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 foreignKeys.append(", ");
             }
 
+//            createStatement.append(",\n").append(getIndent(2));
             createStatement.append(", ");
         }
+
+//        final StringBuilder removeLastComma = new StringBuilder(createStatement.substring(0,
+//                createStatement.length() - 8))
+//                .append(foreignKeys.length() > 0
+//                        ? foreignKeys.substring(0, foreignKeys.length() - 2)
+//                        : "")
+//                .append("")
+//                .append(getIndent(1))
+//                .append(");");
+//
+//        return removeLastComma.toString();
 
         createStatement.append(foreignKeys);
 

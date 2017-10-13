@@ -31,21 +31,28 @@ public @interface SQLiteField {
     /**
      * Creates a PRIMARY KEY constraint for the corresponding database column if set to true
      *
-     * @return the SQLite type of the field
+     * @return
      */
     PrimaryKey primaryKey() default @PrimaryKey(enabled = false);
 
     /**
      * Creates a UNIQUE constraint for the corresponding database column if set to true
      *
-     * @return the SQLite type of the field
+     * @return
      */
     boolean unique() default false;
 
     /**
-     * The SQLite type of the field
+     * Creates a NOT NULL constraint for the corresponding database column if set to true
      *
      * @return the SQLite type of the field
+     */
+    boolean notNull() default false;
+
+    /**
+     * The SQLite type of the field
+     *
+     * @return
      * @see {@link ForeignKey}
      */
     ForeignKey foreignKey() default @ForeignKey(fieldReference = "", table = ForeignKey.class,

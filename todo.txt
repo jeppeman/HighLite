@@ -3,3 +3,4 @@ More LINT warnings (Rx not in classpath, not calling execute or executeBlocking)
 Handle inheritance
 Handle one-to-one and one-to-many rels
 Handle save by query
+Auto naming of tables based on class name

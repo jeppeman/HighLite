@@ -14,6 +14,7 @@ import com.jeppeman.highlite.test.table.TestTable2;
 import com.jeppeman.highlite.test.table.TestTable3;
 import com.jeppeman.highlite.test.table.TestTable4;
 import com.jeppeman.highlite.test.table.TestTable5;
+import com.jeppeman.highlite.test.table.TestTable6;
 
 import org.junit.After;
 import org.junit.Test;
@@ -41,11 +42,6 @@ public class SQLiteOperatorTest {
         return RuntimeEnvironment.application;
     }
 
-    @Test(expected = RuntimeException.class)
-    public void testInvalidClassPassed() {
-        SQLiteOperator.from(getContext(), ArrayList.class).getList();
-    }
-
     @After
     public void finishComponentTesting() throws ClassNotFoundException {
         resetSingleton(Class.forName(TestDatabase.class.getCanonicalName() + "_OpenHelper"),
@@ -67,6 +63,11 @@ public class SQLiteOperatorTest {
             NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         return (SQLiteOpenHelper) Class.forName(TestDatabase.class.getCanonicalName()
                 + "_OpenHelper").getMethod("getInstance", Context.class).invoke(null, getContext());
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void testInvalidClassPassed() {
+        SQLiteOperator.from(getContext(), ArrayList.class).getList();
     }
 
     @Test
@@ -313,6 +314,20 @@ public class SQLiteOperatorTest {
         t1 = operator.getSingle(1).executeBlocking();
         assertNotNull(t1);
         assertEquals(2, t1.table4Relation.size());
+    }
+
+    @Test(expected = SQLiteConstraintException.class)
+    public void testNotNullFailed() {
+        SQLiteOperator<TestTable6> operator = SQLiteOperator.from(getContext(), TestTable6.class);
+        operator.save(new TestTable6("test")).executeBlocking();
+    }
+
+    @Test
+    public void testNotNull() {
+        SQLiteOperator<TestTable6> operator = SQLiteOperator.from(getContext(), TestTable6.class);
+        TestTable6 table = new TestTable6("test");
+        table.notNullString = "not null";
+        operator.save(table).executeBlocking();
     }
 
     @Test
