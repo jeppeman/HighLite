@@ -13,6 +13,6 @@ public class TestTable3 {
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     long xx;
 
-    @SQLiteField
-    String str;
+    @SQLiteField(notNull = true)
+    public String str;
 }

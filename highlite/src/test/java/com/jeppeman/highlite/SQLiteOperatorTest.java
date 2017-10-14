@@ -17,7 +17,9 @@ import com.jeppeman.highlite.test.table.TestTable5;
 import com.jeppeman.highlite.test.table.TestTable6;
 
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
@@ -37,6 +39,9 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
 public class SQLiteOperatorTest {
+
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
 
     private Context getContext() {
         return RuntimeEnvironment.application;
@@ -287,7 +292,7 @@ public class SQLiteOperatorTest {
     }
 
     @Test(expected = SQLiteConstraintException.class)
-    public void testFailingUniqueConstraint() throws Exception  {
+    public void testFailingUniqueConstraint() throws Exception {
         SQLiteOperator<TestTable4> operator = SQLiteOperator.from(getContext(), TestTable4.class);
         TestTable4 t1 = new TestTable4();
         t1.uniqueField = "notUnique";
@@ -346,15 +351,68 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testOnUpgradeWithAddAndDeleteColumnAndValuePersistence() throws Exception {
+    public void testOnUpgradeWithColumnChange() throws Exception {
+        getHelperInstance()
+                .getReadableDatabase()
+                .execSQL("CREATE TABLE testTable3 ("
+                        + "    `xx` INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "    `str` TEXT"
+                        + ");"
+                );
+
+        SQLiteOperator<TestTable3> operator = SQLiteOperator.from(getContext(), TestTable3.class);
+        TestTable3 t = new TestTable3();
+        operator.save(t).executeBlocking();
+        operator.delete(t).executeBlocking();
+        getHelperInstance().onUpgrade(getHelperInstance().getWritableDatabase(), 1, 2);
+        exception.expect(SQLiteConstraintException.class);
+        operator.save(new TestTable3()).executeBlocking();
+    }
+
+    @Test
+    public void testOnUpgradeValuePersistence() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable testTable = new TestTable();
+        testTable.testString = "Persisting across upgrade?";
         operator.save(testTable).executeBlocking();
+
+        assertNotNull(operator.getSingle(1).executeBlocking());
+
+        getHelperInstance().onUpgrade(getHelperInstance().getWritableDatabase(), 1, 2);
+
+        assertNotNull(operator
+                .getSingle()
+                .withQuery(
+                        SQLiteQuery
+                                .builder()
+                                .where("`testFieldName` = ?", "Persisting across upgrade?")
+                                .build()
+                )
+                .executeBlocking()
+        );
+    }
+
+    @Test
+    public void testOnUpgradeWithAddAndDeleteColumn() throws Exception {
+        getHelperInstance()
+                .getWritableDatabase()
+                .execSQL("DROP TABLE testTable;");
+
+        getHelperInstance()
+                .getWritableDatabase()
+                .execSQL("CREATE TABLE testTable (\n" +
+                        "      `id` INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+                        "      `testFieldName` TEXT,\n" +
+                        "      `testList` BLOB,\n" +
+                        "      `testBoolean` INTEGER,\n" +
+                        "      `testSerializable` BLOB,\n" +
+                        "      `upgradeDeleteTester` TEXT\n" +
+                        "    );");
+
         Cursor testTableCursor = getHelperInstance()
                 .getReadableDatabase()
                 .rawQuery("PRAGMA table_info(testTable)", null);
         final List<String> testTableCols = new ArrayList<>();
-
         if (testTableCursor.moveToFirst()) {
             do {
                 testTableCols.add(testTableCursor.getString(1));
@@ -383,6 +441,5 @@ public class SQLiteOperatorTest {
 
         assertTrue(testTableCols.contains(upgradeAddColName));
         assertTrue(!testTableCols.contains(upgradeDeleteColName));
-        assertNotNull(operator.getSingle(1).executeBlocking());
     }
 }

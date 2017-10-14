@@ -28,11 +28,8 @@ public class TestTable {
     @SQLiteField
     public TestSerializable testSerializable;
 
-    @SQLiteField(isUpgradeAddColumnTest = true)
+    @SQLiteField
     public int upgradeAddTester;
-
-    @SQLiteField(isUpgradeDeleteColumnTest = true)
-    public String upgradeDeleteTester;
 
     @SQLiteRelationship(table = TestTable4.class)
     public List<TestTable4> table4Relation;
