@@ -86,7 +86,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final CodeBlock.Builder putStatements = CodeBlock.builder();
         for (final Element enclosed : mElement.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null || field.isUpgradeAddColumnTest()) continue;
+            if (field == null) continue;
 
             final PrimaryKey pk = field.primaryKey();
             if (pk.enabled() && pk.autoIncrement()) {
@@ -137,9 +137,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         for (int i = 0; i < mElement.getEnclosedElements().size(); i++) {
             final Element enclosed = mElement.getEnclosedElements().get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null
-                    || field.isUpgradeAddColumnTest()
-                    || field.isUpgradeDeleteColumnTest()) continue;
+            if (field == null) continue;
 
             arrayValues.add("$S, ", "`" + getDBFieldName(enclosed, field) + "`");
         }
@@ -164,7 +162,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         for (int i = 0; i < mElement.getEnclosedElements().size(); i++) {
             final Element enclosed = mElement.getEnclosedElements().get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null || field.isUpgradeAddColumnTest()) continue;
+            if (field == null) continue;
 
             final String columnName = field.value() == null || field.value().length() == 0
                     ? enclosed.getSimpleName().toString()
@@ -478,7 +476,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 relationshipsBuilder = CodeBlock.builder();
         for (final Element enclosed : mElement.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null || field.isUpgradeAddColumnTest()) {
+            if (field == null) {
                 final SQLiteRelationship relationship = enclosed
                         .getAnnotation(SQLiteRelationship.class);
                 if (relationship == null) continue;

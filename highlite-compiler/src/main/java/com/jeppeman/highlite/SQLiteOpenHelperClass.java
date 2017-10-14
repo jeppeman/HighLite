@@ -162,7 +162,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
 
-            if (field == null || field.isUpgradeDeleteColumnTest()) continue;
+            if (field == null) continue;
 
             final StringBuilder fieldCreator = new StringBuilder();
             final String fieldName = getDBFieldName(enclosed, field);
@@ -263,6 +263,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("$L.append($S)", colsToSaveVarName, "`")
                     .addStatement("$L.append($S)", colsToSaveVarName, ", ")
                     .beginControlFlow("if ($L.contains(entry.getKey()))", dbColsVarName)
+                    .addStatement("$L = $L.replaceAll(\"`?\" + entry.getKey() + \"`?[^,]+\", "
+                                    + "entry.getValue()[0])", createSqlStatementVarName,
+                            createSqlStatementVarName)
+                    .addStatement("$L = true", shouldRecreateVarName)
                     .addStatement("continue")
                     .endControlFlow()
                     .add("\n")
@@ -429,7 +433,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null || field.isUpgradeAddColumnTest()) continue;
+            if (field == null) continue;
 
             final String fieldName = getDBFieldName(enclosed, field);
             createStatement.append("`");
