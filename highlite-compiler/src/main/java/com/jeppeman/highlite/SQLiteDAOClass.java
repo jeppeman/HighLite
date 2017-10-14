@@ -141,12 +141,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     || field.isUpgradeAddColumnTest()
                     || field.isUpgradeDeleteColumnTest()) continue;
 
-            arrayValues.add(i < mElement.getEnclosedElements().size() - 1
-                    ? "$S, "
-                    : "$S", getDBFieldName(enclosed, field));
+            arrayValues.add("$S, ", "`" + getDBFieldName(enclosed, field) + "`");
         }
 
-        arrayValues.add(" }");
+        arrayValues.add("}");
 
         return FieldSpec.builder(ArrayTypeName.of(STRING), "COLUMNS",
                 Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)

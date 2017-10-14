@@ -281,13 +281,13 @@ public class SQLiteOperatorTest {
     }
 
     @Test(expected = SQLiteConstraintException.class)
-    public void testFailingForeignKeyConstraint() {
+    public void testFailingForeignKeyConstraint() throws Exception {
         SQLiteOperator<TestTable4> operator = SQLiteOperator.from(getContext(), TestTable4.class);
         operator.save(new TestTable4()).executeBlocking();
     }
 
     @Test(expected = SQLiteConstraintException.class)
-    public void testFailingUniqueConstraint() {
+    public void testFailingUniqueConstraint() throws Exception  {
         SQLiteOperator<TestTable4> operator = SQLiteOperator.from(getContext(), TestTable4.class);
         TestTable4 t1 = new TestTable4();
         t1.uniqueField = "notUnique";
@@ -298,7 +298,7 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testRelationship() {
+    public void testRelationship() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable t1 = new TestTable();
         operator.save(t1).executeBlocking();
@@ -317,13 +317,13 @@ public class SQLiteOperatorTest {
     }
 
     @Test(expected = SQLiteConstraintException.class)
-    public void testNotNullFailed() {
+    public void testNotNullFailed() throws Exception {
         SQLiteOperator<TestTable6> operator = SQLiteOperator.from(getContext(), TestTable6.class);
         operator.save(new TestTable6("test")).executeBlocking();
     }
 
     @Test
-    public void testNotNull() {
+    public void testNotNull() throws Exception {
         SQLiteOperator<TestTable6> operator = SQLiteOperator.from(getContext(), TestTable6.class);
         TestTable6 table = new TestTable6("test");
         table.notNullString = "not null";
@@ -331,7 +331,7 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testRespectedForeignKeyConstraintAndCascade() {
+    public void testRespectedForeignKeyConstraintAndCascade() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable testTable = new TestTable();
         operator.save(testTable).executeBlocking();
@@ -348,7 +348,8 @@ public class SQLiteOperatorTest {
     @Test
     public void testOnUpgradeWithAddAndDeleteColumnAndValuePersistence() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
-        operator.save(new TestTable()).executeBlocking();
+        TestTable testTable = new TestTable();
+        operator.save(testTable).executeBlocking();
         Cursor testTableCursor = getHelperInstance()
                 .getReadableDatabase()
                 .rawQuery("PRAGMA table_info(testTable)", null);

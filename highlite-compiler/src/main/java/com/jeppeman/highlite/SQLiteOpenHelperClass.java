@@ -89,9 +89,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         }
 
         return CodeBlock.builder()
+                .add("// Check whether $L exists or not\n", table.tableName())
                 .addStatement("boolean $L", tableExistsVarName)
                 .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
-                                + "sqlite_master WHERE `type` = ? AND `name` = ?;\", "
+                                + "sqlite_master WHERE `type` = ? AND `name` = ?;\", \n"
                                 + "new $T[] { $S, $S })",
                         CURSOR, createSqlCursorVarName, STRING, "table", table.tableName())
                 .addStatement("$T $L = $S", STRING, createSqlStatementVarName, "")
@@ -106,11 +107,14 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .endControlFlow()
                 .addStatement("$L.close()", createSqlCursorVarName)
                 .add("\n")
-                .beginControlFlow("if ($L)", tableExistsVarName)
+                .beginControlFlow("if ($L) /* $L existed, do column additions / deletions */",
+                        tableExistsVarName, table.tableName())
+                .add("// Collect columns based on current state of the class\n")
                 .addStatement("final $T<String, String[]> $L = new $T<>()", MAP,
                         currentFieldsVar, LINKED_HASHMAP)
                 .add(currentFieldsPopulator.build())
                 .add("\n")
+                .add("// Check which columns are currently in the table\n", table.tableName())
                 .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
                         + "null)", CURSOR, cursorVarName, table.tableName())
                 .addStatement("final $T<$T> $L = new $T<>()", LIST, STRING, dbColsVarName,
@@ -324,7 +328,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         }
 
         return CodeBlock.builder()
-                .add(getCreateBlock(element, table))
                 .add(recreateStatement.build())
                 .build();
     }
@@ -336,7 +339,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return CodeBlock.builder()
                 .addStatement("$L.execSQL($S)", dbVarName, "BEGIN TRANSACTION;")
                 .addStatement("$L.execSQL($L.replace($S, $S))", dbVarName, colsWithTypesVarName,
-                        tableName, tableName + "_backup")
+                        "CREATE TABLE " + tableName, "CREATE TABLE " + tableName + "_backup")
                 .addStatement("$L.execSQL(String.format(\"INSERT INTO $L_backup SELECT "
                                 + "%s FROM $L;\", $L))", dbVarName,
                         tableName, tableName, colsVarName)
@@ -422,6 +425,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .append(getIndent(2)),
                 foreignKeys = new StringBuilder();
 
+        final String endOfColumnSpec = ",\n" + getIndent(2);
+
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null || field.isUpgradeAddColumnTest()) continue;
@@ -465,27 +470,25 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     foreignKeys.append(" ON UPDATE CASCADE");
                 }
 
-                foreignKeys.append(", ");
+                foreignKeys.append(endOfColumnSpec);
             }
 
-//            createStatement.append(",\n").append(getIndent(2));
-            createStatement.append(", ");
+            createStatement.append(endOfColumnSpec);
         }
 
-//        final StringBuilder removeLastComma = new StringBuilder(createStatement.substring(0,
-//                createStatement.length() - 8))
-//                .append(foreignKeys.length() > 0
-//                        ? foreignKeys.substring(0, foreignKeys.length() - 2)
-//                        : "")
-//                .append("")
-//                .append(getIndent(1))
-//                .append(");");
-//
-//        return removeLastComma.toString();
+        final StringBuilder removeLastComma = new StringBuilder(createStatement.substring(0,
+                createStatement.length() - (foreignKeys.length() > 0
+                        ? endOfColumnSpec.length() - 2
+                        : endOfColumnSpec.length())))
+                .append(foreignKeys.length() > 0
+                        ? getIndent(2) + foreignKeys.substring(0,
+                        foreignKeys.length() - endOfColumnSpec.length())
+                        : "")
+                .append("\n")
+                .append(getIndent(1))
+                .append(");");
 
-        createStatement.append(foreignKeys);
-
-        return createStatement.substring(0, createStatement.length() - 2) + ");";
+        return removeLastComma.toString();
     }
 
     private FieldSpec buildColNameIndexField() {
@@ -704,6 +707,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
             code.addStatement("/****** BEGIN $L ******/", table.tableName());
             code.add(getUpgradeBlock(element, table));
+            code.nextControlFlow("else");
+            code.add("// $L did not exist, let's create it\n", table.tableName());
+            code.add(getCreateBlock(element, table));
             code.endControlFlow();
             code.addStatement("/******  END $L  ******/", table.tableName());
         }
