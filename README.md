@@ -96,11 +96,11 @@ public class Company {
 That's it, you're now ready to start doing some actual database operations
 
 Operations
-===
+---
 The operations
 
-Insert an object
----
+### Insert an object
+
 ```java
 SQLiteOperator<Company> operator = SQLiteOperator.from(getContext(), Company.class);
 final Company companyObject = new Company();
@@ -131,8 +131,8 @@ operator.save(companyObject)
 });
 ```
 
-Fetch by id and update
----
+### Fetch by id and update
+
 ```java
 // If you pass an argument to getSingle it will be matched against the table's primary key field,
 // in this case `id` = 1
@@ -141,8 +141,8 @@ fetchedObject.name = "My not so awesome company";
 operator.save(fetchedObject).executeBlocking();
 ```
 
-Fetch by query
----
+### Fetch by query
+
 ```java
 final List<Company> list = operator
     .getList()
@@ -154,8 +154,8 @@ final List<Company> list = operator
     ).executeBlocking();
 ```
 
-Fetch by raw query and delete
----
+### Fetch by raw query and delete
+
 ```java
 final List<Company> list = operator
     .getList()
@@ -166,8 +166,8 @@ operator.delete(list).executeBlocking();
 
 ```
 
-Delete by query
----
+### Delete by query
+
 ```java
 operator
     .delete()
@@ -180,7 +180,7 @@ operator
 ```
 
 Foreign keys and relationships
-===
+---
 
 HighLite supports foreign keys and relationships, here's an example of how you can use them:
 
@@ -257,4 +257,4 @@ Log.d("employees", companyFromDatabase.employeeList /* <- this is now [john, bob
 ```
 
 Inheritance
-===
+---
