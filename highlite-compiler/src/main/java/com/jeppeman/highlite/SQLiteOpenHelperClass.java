@@ -16,8 +16,6 @@ import java.util.Map;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.type.MirroredTypeException;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -76,7 +74,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 foreignKeysSplitVarName = table.tableName() + "ForeignKeysSplit",
                 foreignKeysVarName = table.tableName() + "ForeignKeys",
                 shouldRecreateVarName = table.tableName() + "ShouldRecreate",
-                tableExistsVarName = table.tableName() + "Exists";
+                tableExistsVarName = table.tableName() + "Exists",
+                newUniqueColsVarName = table.tableName() + "NewUniqueCols";
 
         final String currentFieldsVar = table.tableName() + "CurrentFields";
         final CodeBlock.Builder currentFieldsPopulator = CodeBlock.builder();
@@ -143,6 +142,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         "FOREIGN KEY", foreignKeysSplitVarName)
                 .endControlFlow()
                 .addStatement("boolean $L = false", shouldRecreateVarName)
+                .addStatement("final $T<$T> $L = new $T<>()", LIST, STRING, newUniqueColsVarName,
+                        ARRAY_LIST)
                 .build();
     }
 
@@ -153,7 +154,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 createSqlStatementVarName = table.tableName() + "Create",
                 foreignKeysVarName = table.tableName() + "ForeignKeys",
                 shouldRecreateVarName = table.tableName() + "ShouldRecreate",
-                tableExistsVarName = table.tableName() + "Exists";
+                tableExistsVarName = table.tableName() + "Exists",
+                newUniqueColsVarName = table.tableName() + "NewUniqueCols";
 
         final CodeBlock.Builder recreateStatement = CodeBlock.builder();
         final Map<String, String> columnsMap = new LinkedHashMap<>(),
@@ -165,7 +167,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             if (field == null) continue;
 
             final StringBuilder fieldCreator = new StringBuilder();
-            final String fieldName = getDBFieldName(enclosed, field);
+            final String fieldName = getDBFieldName(enclosed);
             fieldCreator.append("`");
             fieldCreator.append(fieldName);
             fieldCreator.append("`");
@@ -192,14 +194,14 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        foreignKey);
-                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(foreignKey);
+                        foreignKey, mTypeUtils);
+                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(enclosed,
+                        mTypeUtils);
                 final StringBuilder foreignKeyBuilder = new StringBuilder();
                 foreignKeyBuilder.append(
                         String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                                 fieldName, foreignKeyRefTable.tableName(),
-                                getDBFieldName(foreignKeyRefElement,
-                                        foreignKeyRefElement.getAnnotation(SQLiteField.class))));
+                                getDBFieldName(foreignKeyRefElement)));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeyBuilder.append(" ON DELETE CASCADE");
                 }
@@ -229,8 +231,12 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                             STRING, STRING, currentFieldsVar)
                     .beginControlFlow("if (!$L.contains(entry.getKey()))", dbColsVarName)
                     .addStatement("$L = true", shouldRecreateVarName)
-                    .addStatement("database.execSQL($S + entry.getValue()[0])",
-                            "ALTER TABLE `" + table.tableName() + "` ADD COLUMN ")
+                    .beginControlFlow("if (entry.getValue()[0].contains($S))", " UNIQUE")
+                    .addStatement("$L.add(entry.getValue()[0].split($S)[1])", newUniqueColsVarName,
+                            "`")
+                    .endControlFlow()
+                    .addStatement("database.execSQL($S + entry.getValue()[0].replace($S, $S))",
+                            "ALTER TABLE `" + table.tableName() + "` ADD COLUMN ", " UNIQUE", "")
                     .endControlFlow()
                     .add("\n")
                     .addStatement("$L.append($S)", colsToSaveVarName, "`")
@@ -252,6 +258,15 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .add(getRecreateStatement("database", table.tableName(),
                             createSqlStatementVarName, colsToSaveVarName))
                     .endControlFlow()
+                    .beginControlFlow("if ($L.size() > 0)", newUniqueColsVarName)
+                    .addStatement("database.execSQL($S)", "BEGIN TRANSACTION;")
+                    .beginControlFlow("for (final String field : $L)", newUniqueColsVarName)
+                    .addStatement("database.execSQL($T.format("
+                            + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))", STRING,
+                            table.tableName())
+                    .endControlFlow()
+                    .addStatement("database.execSQL($S)", "COMMIT;")
+                    .endControlFlow()
                     .add("\n");
         } else if (table.autoAddColumns() && !table.autoDeleteColumns()) {
             recreateStatement
@@ -266,13 +281,24 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("$L = $L.replaceAll(\"`?\" + entry.getKey() + \"`?[^,]+\", "
                                     + "entry.getValue()[0])", createSqlStatementVarName,
                             createSqlStatementVarName)
+                    .beginControlFlow("if (entry.getValue()[1].length() > 0)")
+                    .addStatement("$T fk = entry.getValue()[1]", STRING)
+                    .addStatement("$L = $L.replaceAll(\"FOREIGN KEY\\\\(`?\" + entry.getKey() + \""
+                                    + "`?\\\\)[^,]+\", "
+                                    + "fk.substring(0, fk.length() - 2))", foreignKeysVarName,
+                            foreignKeysVarName)
+                    .endControlFlow()
+                    .beginControlFlow("if (entry.getValue()[0].contains($S))", " UNIQUE")
+                    .addStatement("$L.add(entry.getValue()[0].split($S)[1])", newUniqueColsVarName,
+                            "`")
+                    .endControlFlow()
                     .addStatement("$L = true", shouldRecreateVarName)
                     .addStatement("continue")
                     .endControlFlow()
                     .add("\n")
                     .addStatement("$L = true", shouldRecreateVarName)
-                    .addStatement("database.execSQL($S + entry.getValue()[0])",
-                            "ALTER TABLE `" + table.tableName() + "` ADD COLUMN ")
+                    .addStatement("database.execSQL($S + entry.getValue()[0].replace($S, $S))",
+                            "ALTER TABLE `" + table.tableName() + "` ADD COLUMN ", " UNIQUE", "")
                     .addStatement("$L += entry.getValue()[1]", foreignKeysVarName)
                     .addStatement("$L += entry.getValue()[0] + $S", createSqlStatementVarName, ", ")
                     .endControlFlow()
@@ -295,6 +321,15 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
                     .add(getRecreateStatement("database", table.tableName(),
                             createSqlStatementVarName, colsToSaveVarName))
+                    .endControlFlow()
+                    .beginControlFlow("if ($L.size() > 0)", newUniqueColsVarName)
+                    .addStatement("database.execSQL($S)", "BEGIN TRANSACTION;")
+                    .beginControlFlow("for (final String field : $L)", newUniqueColsVarName)
+                    .addStatement("database.execSQL($T.format("
+                                    + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))",
+                            STRING, table.tableName())
+                    .endControlFlow()
+                    .addStatement("database.execSQL($S)", "COMMIT;")
                     .endControlFlow()
                     .add("\n");
         } else if (!table.autoAddColumns() && table.autoDeleteColumns()) {
@@ -355,61 +390,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
-    private Element findForeignKeyReferencedField(final Element enclosed,
-                                                  final ForeignKey foreignKey) {
-        TypeMirror mirror = null;
-        try {
-            foreignKey.table();
-        } catch (MirroredTypeException e) {
-            mirror = e.getTypeMirror();
-        }
-
-        final Element tableElem = mTypeUtils.asElement(mirror);
-        if (tableElem.getAnnotation(SQLiteTable.class) == null) {
-            throw new ProcessingException(enclosed,
-                    String.format("Invalid class %s specified as table for @ForeignKey, "
-                                    + "the specified class must be annotated with %s",
-                            tableElem.toString(), SQLiteTable.class.getCanonicalName()));
-        }
-
-        Element fieldRefElement = null;
-        for (final Element enc : tableElem.getEnclosedElements()) {
-            if (!enc.getSimpleName().toString().equals(foreignKey.fieldReference())) {
-                continue;
-            }
-
-            final SQLiteField field = enc.getAnnotation(SQLiteField.class);
-            if (field == null || (!field.primaryKey().enabled() && !field.unique())) {
-                throw new ProcessingException(enclosed,
-                        String.format("Field %s in class %s needs to be declared as primary key or "
-                                + "unique with @SQLiteField to be referenced in "
-                                + "@ForeignKey", enc.toString(), tableElem.toString()));
-            }
-
-            fieldRefElement = enc;
-            break;
-        }
-
-        if (fieldRefElement == null) {
-            throw new ProcessingException(enclosed,
-                    String.format("Field %s in class %s does not exist",
-                            foreignKey.fieldReference(), tableElem.toString()));
-        }
-
-        return fieldRefElement;
-    }
-
-    private SQLiteTable getForeignKeyReferencedTable(final ForeignKey foreignKey) {
-        TypeMirror mirror = null;
-        try {
-            foreignKey.table();
-        } catch (MirroredTypeException ex) {
-            mirror = ex.getTypeMirror();
-        }
-
-        return mTypeUtils.asElement(mirror).getAnnotation(SQLiteTable.class);
-    }
-
     private String getIndent(final int n) {
         final StringBuilder builder = new StringBuilder("  ");
 
@@ -435,7 +415,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            final String fieldName = getDBFieldName(enclosed, field);
+            final String fieldName = getDBFieldName(enclosed);
             createStatement.append("`");
             createStatement.append(fieldName);
             createStatement.append("`");
@@ -460,12 +440,12 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        foreignKey);
-                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(foreignKey);
+                        foreignKey, mTypeUtils);
+                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(enclosed,
+                        mTypeUtils);
                 foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                         fieldName, foreignKeyRefTable.tableName(),
-                        getDBFieldName(foreignKeyRefElement,
-                                foreignKeyRefElement.getAnnotation(SQLiteField.class))));
+                        getDBFieldName(foreignKeyRefElement)));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeys.append(" ON DELETE CASCADE");
                 }
@@ -652,6 +632,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         code.add(onCreateStatement.build());
 
+
         return MethodSpec.methodBuilder("onCreate")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(Override.class).build())
@@ -711,10 +692,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
             code.addStatement("/****** BEGIN $L ******/", table.tableName());
             code.add(getUpgradeBlock(element, table));
-            code.nextControlFlow("else");
-            code.add("// $L did not exist, let's create it\n", table.tableName());
-            code.add(getCreateBlock(element, table));
+            if (table.autoCreate()) {
+                code.nextControlFlow("else");
+                code.add("// $L did not exist, let's create it\n", table.tableName());
+                code.add(getCreateBlock(element, table));
+            }
             code.endControlFlow();
+
             code.addStatement("/******  END $L  ******/", table.tableName());
         }
 

@@ -5,6 +5,7 @@ import com.jeppeman.highlite.SQLiteField;
 import com.jeppeman.highlite.SQLiteRelationship;
 import com.jeppeman.highlite.SQLiteTable;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -15,6 +16,9 @@ public class TestTable {
 
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     public long id;
+
+    @SQLiteField(unique = true)
+    public long unique;
 
     @SQLiteField("testFieldName")
     public String testString;
@@ -29,8 +33,11 @@ public class TestTable {
     public TestSerializable testSerializable;
 
     @SQLiteField
+    public Date testDate;
+
+    @SQLiteField
     public int upgradeAddTester;
 
-    @SQLiteRelationship(table = TestTable4.class)
+    @SQLiteRelationship(table = TestTable4.class, backReference = "foreignKey")
     public List<TestTable4> table4Relation;
 }

@@ -93,11 +93,34 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 continue;
             }
 
+            final ForeignKey fk = field.foreignKey();
+
             final String fieldType = getFieldType(enclosed, field),
-                    fieldName = "`" + getDBFieldName(enclosed, field) + "`";
+                    fieldName = "`" + getDBFieldName(enclosed) + "`";
 
             final CodeBlock.Builder putStatement = CodeBlock.builder();
-            if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
+            if (fk.enabled()) {
+                final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
+                        fk, mTypeUtils);
+                final TypeName foreignKeyRefElementTypeName = ClassName.get(
+                        foreignKeyRefElement.asType());
+                if (foreignKeyRefElementTypeName.equals(TypeName.SHORT)
+                        || foreignKeyRefElementTypeName.equals(TypeName.INT)
+                        || foreignKeyRefElementTypeName.equals(TypeName.LONG)) {
+                    putStatement.beginControlFlow("if (mTarget.$L != null)", enclosed
+                            .getSimpleName());
+                    putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
+                            fieldName, enclosed.getSimpleName(),
+                            foreignKeyRefElement.getSimpleName());
+                    putStatement.endControlFlow();
+                } else {
+                    putStatement.beginControlFlow("if (mTarget.$L != null");
+                    putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
+                            fieldName, enclosed.getSimpleName(),
+                            foreignKeyRefElement.getSimpleName());
+                    putStatement.endControlFlow();
+                }
+            } else if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
                 putStatement.beginControlFlow("try")
                         .addStatement("final $T baos = new $T()", BYTE_ARRAY_OS, BYTE_ARRAY_OS)
                         .addStatement("final $T oos = new $T(baos)", OBJECT_OS, OBJECT_OS)
@@ -107,6 +130,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .nextControlFlow("catch ($T e)", IO_EXCEPTION)
                         .addStatement("throw new $T(e)", RUNTIME_EXCEPTION)
                         .endControlFlow();
+            } else if (DATE.equals(ClassName.get(enclosed.asType()))) {
+                putStatement.beginControlFlow("if (mTarget.$L != null)", enclosed.getSimpleName());
+                putStatement.addStatement("$L.put($S, mTarget.$L.getTime())", contentValsVar,
+                        fieldName, enclosed.getSimpleName());
+                putStatement.endControlFlow();
             } else {
                 putStatement.addStatement("$L.put($S, mTarget.$L)", contentValsVar, fieldName,
                         enclosed.getSimpleName());
@@ -139,7 +167,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            arrayValues.add("$S, ", "`" + getDBFieldName(enclosed, field) + "`");
+            arrayValues.add("$S, ", "`" + getDBFieldName(enclosed) + "`");
         }
 
         arrayValues.add("}");
@@ -214,8 +242,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
 
         return MethodSpec.methodBuilder("save")
                 .addAnnotation(Override.class)
@@ -275,8 +302,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
         return CodeBlock.builder()
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, getContentValues(), $S, "
@@ -309,8 +335,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
 
         return MethodSpec.methodBuilder("delete")
                 .returns(TypeName.INT)
@@ -347,8 +372,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
-                primaryKeyElement.getAnnotation(SQLiteField.class)) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
 
         return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)
@@ -469,6 +493,34 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
+    private Element findEnclosedRelationshipElement(final Element enclosing,
+                                                    final String fieldName) {
+        for (final Element enclosed : enclosing.getEnclosedElements()) {
+            final SQLiteRelationship rel = enclosed.getAnnotation(SQLiteRelationship.class);
+            if (rel == null || !fieldName.equals(rel.backReference())) continue;
+
+            return enclosed;
+        }
+
+        return null;
+    }
+
+    private Element findRelatedForeignKeyElement(final Element enclosing,
+                                                 final String relatedFieldName) {
+        for (final Element enclosed : enclosing.getEnclosedElements()) {
+            final SQLiteField sqliteField = enclosed.getAnnotation(SQLiteField.class);
+            if (sqliteField == null
+                    || !sqliteField.foreignKey().enabled()
+                    || !relatedFieldName.equals(enclosed.getSimpleName().toString())) {
+                continue;
+            }
+
+            return enclosed;
+        }
+
+        throw new ProcessingException(enclosing, "No proper");
+    }
+
     private MethodSpec buildInstantiateObjectMethod() {
         final ClassName elementCn = getClassNameOfElement();
 
@@ -488,13 +540,30 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     mirror = ex.getTypeMirror();
                 }
 
-                final TypeName relationClassName = ClassName.get(mTypeUtils.asElement(mirror)
-                        .asType());
+                final Element relationClassElem = mTypeUtils.asElement(mirror);
+                final TypeName relationClassName = ClassName.get(relationClassElem.asType());
+
+                final Element relatedForeignElem = findRelatedForeignKeyElement(relationClassElem,
+                        relationship.backReference());
+
+                final String dbFieldName = getDBFieldName(relatedForeignElem);
 
                 final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
-                        .addStatement("ret.$L = $T.from(context, $T.class)"
-                                        + ".getList().executeBlocking()",
-                                enclosed.getSimpleName(), SQLITE_OPERATOR, relationClassName);
+                        .beginControlFlow(
+                                "if (excluded == null || !$T.asList(excluded).contains($S))",
+                                ARRAYS, enclosed.getSimpleName())
+                        .addStatement("ret.$L = $T.from(context, $T.class)\n"
+                                        + ".getList()\n"
+                                        + ".withQuery(\n"
+                                        + "  $T.builder().where(\"`$L` = ?\", ret.$L).build()\n"
+                                        + ")\n"
+                                        + ".executeBlocking()",
+                                enclosed.getSimpleName(), SQLITE_OPERATOR, relationClassName,
+                                SQLITE_QUERY, dbFieldName, relatedForeignElem
+                                        .getAnnotation(SQLiteField.class).foreignKey()
+                                        .fieldReference())
+                        .endControlFlow();
+
 
                 relationshipsBuilder.add(relationshipBuilder.build());
 
@@ -504,7 +573,79 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final Name fieldName = enclosed.getSimpleName();
             final TypeName typeName = ClassName.get(enclosed.asType());
             final CodeBlock assignmentStatement;
-            if (typeName.equals(TypeName.BOOLEAN)
+            final ForeignKey foreignKey = field.foreignKey();
+            if (foreignKey.enabled()) {
+                final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
+                        foreignKey, mTypeUtils);
+                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(enclosed,
+                        mTypeUtils);
+                final String dbFieldName = getDBFieldName(foreignKeyRefElement);
+                final TypeName foreignKeyRefElementTypeName = ClassName.get(
+                        foreignKeyRefElement.asType());
+                final CodeBlock cursorBlock;
+                if (foreignKeyRefElementTypeName.equals(TypeName.FLOAT)
+                        || foreignKeyRefElementTypeName.equals(ClassName.get(Float.class))) {
+                    cursorBlock = CodeBlock.of("cursor.getFloat(i)", fieldName);
+                } else if (foreignKeyRefElementTypeName.equals(TypeName.DOUBLE)
+                        || foreignKeyRefElementTypeName.equals(ClassName.get(Double.class))) {
+                    cursorBlock = CodeBlock.of("cursor.getDouble(i)", fieldName);
+                } else if (foreignKeyRefElementTypeName.equals(TypeName.SHORT)
+                        || foreignKeyRefElementTypeName.equals(ClassName.get(Short.class))) {
+                    cursorBlock = CodeBlock.of("cursor.getShort(i)", fieldName);
+                } else if (foreignKeyRefElementTypeName.equals(TypeName.INT)
+                        || foreignKeyRefElementTypeName.equals(ClassName.get(Integer.class))) {
+                    cursorBlock = CodeBlock.of("cursor.getInt(i)", fieldName);
+                } else if (foreignKeyRefElementTypeName.equals(TypeName.LONG)
+                        || foreignKeyRefElementTypeName.equals(ClassName.get(Long.class))) {
+                    cursorBlock = CodeBlock.of("cursor.getLong(i)", fieldName);
+                } else {
+                    cursorBlock = CodeBlock.of("cursor.getString(i)", fieldName);
+                }
+
+                final String cursorVarName = "fkCursor";
+
+                final Element foreignEnclosing = foreignKeyRefElement.getEnclosingElement();
+
+                final TypeName tn = ClassName.get(
+                        mElementUtils.getPackageOf(foreignKeyRefElement).toString(),
+                        mTypeUtils.asElement(foreignEnclosing.asType()).getSimpleName().toString()
+                                + "_DAO");
+
+                final Element rel = findEnclosedRelationshipElement(foreignEnclosing,
+                        fieldName.toString());
+
+                final CodeBlock.Builder relHandler = CodeBlock.builder();
+                if (rel != null) {
+                    relHandler.addStatement("ret.$L.$L = $T.from(context, $T.class)\n"
+                                    + ".getList()\n"
+                                    + ".withQuery(\n"
+                                    + "  $T.builder().where(\"`$L` = ? AND `$L` != ?\", ret.$L.$L,"
+                                    + " ret.$L).build())\n"
+                                    + ".executeBlocking()",
+                            fieldName, rel.getSimpleName(), SQLITE_OPERATOR, mElement.asType(),
+                            SQLITE_QUERY, getDBFieldName(enclosed),
+                            getDBFieldName(getPrimaryKeyField()), fieldName,
+                            foreignKey.fieldReference(), getPrimaryKeyField());
+                    relHandler.addStatement("ret.$L.$L.add(ret)", fieldName,
+                            rel.getSimpleName());
+                }
+
+                assignmentStatement = CodeBlock.builder()
+                        .addStatement("final $T $L = getReadableDatabase(context).rawQuery($S,"
+                                        + " new $T[] { $T.valueOf($L) })",
+                                CURSOR, cursorVarName, String.format("SELECT * FROM %s WHERE"
+                                                + " `%s` = ? LIMIT 1",
+                                        foreignKeyRefTable.tableName(), dbFieldName),
+                                STRING, STRING, cursorBlock.toString())
+                        .addStatement("$L.moveToFirst()", cursorVarName)
+                        .addStatement("final $T dao = new $T(null)", tn, tn)
+                        .addStatement("ret.$L = dao.instantiateObject($L, context$L)",
+                                fieldName, cursorVarName, rel == null
+                                        ? ""
+                                        : ", \"" + rel.getSimpleName() + "\"")
+                        .add(relHandler.build())
+                        .build();
+            } else if (typeName.equals(TypeName.BOOLEAN)
                     || typeName.equals(ClassName.get(Boolean.class))) {
                 assignmentStatement = CodeBlock.of("ret.$L = cursor.getInt(i) != 0;\n", fieldName);
             } else if (typeName.equals(TypeName.FLOAT)
@@ -524,6 +665,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 assignmentStatement = CodeBlock.of("ret.$L = cursor.getLong(i);\n", fieldName);
             } else if (typeName.equals(TypeName.get(String.class))) {
                 assignmentStatement = CodeBlock.of("ret.$L = cursor.getString(i);\n", fieldName);
+            } else if (typeName.equals(DATE)) {
+                assignmentStatement = CodeBlock.of("ret.$L = new $T(cursor.getLong(i));\n",
+                        fieldName, DATE);
             } else {
                 assignmentStatement = CodeBlock.builder()
                         .beginControlFlow("try")
@@ -547,9 +691,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
         }
 
         return MethodSpec.methodBuilder("instantiateObject")
-                .addModifiers(Modifier.PRIVATE)
+                .addModifiers(Modifier.PUBLIC)
                 .addParameter(CURSOR, "cursor", Modifier.FINAL)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(ArrayTypeName.of(STRING), "excluded", Modifier.FINAL)
+                .varargs()
                 .returns(elementCn)
                 .addStatement("final $T ret = new $T()", elementCn, elementCn)
                 .beginControlFlow("for (int i = 0; i < cursor.getColumnCount(); i++)")

@@ -4,3 +4,8 @@ Handle inheritance
 Handle one-to-one and one-to-many rels
 Handle save by query
 Auto naming of tables based on class name
+Remove foreign keys on column upgrades
+Join?
+Foreign keys as instances
+fieldReference named as columnReference?
+Handle dates!

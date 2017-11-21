@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.almworks.sqlite4java.SQLite;
 import com.jeppeman.highlite.test.table.TestDatabase;
 import com.jeppeman.highlite.test.table.TestNonSerializable;
 import com.jeppeman.highlite.test.table.TestSerializable;
@@ -29,6 +30,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import static junit.framework.Assert.assertEquals;
@@ -151,6 +153,7 @@ public class SQLiteOperatorTest {
         newTable.testSerializable = new TestSerializable("test");
         newTable.testString = "123";
         newTable.testBoolean = true;
+        newTable.unique = 1;
         newTable.testList = Arrays.asList("1", "2", "3");
         operator.save(newTable).executeBlocking();
         list = operator
@@ -159,6 +162,7 @@ public class SQLiteOperatorTest {
                 .executeBlocking();
         assertEquals(1, list.size());
         newTable.id = 0;
+        newTable.unique = 2;
         operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
@@ -206,20 +210,29 @@ public class SQLiteOperatorTest {
         newTable.testSerializable = new TestSerializable("test");
         newTable.testString = "123";
         newTable.testBoolean = true;
+        newTable.unique = 1;
         newTable.testList = Arrays.asList("1", "2", "3");
         operator.save(newTable).executeBlocking();
         list = operator.getList().executeBlocking();
         assertEquals(1, list.size());
         newTable.id = 0;
+        newTable.unique = 2;
         operator.save(newTable).executeBlocking();
         list = operator.getList().executeBlocking();
         assertEquals(2, list.size());
     }
 
-    @Test(expected = SQLiteException.class)
+    @Test
     public void testAutoCreateTableDisabled() throws Exception {
+        TestTable t = new TestTable();
+        TestTable3 t3 = new TestTable3();
+        t3.foreign = t;
+        SQLiteOperator.from(getContext(), TestTable.class)
+                .save(t)
+                .executeBlocking();
+        exception.expect(SQLiteException.class);
         SQLiteOperator.from(getContext(), TestTable3.class)
-                .save(new TestTable3())
+                .save(t3)
                 .executeBlocking();
     }
 
@@ -244,11 +257,13 @@ public class SQLiteOperatorTest {
         table.testString = "123";
         table.testList = Arrays.asList("1", "2", "3");
         table.testBoolean = true;
+        table.unique = 1;
         table.testSerializable = new TestSerializable("test");
         assertEquals(0, table.id);
         operator.save(table).executeBlocking();
         assertEquals(1, table.id);
         table.id = 0;
+        table.unique = 2;
         operator.save(table).executeBlocking();
         assertEquals(2, table.id);
         operator.save(table).executeBlocking();
@@ -288,7 +303,9 @@ public class SQLiteOperatorTest {
     @Test(expected = SQLiteConstraintException.class)
     public void testFailingForeignKeyConstraint() throws Exception {
         SQLiteOperator<TestTable4> operator = SQLiteOperator.from(getContext(), TestTable4.class);
-        operator.save(new TestTable4()).executeBlocking();
+        TestTable4 table4 = new TestTable4();
+        table4.foreignKey = new TestTable();
+        operator.save(table4).executeBlocking();
     }
 
     @Test(expected = SQLiteConstraintException.class)
@@ -306,16 +323,20 @@ public class SQLiteOperatorTest {
     public void testRelationship() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable t1 = new TestTable();
+        t1.testString = "testing";
+        t1.testBoolean = true;
+        t1.testDate = new Date();
         operator.save(t1).executeBlocking();
         SQLiteOperator<TestTable4> operator2 = SQLiteOperator.from(getContext(), TestTable4.class);
         t1 = operator.getSingle(1).executeBlocking();
         assertNotNull(t1);
         assertEquals(0, t1.table4Relation.size());
         TestTable4 related1 = new TestTable4();
-        related1.foreignKey = t1.id;
+        related1.foreignKey = t1;
         TestTable4 related2 = new TestTable4();
-        related2.foreignKey = t1.id;
+        related2.foreignKey = t1;
         operator2.save(related1, related2).executeBlocking();
+        List<TestTable4> x = operator2.getList().withRawQuery("foreignKey = ?", 1).executeBlocking();
         t1 = operator.getSingle(1).executeBlocking();
         assertNotNull(t1);
         assertEquals(2, t1.table4Relation.size());
@@ -342,7 +363,7 @@ public class SQLiteOperatorTest {
         operator.save(testTable).executeBlocking();
         SQLiteOperator<TestTable4> operator2 = SQLiteOperator.from(getContext(), TestTable4.class);
         TestTable4 testTable4 = new TestTable4();
-        testTable4.foreignKey = 1;
+        testTable4.foreignKey = testTable;
         operator2.save(testTable4).executeBlocking();
         assertNotNull(operator2.getSingle(1).executeBlocking());
         operator.delete(testTable).executeBlocking();
@@ -356,7 +377,9 @@ public class SQLiteOperatorTest {
                 .getReadableDatabase()
                 .execSQL("CREATE TABLE testTable3 ("
                         + "    `xx` INTEGER PRIMARY KEY AUTOINCREMENT, "
-                        + "    `str` TEXT"
+                        + "    `str` TEXT,"
+                        + "    `foreign` INTEGER,"
+                        + "    FOREIGN KEY(`foreign`) REFERENCES testTable(`unique`)"
                         + ");"
                 );
 

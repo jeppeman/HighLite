@@ -33,16 +33,35 @@ public final class SQLiteOperator<T> {
         mContext = context;
     }
 
+    /**
+     *
+     * @param context
+     * @param cls
+     * @param <T>
+     * @return
+     */
     public static <T> SQLiteOperator<T> from(final @NonNull Context context,
                                              final @NonNull Class<T> cls) {
         return new SQLiteOperator<>(context, cls);
     }
 
+    /**
+     *
+     * @param context
+     * @param cls
+     * @return
+     */
     public static SQLiteDatabase getReadableDatabase(final @NonNull Context context,
                                                      final @NonNull Class<?> cls) {
         return getGeneratedHelper(context, cls).getReadableDatabase();
     }
 
+    /**
+     *
+     * @param context
+     * @param cls
+     * @return
+     */
     public static SQLiteDatabase getWritableDatabase(final @NonNull Context context,
                                                      final @NonNull Class<?> cls) {
         return getGeneratedHelper(context, cls).getWritableDatabase();

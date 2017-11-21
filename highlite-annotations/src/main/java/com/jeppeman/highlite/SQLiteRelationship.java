@@ -10,10 +10,17 @@ import java.lang.annotation.Target;
 public @interface SQLiteRelationship {
 
     Class<?> table();
-    RelationshipType type() default RelationshipType.OneToMany;
+    String backReference();
+    RelationshipType relType() default RelationshipType.OneToMany;
+    LoadingType loadingType() default LoadingType.Lazy;
 
     enum RelationshipType {
         OneToOne,
         OneToMany
+    }
+
+    enum LoadingType {
+        Lazy,
+        Eager
     }
 }

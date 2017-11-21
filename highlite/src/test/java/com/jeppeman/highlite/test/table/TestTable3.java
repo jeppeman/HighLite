@@ -1,5 +1,6 @@
 package com.jeppeman.highlite.test.table;
 
+import com.jeppeman.highlite.ForeignKey;
 import com.jeppeman.highlite.PrimaryKey;
 import com.jeppeman.highlite.SQLiteField;
 import com.jeppeman.highlite.SQLiteTable;
@@ -15,4 +16,7 @@ public class TestTable3 {
 
     @SQLiteField(notNull = true)
     public String str;
+
+    @SQLiteField(foreignKey = @ForeignKey(fieldReference = "id"))
+    public TestTable foreign;
 }

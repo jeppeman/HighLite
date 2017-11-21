@@ -16,9 +16,8 @@ public class TestTable4 {
     public String uniqueField;
 
     @SQLiteField(foreignKey = @ForeignKey(
-            table = TestTable.class,
             fieldReference = "id",
             cascadeOnUpdate = true,
             cascadeOnDelete = true))
-    public long foreignKey;
+    public TestTable foreignKey;
 }

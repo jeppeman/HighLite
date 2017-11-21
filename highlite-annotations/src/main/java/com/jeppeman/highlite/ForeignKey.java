@@ -16,13 +16,6 @@ import java.lang.annotation.Target;
 public @interface ForeignKey {
 
     /**
-     * The table in which the foreign key resides
-     *
-     * @return
-     */
-    Class<?> table();
-
-    /**
      * The name of the field which this key references
      *
      * @return

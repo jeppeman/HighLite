@@ -89,6 +89,9 @@ public class Company {
     String name;
     
     @SQLiteField
+    Date created; // Dates are stored as INTEGER's with the amount of seconds since UNIX epoch
+    
+    @SQLiteField
     List<String> employees; // This will get saved as a BLOB in the database
 }
 ```

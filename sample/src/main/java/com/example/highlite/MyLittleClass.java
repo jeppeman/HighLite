@@ -21,18 +21,16 @@ public abstract class MyLittleClass {
     String name;
 
     @SQLiteField(foreignKey = @ForeignKey(
-            table = TestTable.class,
             fieldReference = "id",
             cascadeOnDelete = true,
             cascadeOnUpdate = true))
-    int foreign;
+    TestTable foreign;
 
     @SQLiteField(foreignKey = @ForeignKey(
-            table = TestTable.class,
             fieldReference = "id",
             cascadeOnDelete = true,
             cascadeOnUpdate = true))
-    int foreign2;
+    TestTable foreign2;
 
     @SQLiteField(fieldType = SQLiteFieldType.REAL)
     float shortz;

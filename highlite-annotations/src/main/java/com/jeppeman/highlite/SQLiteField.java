@@ -55,6 +55,5 @@ public @interface SQLiteField {
      * @return
      * @see {@link ForeignKey}
      */
-    ForeignKey foreignKey() default @ForeignKey(fieldReference = "", table = ForeignKey.class,
-            enabled = false);
+    ForeignKey foreignKey() default @ForeignKey(fieldReference = "", enabled = false);
 }

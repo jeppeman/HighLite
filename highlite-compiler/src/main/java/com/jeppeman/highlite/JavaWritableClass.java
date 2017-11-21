@@ -11,6 +11,7 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Types;
 
 /**
  * @author jesper
@@ -30,12 +32,14 @@ abstract class JavaWritableClass {
     static final ClassName OBJECT_OS = ClassName.get(ObjectOutputStream.class);
     static final ClassName OBJECT_IS = ClassName.get(ObjectInputStream.class);
     static final ClassName STRING = ClassName.get(String.class);
+    static final ClassName DATE = ClassName.get(Date.class);
     static final ClassName STRING_BUILDER = ClassName.get(StringBuilder.class);
     static final ClassName LIST = ClassName.get(List.class);
     static final ClassName MAP = ClassName.get(Map.class);
     static final ClassName HASHMAP = ClassName.get(HashMap.class);
     static final ClassName LINKED_HASHMAP = ClassName.get(LinkedHashMap.class);
     static final ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
+    static final ClassName ARRAYS = ClassName.get(Arrays.class);
     static final ClassName CONTEXT = ClassName.get("android.content", "Context");
     static final ClassName CURSOR = ClassName.get("android.database", "Cursor");
     static final ClassName CONTENT_VALUES = ClassName.get("android.content",
@@ -43,6 +47,7 @@ abstract class JavaWritableClass {
     static final ClassName SQLITE_DAO = ClassName.get("com.jeppeman.highlite", "SQLiteDAO");
     static final ClassName SQLITE_OPERATOR = ClassName.get("com.jeppeman.highlite",
             "SQLiteOperator");
+    static final ClassName SQLITE_QUERY = ClassName.get("com.jeppeman.highlite", "SQLiteQuery");
     static final ClassName SQLITE_DATABASE = ClassName.get("android.database.sqlite",
             "SQLiteDatabase");
     static final ClassName SQLITE_OPEN_HELPER = ClassName.get("android.database.sqlite",
@@ -63,7 +68,8 @@ abstract class JavaWritableClass {
                         Boolean.class,
                         Integer.class,
                         Short.class,
-                        Long.class)));
+                        Long.class,
+                        Date.class)));
         SQLITE_FIELD_CLASS_MAPPING.put(SQLiteFieldType.REAL,
                 new ArrayList<Class<?>>(Arrays.asList(
                         float.class,
@@ -79,7 +85,8 @@ abstract class JavaWritableClass {
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
     }
 
-    String getDBFieldName(final Element element, final SQLiteField field) {
+    String getDBFieldName(final Element element) {
+        final SQLiteField field = element.getAnnotation(SQLiteField.class);
         return field.value().length() == 0
                 ? element.getSimpleName().toString()
                 : field.value();
@@ -111,6 +118,41 @@ abstract class JavaWritableClass {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    Element findForeignKeyReferencedField(final Element enclosed,
+                                          final ForeignKey foreignKey,
+                                          final Types types) {
+        Element fieldRefElement = null;
+        Element tableElem = types.asElement(enclosed.asType());
+        for (final Element enc : tableElem.getEnclosedElements()) {
+            if (!enc.getSimpleName().toString().equals(foreignKey.fieldReference())) {
+                continue;
+            }
+
+            final SQLiteField field = enc.getAnnotation(SQLiteField.class);
+            if (field == null || (!field.primaryKey().enabled() && !field.unique())) {
+                throw new ProcessingException(enclosed,
+                        String.format("Field %s in class %s needs to be declared as primary key or "
+                                + "unique with @SQLiteField to be referenced in "
+                                + "@ForeignKey", enc.toString(), tableElem.toString()));
+            }
+
+            fieldRefElement = enc;
+            break;
+        }
+
+        if (fieldRefElement == null) {
+            throw new ProcessingException(enclosed,
+                    String.format("Field %s in class %s does not exist",
+                            foreignKey.fieldReference(), tableElem.toString()));
+        }
+
+        return fieldRefElement;
+    }
+
+    SQLiteTable getForeignKeyReferencedTable(final Element foreignKeyElement, final Types types) {
+        return types.asElement(foreignKeyElement.asType()).getAnnotation(SQLiteTable.class);
     }
 
     abstract JavaFile writeJava();
