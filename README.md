@@ -40,10 +40,10 @@ Annotate a class with ```@SQLiteDatabaseDescriptor``` as follows:
 ```java
 
 @SQLiteDatabaseDescriptor(
-    dbName = "myDatabase",
+    dbName = "companyDatabase",
     dbVersion = 1 // Increment this to trigger an upgrade
 )
-public class MyDatabase {
+public class CompanyDatabase {
 
     // Optional: define a method like this if you want to manually handle onOpen.
     // Note: PRAGMA foreign_keys = ON is set automatically if any foreign
@@ -74,7 +74,7 @@ Then define a class for a table that links to the database class
 
 ```java
 @SQLiteTable(
-        database = MyDatabase.class, 
+        database = CompanyDatabase.class, 
         tableName = "companies",
         autoCreate = true, // defaults to true, set to false if you do not want the table to be created automatically
         autoAddColumns = true, // defaults to true, set to false if you do not want new columns to be added automatically on upgrades
@@ -85,7 +85,7 @@ public class Company {
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     long id; // fields annotated with @SQLiteField need to be at least package local
     
-    @SQLiteField(fieldName = "companyName")
+    @SQLiteField("companyName") // Column name becomes companyName here
     String name;
     
     @SQLiteField
@@ -108,6 +108,7 @@ The operations
 SQLiteOperator<Company> operator = SQLiteOperator.from(getContext(), Company.class);
 final Company companyObject = new Company();
 companyObject.name = "My awesome company";
+companyObject.created = new Date();
 companyObject.employees = Arrays.asList("John", "Bob");
 
 // Blocking
@@ -197,7 +198,7 @@ public class Company {
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     long id;
     
-    @SQLiteField(fieldName = "companyName")
+    @SQLiteField("companyName")
     String name;
     
     @SQLiteRelationship(table = Employee.class)
@@ -213,19 +214,18 @@ public class Employee {
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     long id; // fields annotated with @SQLiteField need to be package local
     
-    @SQLiteField(fieldName = "employeeName")
+    @SQLiteField("employeeName")
     String name;
     
     @SQLiteField
     float salary;
     
     @SQLiteField(foreignKey = @ForeignKey(
-          table = Company.class,
           fieldReference = "id", // Note: this is the name of the field of the class you are referring to, not the database column name; the field has to be unique
           cascadeOnDelete = true, // defaults to false
           cascadeOnUpdate = true // defaults to false
     ))
-    long companyId;
+    Company company;
 }
 ```
 
@@ -242,10 +242,10 @@ Employee john = new Employee(),
     bob = new Employee();
 john.name = "John";
 john.salary = 1000f;
-john.companyId = company.id;
+john.company = company;
 bob.name = "Bob";
 bob.salary = 10000f;
-bob.companyId = company.id;
+bob.company = company;
 employeeOperator.save(john, bob).executeBlocking();
 ```
 
