@@ -50,7 +50,7 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
 
             return mGenerated.getList(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray, mQuery.mGroupByClause, mQuery.mHavingClause,
-                    mQuery.mOrderByClause, mQuery.mLimitClause);
+                    mQuery.mOrderByClause, mQuery.mLimitClause, false);
         } else if (mRawQueryClause != null) {
             final String[] rawQueryArgsAsStringArray;
             if (mRawQueryArgs != null) {
@@ -63,9 +63,9 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
             }
 
             return mGenerated.getList(mContext, mRawQueryClause,
-                    rawQueryArgsAsStringArray);
+                    rawQueryArgsAsStringArray, false);
         } else {
-            return mGenerated.getList(mContext, null, null, null, null, null, null);
+            return mGenerated.getList(mContext, null, null, null, null, null, null, false);
         }
     }
 

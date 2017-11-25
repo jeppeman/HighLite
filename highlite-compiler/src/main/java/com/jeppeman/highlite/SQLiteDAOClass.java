@@ -30,6 +30,9 @@ import javax.lang.model.util.Types;
  */
 final class SQLiteDAOClass extends JavaWritableClass {
 
+    private static final String INSTANCE_CACHE_VAR_NAME = "INSTANCE_CACHE";
+    private static final String COLUMN_FIELD_MAP_VAR_NAME = "COLUMN_FIELD_MAP";
+
     private final String mHelperPackage;
     private final String mDatabaseName;
     private final SQLiteTable mTable;
@@ -178,9 +181,26 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
+    private FieldSpec buildInstanceCacheField() {
+        TypeName pkTypeName = ClassName.get(getPrimaryKeyField().asType());
+        if (pkTypeName == ClassName.SHORT) {
+            pkTypeName = ClassName.get(Short.class);
+        } else if (pkTypeName == ClassName.INT) {
+            pkTypeName = ClassName.get(Integer.class);
+        } else if (pkTypeName == ClassName.LONG) {
+            pkTypeName = ClassName.get(Long.class);
+        }
+
+        return FieldSpec.builder(ParameterizedTypeName.get(CONCURRENT_MAP, pkTypeName,
+                ClassName.get(mElement.asType())), INSTANCE_CACHE_VAR_NAME,
+                Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+                .initializer("new $T<>()", CONCURRENT_HASHMAP)
+                .build();
+    }
+
     private FieldSpec buildFieldColumnMapField() {
-        return FieldSpec.builder(ParameterizedTypeName.get(MAP, STRING, STRING), "COLUMN_FIELD_MAP",
-                Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+        return FieldSpec.builder(ParameterizedTypeName.get(MAP, STRING, STRING),
+                COLUMN_FIELD_MAP_VAR_NAME, Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .initializer("new $T<>()", HASHMAP)
                 .build();
     }
@@ -192,10 +212,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            final String columnName = field.value() == null || field.value().length() == 0
+            final String columnName = field.value().length() == 0
                     ? enclosed.getSimpleName().toString()
                     : field.value();
-            putStatements.addStatement("$L.put($S, $S)", "COLUMN_FIELD_MAP", columnName,
+            putStatements.addStatement("$L.put($S, $S)", COLUMN_FIELD_MAP_VAR_NAME, columnName,
                     enclosed.getSimpleName().toString());
         }
 
@@ -381,7 +401,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
                 .addStatement("return getSingle($L, $S, "
-                                + "new $T[] { $T.valueOf(id) }, null, null, null)",
+                                + "new $T[] { $T.valueOf(id) }, null, null, null, false)",
                         "context", pkFieldName + " = ?", STRING, STRING)
                 .build();
     }
@@ -395,6 +415,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(STRING, "rawQueryClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "rawQueryArgs", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".rawQuery(rawQueryClause, rawQueryArgs)",
                         CURSOR, cursorVarName, "context")
@@ -402,7 +423,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("$T ret = instantiateObject(cursor, context)",
+                .addStatement("$T ret = instantiateObject(cursor, context, fromCache)",
                         getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -421,6 +442,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "groupBy", Modifier.FINAL)
                 .addParameter(STRING, "having", Modifier.FINAL)
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
                                 + "orderBy, $S)",
@@ -429,7 +451,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("$T ret = instantiateObject(cursor, context)",
+                .addStatement("$T ret = instantiateObject(cursor, context, fromCache)",
                         getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -445,6 +467,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(STRING, "rawQueryClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "rawQueryArgs", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
                 .addStatement("final $T $L = getReadableDatabase($L)"
@@ -455,7 +478,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return ret")
                 .endControlFlow()
                 .beginControlFlow("do")
-                .addStatement("ret.add(instantiateObject(cursor, context))")
+                .addStatement("ret.add(instantiateObject(cursor, context, fromCache))")
                 .endControlFlow("while(cursor.moveToNext())")
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -475,6 +498,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "having", Modifier.FINAL)
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
                 .addParameter(STRING, "limit", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
                 .addStatement("final $T $L = getReadableDatabase($L)"
@@ -486,7 +510,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return ret")
                 .endControlFlow()
                 .beginControlFlow("do")
-                .addStatement("ret.add(instantiateObject(cursor, context))")
+                .addStatement("ret.add(instantiateObject(cursor, context, fromCache))")
                 .endControlFlow("while(cursor.moveToNext())")
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -521,6 +545,27 @@ final class SQLiteDAOClass extends JavaWritableClass {
         throw new ProcessingException(enclosing, "No proper");
     }
 
+    private String getCursorMethodFromTypeName(final TypeName typeName) {
+        if (typeName.equals(TypeName.FLOAT)
+                || typeName.equals(ClassName.get(Float.class))) {
+            return "getFloat";
+        } else if (typeName.equals(TypeName.DOUBLE)
+                || typeName.equals(ClassName.get(Double.class))) {
+            return "getDouble";
+        } else if (typeName.equals(TypeName.SHORT)
+                || typeName.equals(ClassName.get(Short.class))) {
+            return "getShort";
+        } else if (typeName.equals(TypeName.INT)
+                || typeName.equals(ClassName.get(Integer.class))) {
+            return "getInt";
+        } else if (typeName.equals(TypeName.LONG)
+                || typeName.equals(ClassName.get(Long.class))) {
+            return "getLong";
+        } else {
+            return "getString";
+        }
+    }
+
     private MethodSpec buildInstantiateObjectMethod() {
         final ClassName elementCn = getClassNameOfElement();
 
@@ -541,28 +586,24 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 }
 
                 final Element relationClassElem = mTypeUtils.asElement(mirror);
-                final TypeName relationClassName = ClassName.get(relationClassElem.asType());
+                final SQLiteTable table = relationClassElem.getAnnotation(SQLiteTable.class);
 
                 final Element relatedForeignElem = findRelatedForeignKeyElement(relationClassElem,
                         relationship.backReference());
+                final SQLiteField f = relatedForeignElem.getAnnotation(SQLiteField.class);
+
+                final TypeName tn = ClassName.get(
+                        mElementUtils.getPackageOf(relatedForeignElem).toString(),
+                        relationClassElem.getSimpleName().toString() + "_DAO");
 
                 final String dbFieldName = getDBFieldName(relatedForeignElem);
 
                 final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
-                        .beginControlFlow(
-                                "if (excluded == null || !$T.asList(excluded).contains($S))",
-                                ARRAYS, enclosed.getSimpleName())
-                        .addStatement("ret.$L = $T.from(context, $T.class)\n"
-                                        + ".getList()\n"
-                                        + ".withQuery(\n"
-                                        + "  $T.builder().where(\"`$L` = ?\", ret.$L).build()\n"
-                                        + ")\n"
-                                        + ".executeBlocking()",
-                                enclosed.getSimpleName(), SQLITE_OPERATOR, relationClassName,
-                                SQLITE_QUERY, dbFieldName, relatedForeignElem
-                                        .getAnnotation(SQLiteField.class).foreignKey()
-                                        .fieldReference())
-                        .endControlFlow();
+                        .addStatement("final $T dao = new $T(null)", tn, tn)
+                        .addStatement("ret.$L = dao.getList(context, \"SELECT * FROM $L WHERE `$L`"
+                                        + " = \" + $T.valueOf(ret.$L), null, true)",
+                                enclosed.getSimpleName(), table.tableName(), dbFieldName,
+                                STRING, f.foreignKey().fieldReference());
 
 
                 relationshipsBuilder.add(relationshipBuilder.build());
@@ -572,8 +613,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
             final Name fieldName = enclosed.getSimpleName();
             final TypeName typeName = ClassName.get(enclosed.asType());
-            final CodeBlock assignmentStatement;
             final ForeignKey foreignKey = field.foreignKey();
+            final PrimaryKey pk = field.primaryKey();
+            CodeBlock assignmentStatement;
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
                         foreignKey, mTypeUtils);
@@ -582,28 +624,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 final String dbFieldName = getDBFieldName(foreignKeyRefElement);
                 final TypeName foreignKeyRefElementTypeName = ClassName.get(
                         foreignKeyRefElement.asType());
-                final CodeBlock cursorBlock;
-                if (foreignKeyRefElementTypeName.equals(TypeName.FLOAT)
-                        || foreignKeyRefElementTypeName.equals(ClassName.get(Float.class))) {
-                    cursorBlock = CodeBlock.of("cursor.getFloat(i)", fieldName);
-                } else if (foreignKeyRefElementTypeName.equals(TypeName.DOUBLE)
-                        || foreignKeyRefElementTypeName.equals(ClassName.get(Double.class))) {
-                    cursorBlock = CodeBlock.of("cursor.getDouble(i)", fieldName);
-                } else if (foreignKeyRefElementTypeName.equals(TypeName.SHORT)
-                        || foreignKeyRefElementTypeName.equals(ClassName.get(Short.class))) {
-                    cursorBlock = CodeBlock.of("cursor.getShort(i)", fieldName);
-                } else if (foreignKeyRefElementTypeName.equals(TypeName.INT)
-                        || foreignKeyRefElementTypeName.equals(ClassName.get(Integer.class))) {
-                    cursorBlock = CodeBlock.of("cursor.getInt(i)", fieldName);
-                } else if (foreignKeyRefElementTypeName.equals(TypeName.LONG)
-                        || foreignKeyRefElementTypeName.equals(ClassName.get(Long.class))) {
-                    cursorBlock = CodeBlock.of("cursor.getLong(i)", fieldName);
-                } else {
-                    cursorBlock = CodeBlock.of("cursor.getString(i)", fieldName);
-                }
 
-                final String cursorVarName = "fkCursor";
-
+                final CodeBlock cursorBlock = CodeBlock.of("cursor.$L(i)",
+                        getCursorMethodFromTypeName(foreignKeyRefElementTypeName));
                 final Element foreignEnclosing = foreignKeyRefElement.getEnclosingElement();
 
                 final TypeName tn = ClassName.get(
@@ -611,39 +634,14 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         mTypeUtils.asElement(foreignEnclosing.asType()).getSimpleName().toString()
                                 + "_DAO");
 
-                final Element rel = findEnclosedRelationshipElement(foreignEnclosing,
-                        fieldName.toString());
-
-                final CodeBlock.Builder relHandler = CodeBlock.builder();
-                if (rel != null) {
-                    relHandler.addStatement("ret.$L.$L = $T.from(context, $T.class)\n"
-                                    + ".getList()\n"
-                                    + ".withQuery(\n"
-                                    + "  $T.builder().where(\"`$L` = ? AND `$L` != ?\", ret.$L.$L,"
-                                    + " ret.$L).build())\n"
-                                    + ".executeBlocking()",
-                            fieldName, rel.getSimpleName(), SQLITE_OPERATOR, mElement.asType(),
-                            SQLITE_QUERY, getDBFieldName(enclosed),
-                            getDBFieldName(getPrimaryKeyField()), fieldName,
-                            foreignKey.fieldReference(), getPrimaryKeyField());
-                    relHandler.addStatement("ret.$L.$L.add(ret)", fieldName,
-                            rel.getSimpleName());
-                }
-
                 assignmentStatement = CodeBlock.builder()
-                        .addStatement("final $T $L = getReadableDatabase(context).rawQuery($S,"
-                                        + " new $T[] { $T.valueOf($L) })",
-                                CURSOR, cursorVarName, String.format("SELECT * FROM %s WHERE"
+                        .addStatement("final $T dao = new $T(null)", tn, tn)
+                        .addStatement("ret.$L = dao.getSingle(context, $S, "
+                                        + "new $T[] { $T.valueOf($L) }, true)",
+                                fieldName, String.format("SELECT * FROM %s WHERE"
                                                 + " `%s` = ? LIMIT 1",
                                         foreignKeyRefTable.tableName(), dbFieldName),
                                 STRING, STRING, cursorBlock.toString())
-                        .addStatement("$L.moveToFirst()", cursorVarName)
-                        .addStatement("final $T dao = new $T(null)", tn, tn)
-                        .addStatement("ret.$L = dao.instantiateObject($L, context$L)",
-                                fieldName, cursorVarName, rel == null
-                                        ? ""
-                                        : ", \"" + rel.getSimpleName() + "\"")
-                        .add(relHandler.build())
                         .build();
             } else if (typeName.equals(TypeName.BOOLEAN)
                     || typeName.equals(ClassName.get(Boolean.class))) {
@@ -683,6 +681,21 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .build();
             }
 
+            if (pk.enabled()) {
+                assignmentStatement = CodeBlock.builder()
+                        .add(assignmentStatement)
+                        .addStatement("$L.putIfAbsent(ret.$L, ret)", INSTANCE_CACHE_VAR_NAME,
+                                fieldName)
+                        .addStatement("new $T().schedule(new $T() {\n"
+                                        + "  @Override\n"
+                                        + "  public void run() {\n"
+                                        + "      $L.remove(ret.$L);\n"
+                                        + "  }\n"
+                                        + "}, 30 * 1000)", TIMER, TIMER_TASK,
+                                INSTANCE_CACHE_VAR_NAME, fieldName)
+                        .build();
+            }
+
             sqliteFieldsBuilder.beginControlFlow("if (fieldName.equals($S))",
                     enclosed.getSimpleName())
                     .add(assignmentStatement)
@@ -690,17 +703,38 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     .endControlFlow();
         }
 
+        final Element pkElement = getPrimaryKeyField();
+        final CodeBlock.Builder fetchFromCacheStatement = CodeBlock.builder();
+        if (pkElement != null) {
+            final SQLiteField field = pkElement.getAnnotation(SQLiteField.class);
+            final PrimaryKey pk = field.primaryKey();
+            if (pk.enabled()) {
+                final TypeName pkTypeName = ClassName.get(pkElement.asType());
+                fetchFromCacheStatement
+                        .addStatement("final $T pkVal = cursor.$L(cursor.getColumnIndex($S))",
+                                pkTypeName, getCursorMethodFromTypeName(pkTypeName),
+                                getDBFieldName(pkElement))
+                        .beginControlFlow("if (fromCache && $L.containsKey(pkVal))",
+                                INSTANCE_CACHE_VAR_NAME)
+                        .addStatement("return $L.get(pkVal)", INSTANCE_CACHE_VAR_NAME)
+                        .endControlFlow();
+            }
+        }
+
         return MethodSpec.methodBuilder("instantiateObject")
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CURSOR, "cursor", Modifier.FINAL)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
-                .addParameter(ArrayTypeName.of(STRING), "excluded", Modifier.FINAL)
-                .varargs()
+                .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .returns(elementCn)
+                .addCode(fetchFromCacheStatement.build())
                 .addStatement("final $T ret = new $T()", elementCn, elementCn)
                 .beginControlFlow("for (int i = 0; i < cursor.getColumnCount(); i++)")
                 .addStatement("final String name = cursor.getColumnName(i)")
-                .addStatement("final String fieldName = COLUMN_FIELD_MAP.get(name)")
+                .beginControlFlow("if (!$L.containsKey(name))", COLUMN_FIELD_MAP_VAR_NAME)
+                .addStatement("continue")
+                .endControlFlow()
+                .addStatement("final String fieldName = $L.get(name)", COLUMN_FIELD_MAP_VAR_NAME)
                 .addCode(sqliteFieldsBuilder.build())
                 .endControlFlow()
                 .addCode(relationshipsBuilder.build())
@@ -719,6 +753,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStaticBlock(getStaticInitializer())
                 .addFields(Arrays.asList(
                         buildColumnsField(),
+                        buildInstanceCacheField(),
                         buildFieldColumnMapField(),
                         buildTargetField()
                 ))

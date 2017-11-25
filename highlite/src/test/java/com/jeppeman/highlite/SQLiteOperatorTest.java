@@ -336,7 +336,6 @@ public class SQLiteOperatorTest {
         TestTable4 related2 = new TestTable4();
         related2.foreignKey = t1;
         operator2.save(related1, related2).executeBlocking();
-        List<TestTable4> x = operator2.getList().withRawQuery("foreignKey = ?", 1).executeBlocking();
         t1 = operator.getSingle(1).executeBlocking();
         assertNotNull(t1);
         assertEquals(2, t1.table4Relation.size());

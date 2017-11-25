@@ -16,19 +16,27 @@ public interface SQLiteDAO<T> {
     int delete(Context context);
     int deleteByQuery(Context context, String whereClause, String[] whereArgs);
     T getSingle(Context context, Object id);
-    T getSingle(Context context, String rawQueryClause, String[] rawQueryArgs);
+    T getSingle(Context context,
+                String rawQueryClause,
+                String[] rawQueryArgs,
+                boolean fromCache);
     T getSingle(Context context,
                 String whereClause,
                 String[] whereArgs,
                 String groupBy,
                 String having,
-                String orderBy);
-    List<T> getList(Context context, String rawQueryClause, String[] rawQueryArgs);
+                String orderBy,
+                boolean fromCache);
+    List<T> getList(Context context,
+                    String rawQueryClause,
+                    String[] rawQueryArgs,
+                    boolean fromCache);
     List<T> getList(Context context,
                     String whereClause,
                     String[] whereArgs,
                     String groupBy,
                     String having,
                     String orderBy,
-                    String limit);
+                    String limit,
+                    boolean fromCache);
 }

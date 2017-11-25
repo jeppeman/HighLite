@@ -16,6 +16,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -38,6 +42,10 @@ abstract class JavaWritableClass {
     static final ClassName MAP = ClassName.get(Map.class);
     static final ClassName HASHMAP = ClassName.get(HashMap.class);
     static final ClassName LINKED_HASHMAP = ClassName.get(LinkedHashMap.class);
+    static final ClassName CONCURRENT_MAP = ClassName.get(ConcurrentMap.class);
+    static final ClassName CONCURRENT_HASHMAP = ClassName.get(ConcurrentHashMap.class);
+    static final ClassName TIMER = ClassName.get(Timer.class);
+    static final ClassName TIMER_TASK = ClassName.get(TimerTask.class);
     static final ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
     static final ClassName ARRAYS = ClassName.get(Arrays.class);
     static final ClassName CONTEXT = ClassName.get("android.content", "Context");

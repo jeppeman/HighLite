@@ -57,7 +57,7 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
 
             return mGenerated.getSingle(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray, mQuery.mGroupByClause, mQuery.mHavingClause,
-                    mQuery.mOrderByClause);
+                    mQuery.mOrderByClause, false);
         } else if (mRawQueryClause != null) {
             final String[] rawQueryArgsAsStringArray;
             if (mRawQueryArgs != null) {
@@ -70,7 +70,7 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
             }
 
             return mGenerated.getSingle(mContext, mRawQueryClause,
-                    rawQueryArgsAsStringArray);
+                    rawQueryArgsAsStringArray, false);
         }
 
         throw new RuntimeException("No id or query provided to getSingle");
