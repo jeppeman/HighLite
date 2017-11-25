@@ -14,13 +14,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final SQLiteOperator<MyLittleClass2> operator = SQLiteOperator.from(this,
-                MyLittleClass2.class);
+        final SQLiteOperator<Employee> operator = SQLiteOperator.from(this,
+                Employee.class);
 
         operator
                 .getList()
                 .execute()
-                .subscribe(new Subscriber<MyLittleClass2>() {
+                .subscribe(new Subscriber<Employee>() {
                     @Override
                     public void onCompleted() {
 
@@ -32,16 +32,16 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onNext(MyLittleClass2 myLittleClass2) {
+                    public void onNext(Employee myLittleClass2) {
 
                     }
                 });
 
-//        MyLittleClass m = new MyLittleClass();
+//        Company m = new Company();
 //        m.name = "asdf";
 //        m.nameList = Arrays.asList("a, ", "c", "b");
 //        m.foreign = 7;
-//        SQLiteOperator.from(this, MyLittleClass.class)
+//        SQLiteOperator.from(this, Company.class)
 //                .insert(m)
 //                .execute()
 //                .subscribe(new Completable.CompletableSubscriber() {
