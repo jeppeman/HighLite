@@ -153,7 +153,7 @@ final List<Company> list = operator
     .withQuery(
         SQLiteQuery
             .builder()
-            .where("`id` = ?", 1)
+            .where("`id` = ? AND `companyName` = ?", 1, "My not so awesome company")
             .build()
     ).executeBlocking();
 ```
@@ -201,7 +201,7 @@ public class Company {
     @SQLiteField("companyName")
     String name;
     
-    @SQLiteRelationship(table = Employee.class)
+    @SQLiteRelationship(table = Employee.class, backReference = "company")
     List<Employee> employeeList; // When a company is fetched from the database, its related employees gets fetched as well
 }
 
