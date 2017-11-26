@@ -172,6 +172,14 @@ public class HighLiteProcessor extends AbstractProcessor {
 
             final String tableName = JavaWritableClass.getTableName(element);
 
+//            List<Element> all = JavaWritableClass.getAllFields(element, mTypeUtils);
+//
+//            System.out.println(element.getSimpleName());
+//            for (Object x : all) {
+//                System.out.println("asd: " + x.toString());
+//            }
+//            System.out.println("\n\n");
+
             if (mTypeUtils.isSameType(mirror, databaseElement.asType())) {
                 if (tableNamesAdded.contains(tableName)) {
                     error(element, String.format("The table %s was already defined for database %s",

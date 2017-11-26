@@ -32,7 +32,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
     private final String mDatabaseName;
     private final Map<SQLiteTable, Element> mTableElementMap;
     private final Elements mElementUtils;
-    private final Types mTypeUtils;
     private final int mVersion;
 
     SQLiteOpenHelperClass(final Element element,
@@ -196,7 +195,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        foreignKey, mTypeUtils);
+                        foreignKey);
                 final StringBuilder foreignKeyBuilder = new StringBuilder();
                 foreignKeyBuilder.append(
                         String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
@@ -440,7 +439,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final ForeignKey foreignKey = field.foreignKey();
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        foreignKey, mTypeUtils);
+                        foreignKey);
                 foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                         fieldName, getTableName(foreignKeyRefElement.getEnclosingElement()),
                         getDBFieldName(foreignKeyRefElement)));

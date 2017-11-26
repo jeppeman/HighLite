@@ -38,7 +38,6 @@ final class SQLiteDAOClass extends JavaWritableClass {
     private final SQLiteTable mTable;
     private final Element mElement;
     private final Elements mElementUtils;
-    private final Types mTypeUtils;
 
     SQLiteDAOClass(final String helperPackage,
                    final String databaseName,
@@ -104,7 +103,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final CodeBlock.Builder putStatement = CodeBlock.builder();
             if (fk.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        fk, mTypeUtils);
+                        fk);
                 final TypeName foreignKeyRefElementTypeName = ClassName.get(
                         foreignKeyRefElement.asType());
                 if (foreignKeyRefElementTypeName.equals(TypeName.SHORT)
@@ -269,6 +268,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .returns(TypeName.INT)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addStatement("$L.clear()", INSTANCE_CACHE_VAR_NAME)
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".rawQuery($S, new $T[] { $T.valueOf(mTarget.$L) })",
                         CURSOR, cursorVarName, "context",
@@ -341,6 +341,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(STRING, "whereClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
+                .addStatement("$L.clear()", INSTANCE_CACHE_VAR_NAME)
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, null, whereClause, whereArgs)",
                         "context", getTableName(mElement))
@@ -619,7 +620,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             CodeBlock assignmentStatement;
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        foreignKey, mTypeUtils);
+                        foreignKey);
                 final String dbFieldName = getDBFieldName(foreignKeyRefElement);
                 final TypeName foreignKeyRefElementTypeName = ClassName.get(
                         foreignKeyRefElement.asType());

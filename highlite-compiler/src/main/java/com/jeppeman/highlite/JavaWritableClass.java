@@ -22,7 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 
 /**
@@ -88,6 +91,8 @@ abstract class JavaWritableClass {
                 Collections.singletonList(String.class)));
     }
 
+    Types mTypeUtils;
+
     static String getClassName(TypeElement type, String packageName) {
         int packageLen = packageName.length() + 1;
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
@@ -102,6 +107,28 @@ abstract class JavaWritableClass {
                 .replaceAll("(.)(\\p{Upper})", "$1_$2")
                 .toLowerCase()
                 : table.tableName();
+    }
+
+    private List<Element> getAllFields(final Element element,
+                                       final List<Element> current) {
+        for (final Element enclosed : element.getEnclosedElements()) {
+            if (enclosed.getKind() != ElementKind.FIELD) continue;
+
+            current.add(enclosed);
+        }
+
+        for (final TypeMirror superType : mTypeUtils.directSupertypes(element.asType())) {
+            final DeclaredType declared = (DeclaredType) superType;
+            if (declared == null) continue;
+
+            current.addAll(getAllFields(declared.asElement(), new ArrayList<Element>()));
+        }
+
+        return current;
+    }
+
+    List<Element> getAllFields(final Element element) {
+        return getAllFields(element, new ArrayList<Element>());
     }
 
     String getDBFieldName(final Element element) {
@@ -131,6 +158,12 @@ abstract class JavaWritableClass {
 
     String getFieldType(final Element element, final SQLiteField field) {
         try {
+            if (field.foreignKey().enabled()) {
+                final Element foreignRefElem = findForeignKeyReferencedField(element,
+                        field.foreignKey());
+                return getFieldType(foreignRefElem,
+                        foreignRefElem.getAnnotation(SQLiteField.class));
+            }
             return field.fieldType() != SQLiteFieldType.UNSPECIFIED
                     ? field.fieldType().toString()
                     : getFieldTypeFromClass(element.asType().toString()).toString();
@@ -140,10 +173,9 @@ abstract class JavaWritableClass {
     }
 
     Element findForeignKeyReferencedField(final Element enclosed,
-                                          final ForeignKey foreignKey,
-                                          final Types types) {
+                                          final ForeignKey foreignKey) {
         Element fieldRefElement = null;
-        Element tableElem = types.asElement(enclosed.asType());
+        Element tableElem = mTypeUtils.asElement(enclosed.asType());
         for (final Element enc : tableElem.getEnclosedElements()) {
             if (!enc.getSimpleName().toString().equals(foreignKey.fieldReference())) {
                 continue;
@@ -170,8 +202,8 @@ abstract class JavaWritableClass {
         return fieldRefElement;
     }
 
-    SQLiteTable getForeignKeyReferencedTable(final Element foreignKeyElement, final Types types) {
-        return types.asElement(foreignKeyElement.asType()).getAnnotation(SQLiteTable.class);
+    SQLiteTable getForeignKeyReferencedTable(final Element foreignKeyElement) {
+        return mTypeUtils.asElement(foreignKeyElement.asType()).getAnnotation(SQLiteTable.class);
     }
 
     abstract JavaFile writeJava();
