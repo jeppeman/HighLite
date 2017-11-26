@@ -1,8 +1,13 @@
-package com.jeppeman.highlite.test.table;
-
-/**
- * Created by jesper on 2017-11-26.
- */
-
-public class TestTable8 {
-}
+//package com.jeppeman.highlite.test.table;
+//
+//import com.jeppeman.highlite.SQLiteField;
+//import com.jeppeman.highlite.SQLiteTable;
+//
+//import java.util.Date;
+//
+//@SQLiteTable(database = TestDatabase.class)
+//public class TestTable8 extends TestTable7 {
+//
+//    @SQLiteField
+//    Date created;
+//}

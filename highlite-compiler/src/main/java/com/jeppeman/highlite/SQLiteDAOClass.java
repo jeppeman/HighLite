@@ -145,8 +145,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             putStatements.add(putStatement.build());
         }
 
-        return MethodSpec.methodBuilder(
-                "getContentValues")
+        return MethodSpec.methodBuilder("getContentValues")
                 .addModifiers(Modifier.PRIVATE)
                 .returns(CONTENT_VALUES)
                 .addStatement("final $T $L = new $T()", CONTENT_VALUES, contentValsVar,
@@ -685,7 +684,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             if (pk.enabled()) {
                 assignmentStatement = CodeBlock.builder()
                         .add(assignmentStatement)
-                        .addStatement("$L.putIfAbsent(ret.$L, ret)", INSTANCE_CACHE_VAR_NAME,
+                        .addStatement("$L.put(ret.$L, ret)", INSTANCE_CACHE_VAR_NAME,
                                 fieldName)
                         .addStatement("new $T().schedule(new $T() {\n"
                                         + "  @Override\n"
