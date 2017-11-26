@@ -272,8 +272,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".rawQuery($S, new $T[] { $T.valueOf(mTarget.$L) })",
                         CURSOR, cursorVarName, "context",
-                        String.format("SELECT COUNT(*) FROM %s WHERE %s = ?", mTable.tableName(),
-                                pkFieldName), STRING, STRING, primaryKeyElement.getSimpleName())
+                        String.format("SELECT COUNT(*) FROM %s WHERE %s = ?",
+                                getTableName(mElement), pkFieldName), STRING, STRING,
+                        primaryKeyElement.getSimpleName())
                 .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
                 .addStatement("$L.close()", cursorVarName)
                 .addCode(buildInsertBlock())
@@ -307,7 +308,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         return CodeBlock.builder()
                 .add("final long id = ")
                 .addStatement("getWritableDatabase($L).insertOrThrow($S, null, getContentValues())",
-                        "context", mTable.tableName())
+                        "context", getTableName(mElement))
                 .add(setIdAfterInsertion.build())
                 .addStatement("return 1")
                 .build();
@@ -327,7 +328,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, getContentValues(), $S, "
                                 + "new $T[] { $T.valueOf(mTarget.$L) })",
-                        "context", mTable.tableName(), pkFieldName + " = ?", STRING, STRING,
+                        "context", getTableName(mElement), pkFieldName + " = ?", STRING, STRING,
                         primaryKeyElement.getSimpleName())
                 .build();
     }
@@ -342,7 +343,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, null, whereClause, whereArgs)",
-                        "context", mTable.tableName())
+                        "context", getTableName(mElement))
                 .build();
     }
 
@@ -364,7 +365,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addStatement("return getWritableDatabase($L)"
                                 + ".delete($S, $S, new $T[] { $T.valueOf(mTarget.$L) })",
-                        "context", mTable.tableName(), pkFieldName + " = ?", STRING, STRING,
+                        "context", getTableName(mElement), pkFieldName + " = ?", STRING, STRING,
                         primaryKeyElement.getSimpleName())
                 .build();
     }
@@ -379,7 +380,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
                 .addStatement("return getWritableDatabase($L)"
                                 + ".delete($S, whereClause, whereArgs)",
-                        "context", mTable.tableName())
+                        "context", getTableName(mElement))
                 .build();
     }
 
@@ -446,7 +447,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
                                 + "orderBy, $S)",
-                        CURSOR, cursorVarName, "context", mTable.tableName(), 1)
+                        CURSOR, cursorVarName, "context", getTableName(mElement), 1)
                 .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
@@ -504,7 +505,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
                                 + "orderBy, limit)",
-                        CURSOR, cursorVarName, "context", mTable.tableName())
+                        CURSOR, cursorVarName, "context", getTableName(mElement))
                 .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -586,7 +587,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 }
 
                 final Element relationClassElem = mTypeUtils.asElement(mirror);
-                final SQLiteTable table = relationClassElem.getAnnotation(SQLiteTable.class);
+                final String tableName = getTableName(relationClassElem);
 
                 final Element relatedForeignElem = findRelatedForeignKeyElement(relationClassElem,
                         relationship.backReference());
@@ -602,7 +603,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         .addStatement("final $T dao = new $T(null)", tn, tn)
                         .addStatement("ret.$L = dao.getList(context, \"SELECT * FROM $L WHERE `$L`"
                                         + " = \" + $T.valueOf(ret.$L), null, true)",
-                                enclosed.getSimpleName(), table.tableName(), dbFieldName,
+                                enclosed.getSimpleName(), tableName, dbFieldName,
                                 STRING, f.foreignKey().fieldReference());
 
 
@@ -619,8 +620,6 @@ final class SQLiteDAOClass extends JavaWritableClass {
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
                         foreignKey, mTypeUtils);
-                final SQLiteTable foreignKeyRefTable = getForeignKeyReferencedTable(enclosed,
-                        mTypeUtils);
                 final String dbFieldName = getDBFieldName(foreignKeyRefElement);
                 final TypeName foreignKeyRefElementTypeName = ClassName.get(
                         foreignKeyRefElement.asType());
@@ -640,7 +639,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                         + "new $T[] { $T.valueOf($L) }, true)",
                                 fieldName, String.format("SELECT * FROM %s WHERE"
                                                 + " `%s` = ? LIMIT 1",
-                                        foreignKeyRefTable.tableName(), dbFieldName),
+                                        getTableName(foreignKeyRefElement.getEnclosingElement()),
+                                        dbFieldName),
                                 STRING, STRING, cursorBlock.toString())
                         .build();
             } else if (typeName.equals(TypeName.BOOLEAN)

@@ -191,7 +191,7 @@ HighLite supports foreign keys and relationships, here's an example of how you c
 ```java
 @SQLiteTable(
         database = MyDatabase.class, 
-        tableName = "companies"
+        tableName = "companies" // If left empty, the name of the table defaults to the class name snake cased
 )
 public class Company {
     

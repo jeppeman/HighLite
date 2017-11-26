@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * @author jesper
  */
-@SQLiteTable(database = TestDatabase.class, tableName = "testTable", autoDeleteColumns = true)
+@SQLiteTable(database = TestDatabase.class, autoDeleteColumns = true)
 public class TestTable {
 
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))

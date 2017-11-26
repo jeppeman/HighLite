@@ -170,15 +170,17 @@ public class HighLiteProcessor extends AbstractProcessor {
                 return ret;
             }
 
+            final String tableName = JavaWritableClass.getTableName(element);
+
             if (mTypeUtils.isSameType(mirror, databaseElement.asType())) {
-                if (tableNamesAdded.contains(tableAnno.tableName())) {
+                if (tableNamesAdded.contains(tableName)) {
                     error(element, String.format("The table %s was already defined for database %s",
-                            tableAnno.tableName(), dbAnno.dbName()));
+                            tableName, dbAnno.dbName()));
                     ret.setValue(true);
                     return ret;
                 }
 
-                tableNamesAdded.add(tableAnno.tableName());
+                tableNamesAdded.add(tableName);
                 ret.getKey().put(tableAnno, element);
             }
         }

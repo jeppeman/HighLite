@@ -93,6 +93,17 @@ abstract class JavaWritableClass {
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
     }
 
+    static String getTableName(final Element element) {
+        final SQLiteTable table = element.getAnnotation(SQLiteTable.class);
+        return "".equals(table.tableName())
+                ? element
+                .getSimpleName()
+                .toString()
+                .replaceAll("(.)(\\p{Upper})", "$1_$2")
+                .toLowerCase()
+                : table.tableName();
+    }
+
     String getDBFieldName(final Element element) {
         final SQLiteField field = element.getAnnotation(SQLiteField.class);
         return field.value().length() == 0

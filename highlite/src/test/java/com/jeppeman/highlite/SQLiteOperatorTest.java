@@ -93,7 +93,7 @@ public class SQLiteOperatorTest {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable table = operator
                 .getSingle()
-                .withRawQuery("SELECT * FROM testTable WHERE id = ?", 1)
+                .withRawQuery("SELECT * FROM test_table WHERE id = ?", 1)
                 .executeBlocking();
         assertNull(table);
         TestTable newTable = new TestTable();
@@ -104,7 +104,7 @@ public class SQLiteOperatorTest {
         operator.save(newTable).executeBlocking();
         table = operator
                 .getSingle()
-                .withRawQuery("SELECT * FROM testTable WHERE id = ?", 1)
+                .withRawQuery("SELECT * FROM test_table WHERE id = ?", 1)
                 .executeBlocking();
         assertNotNull(table);
         assertEquals(table.id, 1);
@@ -145,7 +145,7 @@ public class SQLiteOperatorTest {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         List<TestTable> list = operator
                 .getList()
-                .withRawQuery("SELECT * FROM testTable")
+                .withRawQuery("SELECT * FROM test_table")
                 .executeBlocking();
         assertNotNull(list);
         assertEquals(0, list.size());
@@ -158,7 +158,7 @@ public class SQLiteOperatorTest {
         operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
-                .withRawQuery("SELECT * FROM testTable")
+                .withRawQuery("SELECT * FROM test_table")
                 .executeBlocking();
         assertEquals(1, list.size());
         newTable.id = 0;
@@ -166,7 +166,7 @@ public class SQLiteOperatorTest {
         operator.save(newTable).executeBlocking();
         list = operator
                 .getList()
-                .withRawQuery("SELECT * FROM testTable")
+                .withRawQuery("SELECT * FROM test_table")
                 .executeBlocking();
         assertEquals(2, list.size());
     }
@@ -378,7 +378,7 @@ public class SQLiteOperatorTest {
                         + "    `xx` INTEGER PRIMARY KEY AUTOINCREMENT, "
                         + "    `str` TEXT,"
                         + "    `foreign` INTEGER,"
-                        + "    FOREIGN KEY(`foreign`) REFERENCES testTable(`unique`)"
+                        + "    FOREIGN KEY(`foreign`) REFERENCES test_table(`unique`)"
                         + ");"
                 );
 
@@ -418,11 +418,11 @@ public class SQLiteOperatorTest {
     public void testOnUpgradeWithAddAndDeleteColumn() throws Exception {
         getHelperInstance()
                 .getWritableDatabase()
-                .execSQL("DROP TABLE testTable;");
+                .execSQL("DROP TABLE test_table;");
 
         getHelperInstance()
                 .getWritableDatabase()
-                .execSQL("CREATE TABLE testTable (\n" +
+                .execSQL("CREATE TABLE test_table (\n" +
                         "      `id` INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
                         "      `testFieldName` TEXT,\n" +
                         "      `testList` BLOB,\n" +
@@ -433,7 +433,7 @@ public class SQLiteOperatorTest {
 
         Cursor testTableCursor = getHelperInstance()
                 .getReadableDatabase()
-                .rawQuery("PRAGMA table_info(testTable)", null);
+                .rawQuery("PRAGMA table_info(test_table)", null);
         final List<String> testTableCols = new ArrayList<>();
         if (testTableCursor.moveToFirst()) {
             do {
@@ -451,7 +451,7 @@ public class SQLiteOperatorTest {
         getHelperInstance().onUpgrade(getHelperInstance().getWritableDatabase(), 1, 2);
         testTableCursor = getHelperInstance()
                 .getReadableDatabase()
-                .rawQuery("PRAGMA table_info(testTable)", null);
+                .rawQuery("PRAGMA table_info(test_table)", null);
         testTableCols.clear();
 
         if (testTableCursor.moveToFirst()) {

@@ -7,7 +7,7 @@ import com.jeppeman.highlite.SQLiteTable;
 /**
  * @author jesper
  */
-@SQLiteTable(database = TestDatabase.class, tableName = "table2")
+@SQLiteTable(database = TestDatabase.class)
 public class TestTable2 {
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     public long id;

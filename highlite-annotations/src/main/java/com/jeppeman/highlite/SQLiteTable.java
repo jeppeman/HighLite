@@ -28,7 +28,7 @@ public @interface SQLiteTable {
      *
      * @return a {@link String} representing the name of the table
      */
-    String tableName();
+    String tableName() default "";
 
     /**
      * Specifies whether the table should be automatically created or not
