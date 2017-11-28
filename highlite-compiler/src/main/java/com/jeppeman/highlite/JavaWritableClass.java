@@ -110,9 +110,17 @@ abstract class JavaWritableClass {
     }
 
     private List<Element> getAllFields(final Element element,
-                                       final List<Element> current) {
+                                       final List<Element> current,
+                                       final String tableName,
+                                       final boolean onlySearchPrimaryKey) {
         for (final Element enclosed : element.getEnclosedElements()) {
-            if (enclosed.getKind() != ElementKind.FIELD) continue;
+            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            final SQLiteRelationship rel = enclosed.getAnnotation(SQLiteRelationship.class);
+            if (enclosed.getKind() != ElementKind.FIELD
+                    || (field == null && rel == null)
+                    || (onlySearchPrimaryKey
+                    && (field == null
+                    || !field.primaryKey().enabled()))) continue;
 
             current.add(enclosed);
         }
@@ -120,22 +128,38 @@ abstract class JavaWritableClass {
         for (final TypeMirror superType : mTypeUtils.directSupertypes(element.asType())) {
             final DeclaredType declared = (DeclaredType) superType;
             if (declared == null) continue;
+            final Element superElement = declared.asElement();
+            final SQLiteTable superTable = superElement.getAnnotation(SQLiteTable.class);
+            if (superTable != null && !getTableName(superElement).equals(tableName)) {
+                current.addAll(getAllFields(declared.asElement(), new ArrayList<Element>(),
+                        tableName, true));
+                continue;
+            }
 
-            current.addAll(getAllFields(declared.asElement(), new ArrayList<Element>()));
+            current.addAll(getAllFields(declared.asElement(), new ArrayList<Element>(), tableName,
+                    false));
         }
 
         return current;
     }
 
     List<Element> getAllFields(final Element element) {
-        return getAllFields(element, new ArrayList<Element>());
+        return getAllFields(element, new ArrayList<Element>(), getTableName(element), false);
     }
 
-    String getDBFieldName(final Element element) {
+    String getDBFieldName(final Element element, final String activeTableName) {
         final SQLiteField field = element.getAnnotation(SQLiteField.class);
-        return field.value().length() == 0
-                ? element.getSimpleName().toString()
-                : field.value();
+        final String tableName = element.getEnclosingElement()
+                .getAnnotation(SQLiteTable.class) == null
+                ? null
+                : getTableName(element.getEnclosingElement()),
+                dbFieldName = field.value().length() == 0
+                        ? element.getSimpleName().toString()
+                        : field.value();
+        return activeTableName != null && tableName != null && !tableName.equals(activeTableName)
+                ? String.format("%s_ptr_%s", tableName, dbFieldName)
+                : dbFieldName;
+
     }
 
     SQLiteFieldType getFieldTypeFromClass(final String cls) {

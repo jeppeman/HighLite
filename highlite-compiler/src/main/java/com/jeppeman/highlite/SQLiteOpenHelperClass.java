@@ -30,14 +30,14 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
     private final Element mElement;
     private final String mPackageName;
     private final String mDatabaseName;
-    private final Map<SQLiteTable, Element> mTableElementMap;
+    private final Map<Element, SQLiteTable> mTableElementMap;
     private final Elements mElementUtils;
     private final int mVersion;
 
     SQLiteOpenHelperClass(final Element element,
                           final String packageName,
                           final String databaseName,
-                          final Map<SQLiteTable, Element> tableElementMap,
+                          final Map<Element, SQLiteTable> tableElementMap,
                           final int version,
                           final Elements elementUtils,
                           final Types typeUtils) {
@@ -162,13 +162,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final Map<String, String> columnsMap = new LinkedHashMap<>(),
                 foreignKeysMap = new LinkedHashMap<>();
 
-        for (final Element enclosed : element.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(element)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
 
             if (field == null) continue;
 
             final StringBuilder fieldCreator = new StringBuilder();
-            final String fieldName = getDBFieldName(enclosed);
+            final String fieldName = getDBFieldName(enclosed, getTableName(element));
             fieldCreator.append("`");
             fieldCreator.append(fieldName);
             fieldCreator.append("`");
@@ -178,10 +178,23 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final PrimaryKey primaryKey = field.primaryKey();
             if (primaryKey.enabled()) {
                 fieldCreator.append(" PRIMARY KEY");
-                fieldCreator.append(
-                        primaryKey.autoIncrement()
-                                ? " AUTOINCREMENT"
-                                : "");
+                if (tableName.equals(getTableName(enclosed.getEnclosingElement()))) {
+                    fieldCreator.append(
+                            primaryKey.autoIncrement()
+                                    ? " AUTOINCREMENT"
+                                    : ""
+                    );
+                } else {
+                    fieldCreator.append(" NOT NULL");
+                    String foreignKeyBuilder = String.format(
+                            "FOREIGN KEY(`%s`) REFERENCES %s(`%s`)", fieldName,
+                            getTableName(enclosed.getEnclosingElement()),
+                            getDBFieldName(enclosed, null))
+                            + " ON DELETE CASCADE"
+                            + " ON UPDATE CASCADE, ";
+
+                    foreignKeysMap.put(fieldName, foreignKeyBuilder);
+                }
             }
 
             if (field.unique()) {
@@ -200,7 +213,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 foreignKeyBuilder.append(
                         String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                                 fieldName, getTableName(foreignKeyRefElement.getEnclosingElement()),
-                                getDBFieldName(foreignKeyRefElement)));
+                                getDBFieldName(foreignKeyRefElement, null)));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeyBuilder.append(" ON DELETE CASCADE");
                 }
@@ -261,8 +274,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("database.execSQL($S)", "BEGIN TRANSACTION;")
                     .beginControlFlow("for (final String field : $L)", newUniqueColsVarName)
                     .addStatement("database.execSQL($T.format("
-                            + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))", STRING,
-                            tableName)
+                                    + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))",
+                            STRING, tableName)
                     .endControlFlow()
                     .addStatement("database.execSQL($S)", "COMMIT;")
                     .endControlFlow()
@@ -410,11 +423,12 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         final String endOfColumnSpec = ",\n" + getIndent(2);
 
-        for (final Element enclosed : element.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(element)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            final String fieldName = getDBFieldName(enclosed);
+            final String tableName = getTableName(element);
+            final String fieldName = getDBFieldName(enclosed, tableName);
             createStatement.append("`");
             createStatement.append(fieldName);
             createStatement.append("`");
@@ -424,8 +438,21 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             final PrimaryKey primaryKey = field.primaryKey();
             if (primaryKey.enabled()) {
                 createStatement.append(" PRIMARY KEY");
-                createStatement.append(primaryKey.autoIncrement()
-                        ? " AUTOINCREMENT" : "");
+                if (tableName.equals(getTableName(enclosed.getEnclosingElement()))) {
+                    createStatement.append(
+                            primaryKey.autoIncrement()
+                                    ? " AUTOINCREMENT"
+                                    : ""
+                    );
+                } else {
+                    createStatement.append(" NOT NULL");
+                    foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
+                            fieldName, getTableName(enclosed.getEnclosingElement()),
+                            getDBFieldName(enclosed, null)));
+                    foreignKeys.append(" ON DELETE CASCADE");
+                    foreignKeys.append(" ON UPDATE CASCADE");
+                    foreignKeys.append(endOfColumnSpec);
+                }
             }
 
             if (field.unique()) {
@@ -442,7 +469,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         foreignKey);
                 foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
                         fieldName, getTableName(foreignKeyRefElement.getEnclosingElement()),
-                        getDBFieldName(foreignKeyRefElement)));
+                        getDBFieldName(foreignKeyRefElement, null)));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeys.append(" ON DELETE CASCADE");
                 }
@@ -556,10 +583,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
             onOpenStatement.addStatement("$T.$L(database)", mElement, enclosed.getSimpleName());
         }
 
-        for (final Map.Entry<SQLiteTable, Element> tableElementEntry
+        for (final Map.Entry<Element, SQLiteTable> tableElementEntry
                 : mTableElementMap.entrySet()) {
 
-            for (final Element enclosed : tableElementEntry.getValue().getEnclosedElements()) {
+            for (final Element enclosed : getAllFields(tableElementEntry.getKey())) {
                 final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
                 if (!foundForeignKey && field != null && field.foreignKey().enabled()) {
 
@@ -618,11 +645,11 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     enclosed.getSimpleName());
         }
 
-        for (final Map.Entry<SQLiteTable, Element> tableElementEntry
+        for (final Map.Entry<Element, SQLiteTable> tableElementEntry
                 : mTableElementMap.entrySet()) {
 
-            final SQLiteTable table = tableElementEntry.getKey();
-            final Element element = tableElementEntry.getValue();
+            final SQLiteTable table = tableElementEntry.getValue();
+            final Element element = tableElementEntry.getKey();
 
             code.add(getCreateBlock(element, table));
         }
@@ -680,12 +707,12 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     ClassName.get(mElement.asType()), enclosed.getSimpleName());
         }
 
-        for (final Map.Entry<SQLiteTable, Element> tableElementEntry
+        for (final Map.Entry<Element, SQLiteTable> tableElementEntry
                 : mTableElementMap.entrySet()) {
 
 
-            final SQLiteTable table = tableElementEntry.getKey();
-            final Element element = tableElementEntry.getValue();
+            final SQLiteTable table = tableElementEntry.getValue();
+            final Element element = tableElementEntry.getKey();
             final String tableName = getTableName(element);
 
             code.addStatement("/****** BEGIN $L ******/", tableName);

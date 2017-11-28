@@ -85,7 +85,7 @@ public class HighLiteProcessor extends AbstractProcessor {
                 databases.add(descriptor.dbName());
             }
 
-            final AbstractMap.SimpleEntry<Map<SQLiteTable, Element>, Boolean> tablesForDatabase =
+            final AbstractMap.SimpleEntry<Map<Element, SQLiteTable>, Boolean> tablesForDatabase =
                     getTableElementMappingForDatabase(roundEnv, element);
             if (tablesForDatabase.getValue()) {
                 return true;
@@ -101,10 +101,10 @@ public class HighLiteProcessor extends AbstractProcessor {
                     tablesForDatabase.getKey(), descriptor.dbVersion(), mElementUtils,
                     mTypeUtils).writeJava());
 
-            for (final Map.Entry<SQLiteTable, Element> entry
+            for (final Map.Entry<Element, SQLiteTable> entry
                     : tablesForDatabase.getKey().entrySet()) {
-                daoFiles.put(entry.getValue(), new SQLiteDAOClass(packageName, descriptor.dbName(),
-                        entry.getKey(), entry.getValue(), mElementUtils, mTypeUtils).writeJava());
+                daoFiles.put(entry.getKey(), new SQLiteDAOClass(packageName, descriptor.dbName(),
+                        entry.getValue(), entry.getKey(), mElementUtils, mTypeUtils).writeJava());
             }
         }
 
@@ -140,13 +140,13 @@ public class HighLiteProcessor extends AbstractProcessor {
         return true;
     }
 
-    private AbstractMap.SimpleEntry<Map<SQLiteTable, Element>,
+    private AbstractMap.SimpleEntry<Map<Element, SQLiteTable>,
             Boolean> getTableElementMappingForDatabase(
             final RoundEnvironment roundEnvironment,
             final Element databaseElement) {
-        final AbstractMap.SimpleEntry<Map<SQLiteTable, Element>, Boolean> ret =
-                new AbstractMap.SimpleEntry<Map<SQLiteTable, Element>, Boolean>(
-                        new LinkedHashMap<SQLiteTable, Element>(), false);
+        final AbstractMap.SimpleEntry<Map<Element, SQLiteTable>, Boolean> ret =
+                new AbstractMap.SimpleEntry<Map<Element, SQLiteTable>, Boolean>(
+                        new LinkedHashMap<Element, SQLiteTable>(), false);
 
         final List<String> tableNamesAdded = new ArrayList<>();
         for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
@@ -172,14 +172,6 @@ public class HighLiteProcessor extends AbstractProcessor {
 
             final String tableName = JavaWritableClass.getTableName(element);
 
-//            List<Element> all = JavaWritableClass.getAllFields(element, mTypeUtils);
-//
-//            System.out.println(element.getSimpleName());
-//            for (Object x : all) {
-//                System.out.println("asd: " + x.toString());
-//            }
-//            System.out.println("\n\n");
-
             if (mTypeUtils.isSameType(mirror, databaseElement.asType())) {
                 if (tableNamesAdded.contains(tableName)) {
                     error(element, String.format("The table %s was already defined for database %s",
@@ -189,7 +181,7 @@ public class HighLiteProcessor extends AbstractProcessor {
                 }
 
                 tableNamesAdded.add(tableName);
-                ret.getKey().put(tableAnno, element);
+                ret.getKey().put(element, tableAnno);
             }
         }
 

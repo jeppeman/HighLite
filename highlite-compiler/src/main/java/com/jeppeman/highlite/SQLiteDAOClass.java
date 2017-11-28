@@ -11,6 +11,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.Arrays;
+import java.util.List;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
@@ -71,7 +72,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
     }
 
     private Element getPrimaryKeyField() {
-        for (final Element enclosed : mElement.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(mElement)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
@@ -79,14 +80,15 @@ final class SQLiteDAOClass extends JavaWritableClass {
             if (pk.enabled()) return enclosed;
         }
 
-        return null;
+        throw new ProcessingException(mElement, String.format("No primary key field defined for %s",
+                mElement.getSimpleName()));
     }
 
     private MethodSpec buildGetContentValuesMethod() {
         final String contentValsVar = "contentValues";
 
         final CodeBlock.Builder putStatements = CodeBlock.builder();
-        for (final Element enclosed : mElement.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(mElement)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
@@ -98,7 +100,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final ForeignKey fk = field.foreignKey();
 
             final String fieldType = getFieldType(enclosed, field),
-                    fieldName = "`" + getDBFieldName(enclosed) + "`";
+                    fieldName = "`" + getDBFieldName(enclosed, getTableName(mElement)) + "`";
 
             final CodeBlock.Builder putStatement = CodeBlock.builder();
             if (fk.enabled()) {
@@ -163,12 +165,13 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private FieldSpec buildColumnsField() {
         final CodeBlock.Builder arrayValues = CodeBlock.builder().add("new $T[] { ", STRING);
-        for (int i = 0; i < mElement.getEnclosedElements().size(); i++) {
-            final Element enclosed = mElement.getEnclosedElements().get(i);
+        final List<Element> allElements = getAllFields(mElement);
+        for (int i = 0; i < allElements.size(); i++) {
+            final Element enclosed = allElements.get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            arrayValues.add("$S, ", "`" + getDBFieldName(enclosed) + "`");
+            arrayValues.add("$S, ", "`" + getDBFieldName(enclosed, getTableName(mElement)) + "`");
         }
 
         arrayValues.add("}");
@@ -205,14 +208,13 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private CodeBlock getStaticInitializer() {
         final CodeBlock.Builder putStatements = CodeBlock.builder();
-        for (int i = 0; i < mElement.getEnclosedElements().size(); i++) {
-            final Element enclosed = mElement.getEnclosedElements().get(i);
+        final List<Element> allElements = getAllFields(mElement);
+        for (int i = 0; i < allElements.size(); i++) {
+            final Element enclosed = allElements.get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
-            final String columnName = field.value().length() == 0
-                    ? enclosed.getSimpleName().toString()
-                    : field.value();
+            final String columnName = getDBFieldName(enclosed, getTableName(mElement));
             putStatements.addStatement("$L.put($S, $S)", COLUMN_FIELD_MAP_VAR_NAME, columnName,
                     enclosed.getSimpleName().toString());
         }
@@ -260,7 +262,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(mElement))
+                + "`";
 
         return MethodSpec.methodBuilder("save")
                 .addAnnotation(Override.class)
@@ -322,7 +325,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(mElement))
+                + "`";
         return CodeBlock.builder()
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, getContentValues(), $S, "
@@ -356,7 +360,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(mElement))
+                + "`";
 
         return MethodSpec.methodBuilder("delete")
                 .returns(TypeName.INT)
@@ -393,7 +398,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement) + "`";
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(mElement))
+                + "`";
 
         return MethodSpec.methodBuilder("getSingle")
                 .addAnnotation(Override.class)
@@ -520,7 +526,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private Element findEnclosedRelationshipElement(final Element enclosing,
                                                     final String fieldName) {
-        for (final Element enclosed : enclosing.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(enclosing)) {
             final SQLiteRelationship rel = enclosed.getAnnotation(SQLiteRelationship.class);
             if (rel == null || !fieldName.equals(rel.backReference())) continue;
 
@@ -532,7 +538,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private Element findRelatedForeignKeyElement(final Element enclosing,
                                                  final String relatedFieldName) {
-        for (final Element enclosed : enclosing.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(enclosing)) {
             final SQLiteField sqliteField = enclosed.getAnnotation(SQLiteField.class);
             if (sqliteField == null
                     || !sqliteField.foreignKey().enabled()
@@ -542,6 +548,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
             return enclosed;
         }
+
+        System.out.println(enclosing);
 
         throw new ProcessingException(enclosing, "No proper");
     }
@@ -572,7 +580,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
         final CodeBlock.Builder sqliteFieldsBuilder = CodeBlock.builder(),
                 relationshipsBuilder = CodeBlock.builder();
-        for (final Element enclosed : mElement.getEnclosedElements()) {
+        for (final Element enclosed : getAllFields(mElement)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) {
                 final SQLiteRelationship relationship = enclosed
@@ -597,7 +605,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         mElementUtils.getPackageOf(relatedForeignElem).toString(),
                         relationClassElem.getSimpleName().toString() + "_DAO");
 
-                final String dbFieldName = getDBFieldName(relatedForeignElem);
+                final String dbFieldName = getDBFieldName(relatedForeignElem, null);
 
                 final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
                         .addStatement("final $T dao = new $T(null)", tn, tn)
@@ -620,7 +628,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             if (foreignKey.enabled()) {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
                         foreignKey);
-                final String dbFieldName = getDBFieldName(foreignKeyRefElement);
+                final String dbFieldName = getDBFieldName(foreignKeyRefElement, null);
                 final TypeName foreignKeyRefElementTypeName = ClassName.get(
                         foreignKeyRefElement.asType());
 
@@ -713,7 +721,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 fetchFromCacheStatement
                         .addStatement("final $T pkVal = cursor.$L(cursor.getColumnIndex($S))",
                                 pkTypeName, getCursorMethodFromTypeName(pkTypeName),
-                                getDBFieldName(pkElement))
+                                getDBFieldName(pkElement, getTableName(mElement)))
                         .beginControlFlow("if (fromCache && $L.containsKey(pkVal))",
                                 INSTANCE_CACHE_VAR_NAME)
                         .addStatement("return $L.get(pkVal)", INSTANCE_CACHE_VAR_NAME)
