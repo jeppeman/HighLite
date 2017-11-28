@@ -201,7 +201,7 @@ public class Company {
     @SQLiteField("companyName")
     String name;
     
-    @SQLiteRelationship(table = Employee.class, backReference = "company")
+    @SQLiteRelationship(table = Employee.class, backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
     List<Employee> employeeList; // When a company is fetched from the database, its related employees gets fetched as well
 }
 
