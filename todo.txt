@@ -4,3 +4,4 @@ Handle one-to-one and one-to-many rels
 Handle save by query
 Remove foreign keys on column upgrades
 Lazy / eager load?
+Break upgrade method into sub methods for each table

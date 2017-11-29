@@ -162,7 +162,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final Map<String, String> columnsMap = new LinkedHashMap<>(),
                 foreignKeysMap = new LinkedHashMap<>();
 
-        for (final Element enclosed : getAllFields(element)) {
+        for (final Element enclosed : getFields(element)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
 
             if (field == null) continue;
@@ -423,7 +423,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
         final String endOfColumnSpec = ",\n" + getIndent(2);
 
-        for (final Element enclosed : getAllFields(element)) {
+        for (final Element enclosed : getFields(element)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
@@ -586,7 +586,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         for (final Map.Entry<Element, SQLiteTable> tableElementEntry
                 : mTableElementMap.entrySet()) {
 
-            for (final Element enclosed : getAllFields(tableElementEntry.getKey())) {
+            for (final Element enclosed : getFields(tableElementEntry.getKey())) {
                 final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
                 if (!foundForeignKey && field != null && field.foreignKey().enabled()) {
 

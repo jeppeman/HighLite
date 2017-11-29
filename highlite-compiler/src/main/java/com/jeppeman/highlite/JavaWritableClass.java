@@ -2,6 +2,7 @@ package com.jeppeman.highlite;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.TypeName;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -109,10 +111,10 @@ abstract class JavaWritableClass {
                 : table.tableName();
     }
 
-    private List<Element> getAllFields(final Element element,
-                                       final List<Element> current,
-                                       final String tableName,
-                                       final boolean onlySearchPrimaryKey) {
+    private List<Element> getFields(final Element element,
+                                    final List<Element> current,
+                                    final String tableName,
+                                    final boolean onlySearchPrimaryKey) {
         for (final Element enclosed : element.getEnclosedElements()) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             final SQLiteRelationship rel = enclosed.getAnnotation(SQLiteRelationship.class);
@@ -128,23 +130,72 @@ abstract class JavaWritableClass {
         for (final TypeMirror superType : mTypeUtils.directSupertypes(element.asType())) {
             final DeclaredType declared = (DeclaredType) superType;
             if (declared == null) continue;
+
             final Element superElement = declared.asElement();
+            if (superElement.getKind().equals(ElementKind.INTERFACE)) continue;
+
             final SQLiteTable superTable = superElement.getAnnotation(SQLiteTable.class);
-            if (superTable != null && !getTableName(superElement).equals(tableName)) {
-                current.addAll(getAllFields(declared.asElement(), new ArrayList<Element>(),
+            if (superTable != null
+                    && !getTableName(superElement).equals(tableName)) {
+                current.addAll(getFields(declared.asElement(), new ArrayList<Element>(),
                         tableName, true));
                 continue;
             }
 
-            current.addAll(getAllFields(declared.asElement(), new ArrayList<Element>(), tableName,
+            current.addAll(getFields(declared.asElement(), new ArrayList<Element>(), tableName,
                     false));
         }
 
         return current;
     }
 
-    List<Element> getAllFields(final Element element) {
-        return getAllFields(element, new ArrayList<Element>(), getTableName(element), false);
+    List<Element> getFields(final Element element) {
+        return getFields(element, new ArrayList<Element>(), getTableName(element), false);
+    }
+
+    List<Element> getFieldsAndSuperFields(final Element element) {
+        return getFields(element, new ArrayList<Element>(), getTableName(element), false);
+    }
+
+    Map<Element, List<Element>> getTypeFieldMap(final Element element) {
+        final Map<Element, List<Element>> ret = new LinkedHashMap<>();
+        final Stack<Element> typeStack = new Stack<>();
+        typeStack.push(element);
+
+        Element currSuperType = element;
+        while (currSuperType != null
+                && !ClassName.get(currSuperType.asType()).equals(TypeName.OBJECT)) {
+            boolean found = false;
+            for (final TypeMirror superType : mTypeUtils.directSupertypes(currSuperType.asType())) {
+                final DeclaredType declared = (DeclaredType) superType;
+                if (declared == null) continue;
+
+                currSuperType = declared.asElement();
+                if (ClassName.get(currSuperType.asType()).equals(TypeName.OBJECT)
+                        || currSuperType.getAnnotation(SQLiteTable.class) == null) break;
+                if (!currSuperType.getKind().equals(ElementKind.CLASS)) continue;
+
+                typeStack.push(currSuperType);
+                found = true;
+                break;
+            }
+
+            if (found) continue;
+
+            currSuperType = null;
+        }
+
+        while (!typeStack.empty()) {
+            final Element typeElem = typeStack.pop();
+            final List<Element> ff = getFields(typeElem);
+            System.out.println("-------------");
+            for (Element element1 : ff) {
+                System.out.println(element1);
+            }
+            ret.put(typeElem, ff);
+        }
+
+        return ret;
     }
 
     String getDBFieldName(final Element element, final String activeTableName) {

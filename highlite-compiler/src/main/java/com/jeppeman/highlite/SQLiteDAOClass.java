@@ -10,8 +10,10 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
@@ -71,8 +73,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         + mDatabaseName.substring(1) + "_OpenHelper");
     }
 
-    private Element getPrimaryKeyField() {
-        for (final Element enclosed : getAllFields(mElement)) {
+    private Element getPrimaryKeyField(final Element enclosing) {
+        for (final Element enclosed : getFields(enclosing)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) continue;
 
@@ -84,77 +86,94 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 mElement.getSimpleName()));
     }
 
-    private MethodSpec buildGetContentValuesMethod() {
+    private Element getPrimaryKeyField() {
+        return getPrimaryKeyField(mElement);
+    }
+
+    private List<MethodSpec> buildGetContentValuesMethods() {
+        final List<MethodSpec> ret = new ArrayList<>();
         final String contentValsVar = "contentValues";
 
-        final CodeBlock.Builder putStatements = CodeBlock.builder();
-        for (final Element enclosed : getAllFields(mElement)) {
-            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
+        CodeBlock.Builder putStatements = CodeBlock.builder();
+        for (final Map.Entry<Element, List<Element>> typeFieldsEntry
+                : getTypeFieldMap(mElement).entrySet()) {
+            for (final Element enclosed : typeFieldsEntry.getValue()) {
+                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+                if (field == null) continue;
 
-            final PrimaryKey pk = field.primaryKey();
-            if (pk.enabled() && pk.autoIncrement()) {
-                continue;
-            }
+                final PrimaryKey pk = field.primaryKey();
+                if (pk.enabled() && pk.autoIncrement()) {
+                    continue;
+                }
 
-            final ForeignKey fk = field.foreignKey();
+                final ForeignKey fk = field.foreignKey();
 
-            final String fieldType = getFieldType(enclosed, field),
-                    fieldName = "`" + getDBFieldName(enclosed, getTableName(mElement)) + "`";
+                final String fieldType = getFieldType(enclosed, field),
+                        fieldName = "`" + getDBFieldName(enclosed,
+                                enclosed.equals(typeFieldsEntry.getKey())
+                                        ? getTableName(mElement)
+                                        : null) + "`";
 
-            final CodeBlock.Builder putStatement = CodeBlock.builder();
-            if (fk.enabled()) {
-                final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
-                        fk);
-                final TypeName foreignKeyRefElementTypeName = ClassName.get(
-                        foreignKeyRefElement.asType());
-                if (foreignKeyRefElementTypeName.equals(TypeName.SHORT)
-                        || foreignKeyRefElementTypeName.equals(TypeName.INT)
-                        || foreignKeyRefElementTypeName.equals(TypeName.LONG)) {
-                    putStatement.beginControlFlow("if (mTarget.$L != null)", enclosed
-                            .getSimpleName());
-                    putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
-                            fieldName, enclosed.getSimpleName(),
-                            foreignKeyRefElement.getSimpleName());
+                final CodeBlock.Builder putStatement = CodeBlock.builder();
+                if (fk.enabled()) {
+                    final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
+                            fk);
+                    final TypeName foreignKeyRefElementTypeName = ClassName.get(
+                            foreignKeyRefElement.asType());
+                    if (foreignKeyRefElementTypeName.equals(TypeName.SHORT)
+                            || foreignKeyRefElementTypeName.equals(TypeName.INT)
+                            || foreignKeyRefElementTypeName.equals(TypeName.LONG)) {
+                        putStatement.beginControlFlow("if (mTarget.$L != null)", enclosed
+                                .getSimpleName());
+                        putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
+                                fieldName, enclosed.getSimpleName(),
+                                foreignKeyRefElement.getSimpleName());
+                        putStatement.endControlFlow();
+                    } else {
+                        putStatement.beginControlFlow("if (mTarget.$L != null");
+                        putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
+                                fieldName, enclosed.getSimpleName(),
+                                foreignKeyRefElement.getSimpleName());
+                        putStatement.endControlFlow();
+                    }
+                } else if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
+                    putStatement.beginControlFlow("try")
+                            .addStatement("final $T baos = new $T()", BYTE_ARRAY_OS, BYTE_ARRAY_OS)
+                            .addStatement("final $T oos = new $T(baos)", OBJECT_OS, OBJECT_OS)
+                            .addStatement("oos.writeObject(mTarget.$L)", enclosed.getSimpleName())
+                            .addStatement("$L.put($S, baos.toByteArray())", contentValsVar,
+                                    fieldName)
+                            .nextControlFlow("catch ($T e)", IO_EXCEPTION)
+                            .addStatement("throw new $T(e)", RUNTIME_EXCEPTION)
+                            .endControlFlow();
+                } else if (DATE.equals(ClassName.get(enclosed.asType()))) {
+                    putStatement.beginControlFlow("if (mTarget.$L != null)",
+                            enclosed.getSimpleName());
+                    putStatement.addStatement("$L.put($S, mTarget.$L.getTime())", contentValsVar,
+                            fieldName, enclosed.getSimpleName());
                     putStatement.endControlFlow();
                 } else {
-                    putStatement.beginControlFlow("if (mTarget.$L != null");
-                    putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
-                            fieldName, enclosed.getSimpleName(),
-                            foreignKeyRefElement.getSimpleName());
-                    putStatement.endControlFlow();
+                    putStatement.addStatement("$L.put($S, mTarget.$L)", contentValsVar, fieldName,
+                            enclosed.getSimpleName());
                 }
-            } else if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
-                putStatement.beginControlFlow("try")
-                        .addStatement("final $T baos = new $T()", BYTE_ARRAY_OS, BYTE_ARRAY_OS)
-                        .addStatement("final $T oos = new $T(baos)", OBJECT_OS, OBJECT_OS)
-                        .addStatement("oos.writeObject(mTarget.$L)", enclosed.getSimpleName())
-                        .addStatement("$L.put($S, baos.toByteArray())", contentValsVar,
-                                fieldName)
-                        .nextControlFlow("catch ($T e)", IO_EXCEPTION)
-                        .addStatement("throw new $T(e)", RUNTIME_EXCEPTION)
-                        .endControlFlow();
-            } else if (DATE.equals(ClassName.get(enclosed.asType()))) {
-                putStatement.beginControlFlow("if (mTarget.$L != null)", enclosed.getSimpleName());
-                putStatement.addStatement("$L.put($S, mTarget.$L.getTime())", contentValsVar,
-                        fieldName, enclosed.getSimpleName());
-                putStatement.endControlFlow();
-            } else {
-                putStatement.addStatement("$L.put($S, mTarget.$L)", contentValsVar, fieldName,
-                        enclosed.getSimpleName());
+
+                putStatements.add(putStatement.build());
             }
 
-            putStatements.add(putStatement.build());
+            ret.add(MethodSpec.methodBuilder(String.format("getContentValues%s",
+                    typeFieldsEntry.getKey().getSimpleName()))
+                    .addModifiers(Modifier.PRIVATE)
+                    .returns(CONTENT_VALUES)
+                    .addStatement("final $T $L = new $T()", CONTENT_VALUES, contentValsVar,
+                            CONTENT_VALUES)
+                    .addCode(putStatements.build())
+                    .addStatement("return $L", contentValsVar)
+                    .build());
+
+            putStatements = CodeBlock.builder();
         }
 
-        return MethodSpec.methodBuilder("getContentValues")
-                .addModifiers(Modifier.PRIVATE)
-                .returns(CONTENT_VALUES)
-                .addStatement("final $T $L = new $T()", CONTENT_VALUES, contentValsVar,
-                        CONTENT_VALUES)
-                .addCode(putStatements.build())
-                .addStatement("return $L", contentValsVar)
-                .build();
+        return ret;
     }
 
     private FieldSpec buildTargetField() {
@@ -165,7 +184,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private FieldSpec buildColumnsField() {
         final CodeBlock.Builder arrayValues = CodeBlock.builder().add("new $T[] { ", STRING);
-        final List<Element> allElements = getAllFields(mElement);
+        final List<Element> allElements = getFields(mElement);
         for (int i = 0; i < allElements.size(); i++) {
             final Element enclosed = allElements.get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
@@ -208,7 +227,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private CodeBlock getStaticInitializer() {
         final CodeBlock.Builder putStatements = CodeBlock.builder();
-        final List<Element> allElements = getAllFields(mElement);
+        final List<Element> allElements = getFields(mElement);
         for (int i = 0; i < allElements.size(); i++) {
             final Element enclosed = allElements.get(i);
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
@@ -252,18 +271,58 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private MethodSpec buildSaveMethod() {
-        final Element primaryKeyElement = getPrimaryKeyField();
-        final String cursorVarName = "cursor";
+    private List<MethodSpec> buildSaveSubMethods() {
+        final List<MethodSpec> ret = new ArrayList<>();
+        for (final Map.Entry<Element, List<Element>> entry : getTypeFieldMap(mElement).entrySet()) {
+            final Element primaryKeyElement = getPrimaryKeyField(entry.getKey());
+            final String cursorVarName = "cursor";
 
-        if (primaryKeyElement == null) {
-            throw new ProcessingException(mElement,
-                    String.format("%s must contain a field annotated with %s",
-                            mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
+            if (primaryKeyElement == null) {
+                throw new ProcessingException(mElement,
+                        String.format("%s must contain a field annotated with %s",
+                                mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
+            }
+
+            final String pkFieldName = "`" + getDBFieldName(primaryKeyElement,
+                    !primaryKeyElement.getEnclosingElement().equals(entry.getKey())
+                            ? getTableName(mElement)
+                            : null) + "`";
+
+            ret.add(MethodSpec.methodBuilder(
+                    String.format("save%s", entry.getKey().getSimpleName()))
+                    .returns(TypeName.INT)
+                    .addModifiers(Modifier.PRIVATE)
+                    .addParameter(CONTEXT, "context", Modifier.FINAL)
+                    .addStatement("final $T $L = getReadableDatabase($L)"
+                                    + ".rawQuery($S, new $T[] { $T.valueOf(mTarget.$L) })",
+                            CURSOR, cursorVarName, "context",
+                            String.format("SELECT COUNT(*) FROM %s WHERE %s = ?",
+                                    getTableName(entry.getKey()), pkFieldName), STRING, STRING,
+                            primaryKeyElement.getSimpleName())
+                    .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
+                    .addStatement("$L.close()", cursorVarName)
+                    .addCode(buildInsertBlock(entry.getKey()))
+                    .nextControlFlow("else")
+                    .addStatement("$T rowCount = $L.getInt(0)", TypeName.INT, cursorVarName)
+                    .addStatement("$L.close()", cursorVarName)
+                    .beginControlFlow("if (rowCount == 0)")
+                    .addCode(buildInsertBlock(entry.getKey()))
+                    .nextControlFlow("else")
+                    .addCode(buildUpdateBlock(entry.getKey()))
+                    .endControlFlow()
+                    .endControlFlow()
+                    .build());
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(mElement))
-                + "`";
+        return ret;
+    }
+
+    private MethodSpec buildSaveMethod() {
+        final CodeBlock.Builder subSaveMethods = CodeBlock.builder();
+
+        for (final Map.Entry<Element, List<Element>> entry : getTypeFieldMap(mElement).entrySet()) {
+            subSaveMethods.addStatement("save$L(context)", entry.getKey().getSimpleName());
+        }
 
         return MethodSpec.methodBuilder("save")
                 .addAnnotation(Override.class)
@@ -271,34 +330,17 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addStatement("$L.clear()", INSTANCE_CACHE_VAR_NAME)
-                .addStatement("final $T $L = getReadableDatabase($L)"
-                                + ".rawQuery($S, new $T[] { $T.valueOf(mTarget.$L) })",
-                        CURSOR, cursorVarName, "context",
-                        String.format("SELECT COUNT(*) FROM %s WHERE %s = ?",
-                                getTableName(mElement), pkFieldName), STRING, STRING,
-                        primaryKeyElement.getSimpleName())
-                .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
-                .addStatement("$L.close()", cursorVarName)
-                .addCode(buildInsertBlock())
-                .nextControlFlow("else")
-                .addStatement("$T rowCount = $L.getInt(0)", TypeName.INT, cursorVarName)
-                .addStatement("$L.close()", cursorVarName)
-                .beginControlFlow("if (rowCount == 0)")
-                .addCode(buildInsertBlock())
-                .nextControlFlow("else")
-                .addCode(buildUpdateBlock())
-                .endControlFlow()
-                .endControlFlow()
+                .addCode(subSaveMethods.build())
                 .build();
     }
 
-    private CodeBlock buildInsertBlock() {
-        final Element primaryKeyElement = getPrimaryKeyField();
+    private CodeBlock buildInsertBlock(final Element enclosing) {
+        final Element primaryKeyElement = getPrimaryKeyField(enclosing);
 
         if (primaryKeyElement == null) {
-            throw new ProcessingException(mElement,
+            throw new ProcessingException(enclosing,
                     String.format("%s must contain a field annotated with %s",
-                            mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
+                            enclosing.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
         final CodeBlock.Builder setIdAfterInsertion = CodeBlock.builder();
@@ -310,28 +352,28 @@ final class SQLiteDAOClass extends JavaWritableClass {
         return CodeBlock.builder()
                 .add("final long id = ")
                 .addStatement("getWritableDatabase($L).insertOrThrow($S, null, getContentValues())",
-                        "context", getTableName(mElement))
+                        "context", getTableName(enclosing))
                 .add(setIdAfterInsertion.build())
                 .addStatement("return 1")
                 .build();
     }
 
-    private CodeBlock buildUpdateBlock() {
-        final Element primaryKeyElement = getPrimaryKeyField();
+    private CodeBlock buildUpdateBlock(final Element enclosing) {
+        final Element primaryKeyElement = getPrimaryKeyField(enclosing);
 
         if (primaryKeyElement == null) {
-            throw new ProcessingException(mElement,
+            throw new ProcessingException(enclosing,
                     String.format("%s must contain a field annotated with %s",
-                            mElement.asType().toString(), PrimaryKey.class.getCanonicalName()));
+                            enclosing.asType().toString(), PrimaryKey.class.getCanonicalName()));
         }
 
-        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(mElement))
+        final String pkFieldName = "`" + getDBFieldName(primaryKeyElement, getTableName(enclosing))
                 + "`";
         return CodeBlock.builder()
                 .addStatement("return getWritableDatabase($L)"
                                 + ".update($S, getContentValues(), $S, "
                                 + "new $T[] { $T.valueOf(mTarget.$L) })",
-                        "context", getTableName(mElement), pkFieldName + " = ?", STRING, STRING,
+                        "context", getTableName(enclosing), pkFieldName + " = ?", STRING, STRING,
                         primaryKeyElement.getSimpleName())
                 .build();
     }
@@ -526,7 +568,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private Element findEnclosedRelationshipElement(final Element enclosing,
                                                     final String fieldName) {
-        for (final Element enclosed : getAllFields(enclosing)) {
+        for (final Element enclosed : getFields(enclosing)) {
             final SQLiteRelationship rel = enclosed.getAnnotation(SQLiteRelationship.class);
             if (rel == null || !fieldName.equals(rel.backReference())) continue;
 
@@ -538,7 +580,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private Element findRelatedForeignKeyElement(final Element enclosing,
                                                  final String relatedFieldName) {
-        for (final Element enclosed : getAllFields(enclosing)) {
+        for (final Element enclosed : getFields(enclosing)) {
             final SQLiteField sqliteField = enclosed.getAnnotation(SQLiteField.class);
             if (sqliteField == null
                     || !sqliteField.foreignKey().enabled()
@@ -548,8 +590,6 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
             return enclosed;
         }
-
-        System.out.println(enclosing);
 
         throw new ProcessingException(enclosing, "No proper");
     }
@@ -580,7 +620,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
         final CodeBlock.Builder sqliteFieldsBuilder = CodeBlock.builder(),
                 relationshipsBuilder = CodeBlock.builder();
-        for (final Element enclosed : getAllFields(mElement)) {
+        for (final Element enclosed : getFields(mElement)) {
             final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
             if (field == null) {
                 final SQLiteRelationship relationship = enclosed
@@ -765,9 +805,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                         buildFieldColumnMapField(),
                         buildTargetField()
                 ))
+                .addMethods(buildGetContentValuesMethods())
+                .addMethods(buildSaveSubMethods())
                 .addMethods(Arrays.asList(
                         buildCtor(),
-                        buildGetContentValuesMethod(),
                         buildGetReadableDatabaseMethod(),
                         buildGetWritableDatabaseMethod(),
                         buildInstantiateObjectMethod(),

@@ -20,6 +20,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
@@ -63,7 +64,7 @@ public class HighLiteProcessor extends AbstractProcessor {
             final SQLiteRelationship relationship = element.getAnnotation(SQLiteRelationship.class);
             if (relationship != null) {
                 error(element, String.format("Fields are not allowed to be annotated with both"
-                        + "%s and %s", SQLiteField.class.getCanonicalName(),
+                                + "%s and %s", SQLiteField.class.getCanonicalName(),
                         SQLiteRelationship.class.getCanonicalName()));
             }
         }
@@ -150,7 +151,8 @@ public class HighLiteProcessor extends AbstractProcessor {
 
         final List<String> tableNamesAdded = new ArrayList<>();
         for (final Element element : roundEnvironment.getElementsAnnotatedWith(SQLiteTable.class)) {
-            if (element.getModifiers().contains(Modifier.ABSTRACT)) continue;
+            if (element.getModifiers().contains(Modifier.ABSTRACT)
+                    || element.getKind().equals(ElementKind.INTERFACE)) continue;
 
             final SQLiteTable tableAnno = element.getAnnotation(SQLiteTable.class);
 
