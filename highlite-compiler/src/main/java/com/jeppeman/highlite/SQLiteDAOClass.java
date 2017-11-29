@@ -324,6 +324,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
             subSaveMethods.addStatement("save$L(context)", entry.getKey().getSimpleName());
         }
 
+        subSaveMethods.addStatement("return 1");
+
         return MethodSpec.methodBuilder("save")
                 .addAnnotation(Override.class)
                 .returns(TypeName.INT)
@@ -351,8 +353,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
         return CodeBlock.builder()
                 .add("final long id = ")
-                .addStatement("getWritableDatabase($L).insertOrThrow($S, null, getContentValues())",
-                        "context", getTableName(enclosing))
+                .addStatement("getWritableDatabase($L).insertOrThrow($S, null, "
+                                + "getContentValues$L())",
+                        "context", getTableName(enclosing), enclosing.getSimpleName())
                 .add(setIdAfterInsertion.build())
                 .addStatement("return 1")
                 .build();
@@ -371,10 +374,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 + "`";
         return CodeBlock.builder()
                 .addStatement("return getWritableDatabase($L)"
-                                + ".update($S, getContentValues(), $S, "
+                                + ".update($S, getContentValues$L(), $S, "
                                 + "new $T[] { $T.valueOf(mTarget.$L) })",
-                        "context", getTableName(enclosing), pkFieldName + " = ?", STRING, STRING,
-                        primaryKeyElement.getSimpleName())
+                        "context", getTableName(enclosing), enclosing.getSimpleName(),
+                        pkFieldName + " = ?", STRING, STRING, primaryKeyElement.getSimpleName())
                 .build();
     }
 
