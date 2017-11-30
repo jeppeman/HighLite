@@ -5,15 +5,15 @@ sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
 targetCompatibility = rootProject.ext.targetCompatibilityVersion
 
 dependencies {
-    compile deps.lintapi
-    compile deps.lintchecks
+    compileOnly deps.lintapi
+    compileOnly deps.lintchecks
 
-    testCompile deps.junit
-    testCompile deps.lint
-    testCompile deps.linttests
-    testCompile deps.android
-    testCompile deps.mockito
-    testCompile project(':highlite-annotations')
+    testImplementation deps.junit
+    testImplementation deps.lint
+    testImplementation deps.linttests
+    testImplementation deps.android
+    testImplementation deps.mockito
+    testImplementation project(':highlite-annotations')
 }
 
 checkstyle {

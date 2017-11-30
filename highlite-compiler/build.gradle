@@ -1,4 +1,4 @@
-apply plugin: 'java'
+apply plugin: 'java-library'
 apply plugin: 'checkstyle'
 
 sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
@@ -11,14 +11,13 @@ checkstyle {
 }
 
 dependencies {
-    compile project(':highlite-annotations')
+    implementation project(':highlite-annotations')
+    implementation deps.autocommon
+    compileOnly deps.autoservice
+    api deps.javapoet
 
-    compile deps.autoservice
-    compile deps.autocommon
-    compile deps.javapoet
-
-    testCompile deps.junit
-    testCompile deps.compiletesting
+    testImplementation deps.junit
+    testImplementation deps.compiletesting
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

@@ -25,14 +25,14 @@ android {
 }
 
 dependencies {
-    testCompile deps.junit
-    compile deps.appcompat
-    compile deps.android
+    testImplementation deps.junit
+    implementation deps.appcompat
+    implementation deps.android
 
 //    compile 'com.jeppeman:highlite:1.0-SNAPSHOT'
 //    apt 'com.jeppeman:highlite-compiler:1.0-SNAPSHOT'
-    compile deps.rxjava
-    compile deps.rxandroid
-    compile project(':highlite')
+    implementation deps.rxjava
+    implementation deps.rxandroid
+    implementation project(':highlite')
     annotationProcessor project(':highlite-compiler')
 }

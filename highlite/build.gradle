@@ -20,17 +20,17 @@ android {
 }
 
 dependencies {
-    testCompile deps.junit
-    testCompile deps.robolectric
-    testCompile project(':highlite-compiler')
+    testImplementation deps.junit
+    testImplementation deps.robolectric
+    testImplementation project(':highlite-compiler')
 
     lintRules project(':highlite-lint')
 
-    compile project(':highlite-annotations')
-    compile deps.supportAnnotations
-    provided deps.supportcompat
-    provided deps.rxandroid
-    provided deps.rxjava
+    api project(':highlite-annotations')
+    api deps.supportAnnotations
+    implementation deps.supportcompat
+    implementation deps.rxandroid
+    implementation deps.rxjava
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
