@@ -7,8 +7,8 @@ import java.util.Date;
 public class TimestampedModel {
 
     @SQLiteField
-    Date created;
+    public Date created;
 
     @SQLiteField
-    Date modified;
+    public Date modified;
 }

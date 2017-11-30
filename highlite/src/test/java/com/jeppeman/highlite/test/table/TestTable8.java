@@ -8,8 +8,8 @@ import com.jeppeman.highlite.SQLiteTable;
 public class TestTable8 extends TimestampedModel {
 
     @SQLiteField(primaryKey = @PrimaryKey)
-    long id;
+    public long id;
 
     @SQLiteField
-    String testingEight;
+    public String testingEight;
 }

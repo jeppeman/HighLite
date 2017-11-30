@@ -213,7 +213,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
         return FieldSpec.builder(ParameterizedTypeName.get(CONCURRENT_MAP, pkTypeName,
                 ClassName.get(mElement.asType())), INSTANCE_CACHE_VAR_NAME,
-                Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+                Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .initializer("new $T<>()", CONCURRENT_HASHMAP)
                 .build();
     }

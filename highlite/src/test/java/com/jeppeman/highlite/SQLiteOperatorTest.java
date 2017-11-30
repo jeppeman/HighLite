@@ -16,6 +16,7 @@ import com.jeppeman.highlite.test.table.TestTable3;
 import com.jeppeman.highlite.test.table.TestTable4;
 import com.jeppeman.highlite.test.table.TestTable5;
 import com.jeppeman.highlite.test.table.TestTable6;
+import com.jeppeman.highlite.test.table.TestTable8;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -412,6 +413,20 @@ public class SQLiteOperatorTest {
                 )
                 .executeBlocking()
         );
+    }
+
+    @Test
+    public void testInheritanceOfNonSqliteClass() {
+        SQLiteOperator<TestTable8> operator = SQLiteOperator.from(getContext(), TestTable8.class);
+        TestTable8 table = new TestTable8();
+        table.id = 1;
+        table.created = new Date();
+        table.modified = new Date();
+        long cTime = table.created.getTime(), mTime = table.created.getTime();
+        operator.save(table).executeBlocking();
+        table = operator.getSingle(1).executeBlocking();
+        assertNotNull(table);
+        assertTrue(cTime == table.created.getTime() && mTime == table.modified.getTime());
     }
 
     @Test

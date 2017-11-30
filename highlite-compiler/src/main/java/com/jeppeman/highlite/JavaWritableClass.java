@@ -187,12 +187,7 @@ abstract class JavaWritableClass {
 
         while (!typeStack.empty()) {
             final Element typeElem = typeStack.pop();
-            final List<Element> ff = getFields(typeElem);
-            System.out.println("-------------");
-            for (Element element1 : ff) {
-                System.out.println(element1);
-            }
-            ret.put(typeElem, ff);
+            ret.put(typeElem, getFields(typeElem));
         }
 
         return ret;

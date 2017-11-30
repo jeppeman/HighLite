@@ -665,6 +665,10 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
+//    private List<MethodSpec> buildOnUpgradeMethods() {
+//
+//    }
+
     private MethodSpec buildOnUpgradeMethod() {
         final CodeBlock.Builder code = CodeBlock.builder(),
                 onUpgradeStatements = CodeBlock.builder();
@@ -753,6 +757,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         buildDbVersionField(),
                         buildInstanceField()
                 ))
+//                .addMethods(buildOnUpgradeMethods())
                 .addMethods(Arrays.asList(
                         buildCtor(),
                         buildGetInstanceMethod(),
