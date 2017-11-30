@@ -50,7 +50,6 @@ ext {
     buildToolsVersion = '26.0.2'
     sourceCompatibilityVersion = JavaVersion.VERSION_1_7
     targetCompatibilityVersion = JavaVersion.VERSION_1_7
-
 }
 
 ext.deps = [

@@ -22,7 +22,7 @@ android {
 dependencies {
     testImplementation deps.junit
     testImplementation deps.robolectric
-    testImplementation project(':highlite-compiler')
+    testAnnotationProcessor project(':highlite-compiler')
 
     lintRules project(':highlite-lint')
 
