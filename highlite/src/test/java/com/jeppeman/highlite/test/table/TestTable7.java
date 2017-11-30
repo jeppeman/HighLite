@@ -7,5 +7,5 @@ import com.jeppeman.highlite.SQLiteTable;
 public class TestTable7 extends TestTable {
 
     @SQLiteField
-    String testingSeven;
+    public String testingSeven;
 }

@@ -538,6 +538,25 @@ final class SQLiteDAOClass extends JavaWritableClass {
     }
 
     private MethodSpec buildGetListMethod() {
+        final Element pkElem = getPrimaryKeyField();
+        final String pkFieldName = getDBFieldName(pkElem, getTableName(mElement)),
+                tableName = getTableName(mElement);
+        final StringBuilder sqlStatementBuilder = new StringBuilder(
+                String.format("SELECT %s.* FROM %s ", tableName, tableName));
+        final List<Element> set = new ArrayList<>(getTypeFieldMap(mElement).keySet());
+        if (set.size() > 1) {
+            sqlStatementBuilder.append("\n");
+        }
+        for (int i = set.size() - 2; i >= 0; i--) {
+            final Element element = set.get(i),
+                    primaryKeyElem = getPrimaryKeyField(element);
+            final String primaryKeyFieldName = getDBFieldName(primaryKeyElem,
+                    getTableName(element)),
+                    superTableName = getTableName(element);
+            sqlStatementBuilder.append(String.format("INNER JOIN %s ON (%s.%s = %s.%s)\n",
+                    superTableName, tableName, pkFieldName, superTableName, primaryKeyFieldName));
+        }
+
         final String cursorVarName = "cursor";
         return MethodSpec.methodBuilder("getList")
                 .addAnnotation(Override.class)
@@ -551,12 +570,19 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
                 .addParameter(STRING, "limit", Modifier.FINAL)
                 .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
+                .addStatement("final String sql = $S \n"
+                                + "+ (whereClause != null ? $S + whereClause : $S)\n"
+                                + "+ (groupBy != null ? $S + groupBy : $S)\n"
+                                + "+ (having != null ? $S + groupBy : $S)\n"
+                                + "+ (orderBy != null ? $S + orderBy : $S)\n"
+                                + "+ (limit != null ? $S + limit : $S)",
+                        sqlStatementBuilder.toString(), " WHERE ", "", " GROUP BY ", "", " HAVING ",
+                        "", " ORDER BY ", "", " LIMIT ", "")
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
                 .addStatement("final $T $L = getReadableDatabase($L)"
-                                + ".query($S, COLUMNS, whereClause, whereArgs, groupBy, having, "
-                                + "orderBy, limit)",
-                        CURSOR, cursorVarName, "context", getTableName(mElement))
+                                + ".rawQuery(sql, whereArgs)",
+                        CURSOR, cursorVarName, "context")
                 .beginControlFlow("if (!$L.moveToFirst())", cursorVarName)
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")

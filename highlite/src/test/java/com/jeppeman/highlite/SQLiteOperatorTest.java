@@ -17,6 +17,7 @@ import com.jeppeman.highlite.test.table.TestTable4;
 import com.jeppeman.highlite.test.table.TestTable5;
 import com.jeppeman.highlite.test.table.TestTable6;
 import com.jeppeman.highlite.test.table.TestTable8;
+import com.jeppeman.highlite.test.table.TestTable9;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -427,6 +428,19 @@ public class SQLiteOperatorTest {
         table = operator.getSingle(1).executeBlocking();
         assertNotNull(table);
         assertTrue(cTime == table.created.getTime() && mTime == table.modified.getTime());
+    }
+
+    @Test
+    public void testInheritanceOfSqliteClass() {
+        SQLiteOperator<TestTable9> operator = SQLiteOperator.from(getContext(), TestTable9.class);
+        TestTable9 table = new TestTable9();
+        table.testingSeven = "seven";
+        table.testingNine = "nine";
+        table.testString = "test";
+        operator.save(table).executeBlocking();
+        operator.getList().withQuery(
+                SQLiteQuery.builder().where("testTable7.testingSeven = 'seven'").build()
+        ).executeBlocking();
     }
 
     @Test

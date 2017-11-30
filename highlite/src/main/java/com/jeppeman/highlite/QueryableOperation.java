@@ -38,6 +38,8 @@ public abstract class QueryableOperation<T extends QueryableOperation> {
         final StringBuilder clauseBuilder = new StringBuilder();
         for (int i = 0; i < split.length; i++) {
             clauseBuilder.append(split[i]);
+            if (i > paramReplacements.size() - 1) continue;
+
             clauseBuilder.append(paramReplacements.get(i));
         }
         mQuery.mWhereClause = clauseBuilder.toString();
