@@ -437,10 +437,15 @@ public class SQLiteOperatorTest {
         table.testingSeven = "seven";
         table.testingNine = "nine";
         table.testString = "test";
+        table.testDate = new Date();
         operator.save(table).executeBlocking();
-        operator.getList().withQuery(
+        TestTable9 fetchedObj = operator.getSingle().withQuery(
                 SQLiteQuery.builder().where("testTable7.testingSeven = 'seven'").build()
         ).executeBlocking();
+        assertNotNull(fetchedObj);
+        assertEquals(table.testingSeven, fetchedObj.testingSeven);
+        assertEquals(table.testingNine, fetchedObj.testingNine);
+        assertEquals(table.testDate.getTime(), fetchedObj.testDate.getTime());
     }
 
     @Test
