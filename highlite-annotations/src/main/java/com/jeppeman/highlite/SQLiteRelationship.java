@@ -11,16 +11,4 @@ public @interface SQLiteRelationship {
 
     Class<?> table();
     String backReference();
-    RelationshipType relType() default RelationshipType.OneToMany;
-    LoadingType loadingType() default LoadingType.Lazy;
-
-    enum RelationshipType {
-        OneToOne,
-        OneToMany
-    }
-
-    enum LoadingType {
-        Lazy,
-        Eager
-    }
 }
