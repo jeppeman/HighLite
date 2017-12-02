@@ -24,7 +24,7 @@ dependencies {
     testImplementation deps.robolectric
     testAnnotationProcessor project(':highlite-compiler')
 
-    lintRules project(':highlite-lint')
+    lintChecks project(':highlite-lint')
 
     api project(':highlite-annotations')
     api deps.supportAnnotations

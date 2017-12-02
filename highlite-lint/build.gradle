@@ -4,6 +4,10 @@ apply plugin: 'checkstyle'
 sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
 targetCompatibility = rootProject.ext.targetCompatibilityVersion
 
+configurations {
+    lintChecks
+}
+
 dependencies {
     compileOnly deps.lintapi
     compileOnly deps.lintchecks
@@ -11,8 +15,8 @@ dependencies {
     testImplementation deps.junit
     testImplementation deps.lint
     testImplementation deps.linttests
-    testImplementation deps.android
     testImplementation deps.mockito
+    testImplementation deps.android
     testImplementation project(':highlite-annotations')
 }
 
@@ -57,6 +61,6 @@ testClasses {
 
 jar {
     manifest {
-        attributes 'Lint-Registry': 'com.jeppeman.highlite.LintRegistry'
+        attributes 'Lint-Registry-v2': 'com.jeppeman.highlite.LintRegistry'
     }
 }

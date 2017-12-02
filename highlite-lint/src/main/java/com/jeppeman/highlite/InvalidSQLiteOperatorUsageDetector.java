@@ -1,8 +1,7 @@
 package com.jeppeman.highlite;
 
-import com.android.annotations.NonNull;
+import com.android.tools.lint.client.api.UElementHandler;
 import com.android.tools.lint.detector.api.Category;
-import com.android.tools.lint.detector.api.Context;
 import com.android.tools.lint.detector.api.Detector;
 import com.android.tools.lint.detector.api.Implementation;
 import com.android.tools.lint.detector.api.Issue;
@@ -10,12 +9,13 @@ import com.android.tools.lint.detector.api.JavaContext;
 import com.android.tools.lint.detector.api.Scope;
 import com.android.tools.lint.detector.api.Severity;
 
-import java.io.File;
-import java.util.EnumSet;
+import org.jetbrains.uast.UClass;
+import org.jetbrains.uast.UElement;
 
-import lombok.ast.AstVisitor;
+import java.util.ArrayList;
+import java.util.List;
 
-public class InvalidSQLiteOperatorUsageDetector extends Detector implements Detector.JavaScanner {
+public class InvalidSQLiteOperatorUsageDetector extends Detector implements Detector.UastScanner {
 
     private static final String ISSUE_ID = "InvalidSQLiteOperatorUsage";
     private static final String ISSUE_TITLE = "Invalid usage of SQLiteOperator";
@@ -27,18 +27,19 @@ public class InvalidSQLiteOperatorUsageDetector extends Detector implements Dete
             new Implementation(InvalidSQLiteOperatorUsageDetector.class, Scope.JAVA_FILE_SCOPE));
 
     @Override
-    public boolean appliesTo(@NonNull Context context, @NonNull File file) {
-        final String name = file.getName();
-        return !name.contains("_DAO");
+    public List<Class<? extends UElement>> getApplicableUastTypes() {
+        final List<Class<? extends UElement>> ret = new ArrayList<>();
+        ret.add(UClass.class);
+        return ret;
     }
 
     @Override
-    public EnumSet<Scope> getApplicableFiles() {
-        return Scope.JAVA_FILE_SCOPE;
-    }
-
-    @Override
-    public AstVisitor createJavaVisitor(final @NonNull JavaContext context) {
-        return new FromMethodVisitor(context);
+    public UElementHandler createUastHandler(final JavaContext context) {
+        return new UElementHandler() {
+            @Override
+            public void visitClass(UClass uClass) {
+                uClass.accept(new FromMethodVisitor(context));
+            }
+        };
     }
 }

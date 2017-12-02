@@ -27,7 +27,6 @@ android {
 dependencies {
     testImplementation deps.junit
     implementation deps.appcompat
-    implementation deps.android
 
 //    compile 'com.jeppeman:highlite:1.0-SNAPSHOT'
 //    apt 'com.jeppeman:highlite-compiler:1.0-SNAPSHOT'

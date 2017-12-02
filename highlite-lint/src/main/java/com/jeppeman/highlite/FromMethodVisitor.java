@@ -1,26 +1,22 @@
 package com.jeppeman.highlite;
 
-import com.android.tools.lint.client.api.JavaParser;
 import com.android.tools.lint.detector.api.JavaContext;
 import com.android.tools.lint.detector.api.TextFormat;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiClass;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import lombok.ast.ClassLiteral;
-import lombok.ast.Expression;
-import lombok.ast.ForwardingAstVisitor;
-import lombok.ast.MethodInvocation;
+import org.jetbrains.uast.UCallExpression;
+import org.jetbrains.uast.java.JavaUClassLiteralExpression;
+import org.jetbrains.uast.java.JavaUCompositeQualifiedExpression;
+import org.jetbrains.uast.visitor.AbstractUastVisitor;
 
 import static com.jeppeman.highlite.InvalidSQLiteOperatorUsageDetector.ISSUE;
 
-class FromMethodVisitor extends ForwardingAstVisitor {
+class FromMethodVisitor extends AbstractUastVisitor {
 
     private static final int PARAM_INDEX = 1;
-    private static final String CLASS_SQLITE_OPERATOR =
-            "com.jeppeman.highlite.SQLiteOperator";
+    private static final String CLASS_SQLITE_OPERATOR = "SQLiteOperator";
     private static final String ANNOTATION_TYPE_LONG = "com.jeppeman.highlite.SQLiteTable";
-    private static final String ANNOTATION_TYPE_SHORT = "SQLiteTable";
     private static final String METHOD_NAME = "from";
 
     private final JavaContext mContext;
@@ -30,77 +26,39 @@ class FromMethodVisitor extends ForwardingAstVisitor {
     }
 
     @Override
-    public boolean visitMethodInvocation(final MethodInvocation node) {
-        final JavaParser.ResolvedNode resolvedNode = mContext.resolve(node);
-        if (!(resolvedNode instanceof JavaParser.ResolvedMethod)) {
-            return super.visitMethodInvocation(node);
-        }
-        final JavaParser.ResolvedMethod method = (JavaParser.ResolvedMethod) resolvedNode;
+    public boolean visitCallExpression(UCallExpression node) {
+        if (!METHOD_NAME.equals(node.getMethodName())) return false;
 
-        if (!(method.getContainingClass().getName().equals(CLASS_SQLITE_OPERATOR)
-                && method.getName().equals(METHOD_NAME))) {
-            return super.visitMethodInvocation(node);
-        }
+        final JavaUCompositeQualifiedExpression exp =
+                (JavaUCompositeQualifiedExpression) node.getUastParent();
+        if (exp == null
+                || !CLASS_SQLITE_OPERATOR.equals(exp.receiver.toString())
+                || node.getValueArgumentCount() != 2) return false;
 
-        int iterator = 0;
-        for (final Expression arg : node.astArguments()) {
-            if (iterator++ < PARAM_INDEX) continue;
-            if (iterator - 1 > PARAM_INDEX) break;
+        final JavaUClassLiteralExpression classLiteral =
+                (JavaUClassLiteralExpression) node.getValueArguments().get(PARAM_INDEX);
 
-            final ClassLiteral classLiteral = (ClassLiteral) arg;
-            if (classLiteral == null) continue;
+        if (classLiteral == null) return false;
 
-            JavaParser.TypeDescriptor typeDesc = mContext.getType(classLiteral.rawTypeReference());
+        final PsiClass psiClass = mContext.getEvaluator().findClass(classLiteral.toString());
 
-            if (typeDesc != null) {
-                boolean found = false;
-                for (final JavaParser.ResolvedAnnotation a
-                        : typeDesc.getTypeClass().getAnnotations()) {
-                    if (ANNOTATION_TYPE_SHORT.equals(a.getName())
-                            || ANNOTATION_TYPE_LONG.equals(a.getName())) {
-                        found = true;
-                        break;
-                    }
-                }
+        if (psiClass == null
+                || psiClass.getModifierList() == null) return false;
 
-                if (!found && !mContext.isSuppressedWithComment(node, ISSUE)) {
-                    mContext.report(ISSUE, mContext.getLocation(arg),
-                            String.format(ISSUE.getExplanation(TextFormat.TEXT),
-                                    typeDesc.getName()));
-                    return true;
-                }
-            } else {
-                // Submit bug report to google about having to do this instead of
-                // mContext.getType(arg) when JavaParser is LombokPsiParser and
-                // PsiElement is of type PsiTypeElement
-                final Pattern pattern = Pattern.compile("<.+>");
-                final String s = mContext.getType(arg).getName();
-                final Matcher m = pattern.matcher(s);
-                while (m.find()) {
-                    final JavaParser.ResolvedClass resolvedClass = mContext.findClass(
-                            s.substring(m.start() + 1, m.end() - 1));
+        boolean found = false;
+        for (final PsiAnnotation annotation : psiClass.getModifierList().getAnnotations()) {
+            if (!ANNOTATION_TYPE_LONG.equals(annotation.getQualifiedName())) continue;
 
-                    if (resolvedClass == null) continue;
-
-                    boolean found = false;
-                    for (final JavaParser.ResolvedAnnotation a : resolvedClass.getAnnotations()) {
-                        if (ANNOTATION_TYPE_SHORT.equals(a.getName())
-                                || ANNOTATION_TYPE_LONG.equals(a.getName())) {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (!found && !mContext.isSuppressedWithComment(node, ISSUE)) {
-                        mContext.report(ISSUE, mContext.getLocation(arg),
-                                String.format(ISSUE.getExplanation(TextFormat.TEXT),
-                                        resolvedClass.getName()));
-                        return true;
-                    }
-                }
-            }
+            found = true;
+            break;
         }
 
-        return super.visitMethodInvocation(node);
+        if (!found) {
+            mContext.report(ISSUE, mContext.getLocation(classLiteral),
+                    String.format(ISSUE.getExplanation(TextFormat.TEXT), classLiteral));
+            return true;
+        }
+
+        return false;
     }
 }
