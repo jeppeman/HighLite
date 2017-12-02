@@ -182,25 +182,6 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .build();
     }
 
-    private FieldSpec buildColumnsField() {
-        final CodeBlock.Builder arrayValues = CodeBlock.builder().add("new $T[] { ", STRING);
-        final List<Element> allElements = getFields(mElement);
-        for (int i = 0; i < allElements.size(); i++) {
-            final Element enclosed = allElements.get(i);
-            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
-            if (field == null) continue;
-
-            arrayValues.add("$S, ", "`" + getDBFieldName(enclosed, getTableName(mElement)) + "`");
-        }
-
-        arrayValues.add("}");
-
-        return FieldSpec.builder(ArrayTypeName.of(STRING), "COLUMNS",
-                Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer(arrayValues.build())
-                .build();
-    }
-
     private FieldSpec buildInstanceCacheField() {
         TypeName pkTypeName = ClassName.get(getPrimaryKeyField().asType());
         if (pkTypeName == ClassName.SHORT) {
@@ -300,7 +281,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     .addModifiers(Modifier.PRIVATE)
                     .addParameter(CONTEXT, "context", Modifier.FINAL)
                     .addStatement("final $T $L = getReadableDatabase($L)"
-                                    + ".rawQuery($S, new $T[] { $T.valueOf(mTarget.$L) })",
+                                    + ".rawQuery(\n$S, \nnew $T[] { $T.valueOf(mTarget.$L) })",
                             CURSOR, cursorVarName, "context",
                             String.format("SELECT COUNT(*) FROM %s WHERE %s = ?",
                                     getTableName(entry.getKey()), pkFieldName), STRING, STRING,
@@ -359,8 +340,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
         return CodeBlock.builder()
                 .add("final long id = ")
-                .addStatement("getWritableDatabase($L).insertOrThrow($S, null, "
-                                + "getContentValues$L())",
+                .addStatement("getWritableDatabase($L)\n.insertOrThrow(\n$S, \nnull, "
+                                + "\ngetContentValues$L())",
                         "context", getTableName(enclosing), enclosing.getSimpleName())
                 .add(setIdAfterInsertion.build())
                 .addStatement("return 1")
@@ -380,8 +361,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 + "`";
         return CodeBlock.builder()
                 .addStatement("return getWritableDatabase($L)"
-                                + ".update($S, getContentValues$L(), $S, "
-                                + "new $T[] { $T.valueOf(mTarget.$L) })",
+                                + "\n.update(\n$S, \ngetContentValues$L(), \n$S, "
+                                + "\nnew $T[] { $T.valueOf(mTarget.$L) })",
                         "context", getTableName(enclosing), enclosing.getSimpleName(),
                         pkFieldName + " = ?", STRING, STRING, primaryKeyElement.getSimpleName())
                 .build();
@@ -397,7 +378,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
                 .addStatement("$L.clear()", INSTANCE_CACHE_VAR_NAME)
                 .addStatement("return getWritableDatabase($L)"
-                                + ".update($S, null, whereClause, whereArgs)",
+                                + ".update(\n$S, \nnull, \nwhereClause, \nwhereArgs)",
                         "context", getTableName(mElement))
                 .build();
     }
@@ -420,7 +401,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addStatement("return getWritableDatabase($L)"
-                                + ".delete($S, $S, new $T[] { $T.valueOf(mTarget.$L) })",
+                                + ".delete(\n$S, \n$S, \nnew $T[] { $T.valueOf(mTarget.$L) })",
                         "context", getTableName(mElement), pkFieldName + " = ?", STRING, STRING,
                         primaryKeyElement.getSimpleName())
                 .build();
@@ -435,7 +416,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "whereClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "whereArgs", Modifier.FINAL)
                 .addStatement("return getWritableDatabase($L)"
-                                + ".delete($S, whereClause, whereArgs)",
+                                + ".delete(\n$S, \nwhereClause, \nwhereArgs)",
                         "context", getTableName(mElement))
                 .build();
     }
@@ -458,8 +439,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .returns(getClassNameOfElement())
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
-                .addStatement("return getSingle($L, $S, "
-                                + "new $T[] { $T.valueOf(id) }, null, null, null, false)",
+                .addStatement("return getSingle(\n$L, \n$S, "
+                                + "\nnew $T[] { $T.valueOf(id) }, \nnull, \nnull, \nnull, \nfalse)",
                         "context", pkFieldName + " = ?", STRING, STRING)
                 .build();
     }
@@ -703,9 +684,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
                     final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
                             .addStatement("final $T dao = new $T(null)", tn, tn)
-                            .addStatement("ret.$L = dao.getList(context, \"`$L` = \" + "
-                                            + "$T.valueOf(ret.$L), null, null, null, null, null, "
-                                            + "true)",
+                            .addStatement("ret.$L = dao.getList(\ncontext, \n\"`$L` = \" + "
+                                            + "\n$T.valueOf(ret.$L), "
+                                            + "\nnull, \nnull, \nnull, \nnull, \nnull, "
+                                            + "\ntrue)",
                                     enclosed.getSimpleName(), dbFieldName, STRING,
                                     f.foreignKey().fieldReference());
 
@@ -867,7 +849,6 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addSuperinterface(ParameterizedTypeName.get(SQLITE_DAO, getClassNameOfElement()))
                 .addStaticBlock(getStaticInitializer())
                 .addFields(Arrays.asList(
-                        buildColumnsField(),
                         buildInstanceCacheField(),
                         buildFieldColumnMapField(),
                         buildTargetField()

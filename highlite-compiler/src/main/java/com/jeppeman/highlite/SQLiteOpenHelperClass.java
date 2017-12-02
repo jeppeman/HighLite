@@ -9,8 +9,10 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.lang.model.element.Element;
@@ -80,7 +82,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final String currentFieldsVar = tableName + "CurrentFields";
         final CodeBlock.Builder currentFieldsPopulator = CodeBlock.builder();
         for (final Map.Entry<String, String> entry : columnsMap.entrySet()) {
-            currentFieldsPopulator.addStatement("$L.put($S, new $T[] { $S, $S })",
+            currentFieldsPopulator.addStatement("$L.put($S, new $T[] { \n$S, \n$S })",
                     currentFieldsVar, entry.getKey(), STRING, entry.getValue(),
                     foreignKeysMap.containsKey(entry.getKey())
                             ? foreignKeysMap.get(entry.getKey())
@@ -90,7 +92,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         return CodeBlock.builder()
                 .add("// Check whether $L exists or not\n", tableName)
                 .addStatement("boolean $L", tableExistsVarName)
-                .addStatement("final $T $L = database.rawQuery(\"SELECT `sql` FROM "
+                .addStatement("final $T $L = database.rawQuery(\n\"SELECT `sql` FROM "
                                 + "sqlite_master WHERE `type` = ? AND `name` = ?;\", \n"
                                 + "new $T[] { $S, $S })",
                         CURSOR, createSqlCursorVarName, STRING, "table", tableName)
@@ -113,7 +115,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         currentFieldsVar, LINKED_HASHMAP)
                 .add(currentFieldsPopulator.build())
                 .add("\n")
-                .add("// Check which columns are currently in the table\n", tableName)
+                .add("// Fetch current columns from the database\n", tableName)
                 .addStatement("final $T $L = database.rawQuery(\"PRAGMA table_info($L)\", "
                         + "null)", CURSOR, cursorVarName, tableName)
                 .addStatement("final $T<$T> $L = new $T<>()", LIST, STRING, dbColsVarName,
@@ -126,12 +128,14 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .endControlFlow("while ($L.moveToNext())", cursorVarName)
                 .endControlFlow()
                 .addStatement("$L.close()", cursorVarName)
-                .add("\n")
+                .add("\n// Remove closing parenthesis of create statement definitions\n")
                 .addStatement("$L = $L.substring(0, $L.length() - 1) + $S",
                         createSqlStatementVarName, createSqlStatementVarName,
                         createSqlStatementVarName, ", ")
                 .addStatement("$T $L = new $T()", STRING_BUILDER, colsToSaveVarName,
                         STRING_BUILDER)
+                .add("\n// Split create statement into column definitions and foreign key "
+                        + "definitions\n")
                 .addStatement("$T[] $L = $L.split($S)", STRING, foreignKeysSplitVarName,
                         createSqlStatementVarName, "FOREIGN KEY")
                 .addStatement("$L = $L[0]", createSqlStatementVarName, foreignKeysSplitVarName)
@@ -144,6 +148,48 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .addStatement("boolean $L = false", shouldRecreateVarName)
                 .addStatement("final $T<$T> $L = new $T<>()", LIST, STRING, newUniqueColsVarName,
                         ARRAY_LIST)
+                .build();
+    }
+
+    private CodeBlock getUpgradeTableCopyBlock(final Element element, final SQLiteTable table) {
+        final String tableName = getTableName(element),
+                colsToSaveVarName = tableName + "ColsToSave",
+                createSqlStatementVarName = tableName + "Create",
+                foreignKeysVarName = tableName + "ForeignKeys",
+                shouldRecreateVarName = tableName + "ShouldRecreate",
+                tableExistsVarName = tableName + "Exists",
+                newUniqueColsVarName = tableName + "NewUniqueCols";
+
+        return CodeBlock.builder()
+                .add("\n// Remove last comma from new column definitions\n")
+                .beginControlFlow("if ($L.length() > 0)", colsToSaveVarName)
+                .addStatement("$L = new $T($L.substring(0, \n$L.length() - 2))",
+                        colsToSaveVarName, STRING_BUILDER, colsToSaveVarName, colsToSaveVarName)
+                .endControlFlow()
+                .add("\n// Wrap up the new create statement by combining column definition and "
+                        + "foreign key definition\n// parts, as well as removing the last comma"
+                        + " and adding the last parenthesis\n")
+                .addStatement("$L = ($L + $L).substring(0, \n($L + $L).length() - 2) + $S",
+                        createSqlStatementVarName, createSqlStatementVarName,
+                        foreignKeysVarName, createSqlStatementVarName,
+                        foreignKeysVarName, ");")
+                .add("\n// Create a new table and copy the data from the old table to it and "
+                        + "rename it after\n")
+                .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
+                .add(getRecreateStatement("database", tableName,
+                        createSqlStatementVarName, colsToSaveVarName))
+                .endControlFlow()
+                .add("\n// Add any new unique indices\n")
+                .beginControlFlow("if ($L.size() > 0)", newUniqueColsVarName)
+                .addStatement("database.execSQL($S)", "BEGIN TRANSACTION;")
+                .beginControlFlow("for (final String field : $L)", newUniqueColsVarName)
+                .addStatement("database.execSQL($T.format("
+                                + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))",
+                        STRING, tableName)
+                .endControlFlow()
+                .addStatement("database.execSQL($S)", "COMMIT;")
+                .endControlFlow()
+                .add("\n")
                 .build();
     }
 
@@ -239,14 +285,22 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("$L = $S", foreignKeysVarName, "")
                     .addStatement("$L = $S", createSqlStatementVarName, "CREATE TABLE "
                             + tableName + " (")
+                    .add("// Match database fields against class fields to see if anything needs to"
+                            + " be added\n")
                     .beginControlFlow("for (final $T.Entry<$T, $T[]> entry : $L.entrySet())", MAP,
                             STRING, STRING, currentFieldsVar)
                     .beginControlFlow("if (!$L.contains(entry.getKey()))", dbColsVarName)
                     .addStatement("$L = true", shouldRecreateVarName)
                     .beginControlFlow("if (entry.getValue()[0].contains($S))", " UNIQUE")
+                    .add("// Mark column for UNIQUE constraint addition after table has been "
+                            + "recreated\n")
                     .addStatement("$L.add(entry.getValue()[0].split($S)[1])", newUniqueColsVarName,
                             "`")
                     .endControlFlow()
+                    .add("// Adding the new column to the table so that the tables that will be "
+                            + "copied between have matching columns\n")
+                    .add("// Since UNIQUE columns can't be added, remove constraint if it exists. "
+                            + "\n// It will be added when the table is recreated\n")
                     .addStatement("database.execSQL($S + entry.getValue()[0].replace($S, $S))",
                             "ALTER TABLE `" + tableName + "` ADD COLUMN ", " UNIQUE", "")
                     .endControlFlow()
@@ -258,31 +312,12 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("$L += entry.getValue()[1]", foreignKeysVarName)
                     .addStatement("$L += entry.getValue()[0] + $S", createSqlStatementVarName, ", ")
                     .endControlFlow()
-                    .beginControlFlow("if ($L.length() > 0)", colsToSaveVarName)
-                    .addStatement("$L = new $T($L.substring(0, $L.length() - 2))",
-                            colsToSaveVarName, STRING_BUILDER, colsToSaveVarName, colsToSaveVarName)
-                    .endControlFlow()
-                    .addStatement("$L = ($L + $L).substring(0, ($L + $L).length() - 2) + $S",
-                            createSqlStatementVarName, createSqlStatementVarName,
-                            foreignKeysVarName, createSqlStatementVarName,
-                            foreignKeysVarName, ");")
-                    .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
-                    .add(getRecreateStatement("database", tableName,
-                            createSqlStatementVarName, colsToSaveVarName))
-                    .endControlFlow()
-                    .beginControlFlow("if ($L.size() > 0)", newUniqueColsVarName)
-                    .addStatement("database.execSQL($S)", "BEGIN TRANSACTION;")
-                    .beginControlFlow("for (final String field : $L)", newUniqueColsVarName)
-                    .addStatement("database.execSQL($T.format("
-                                    + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))",
-                            STRING, tableName)
-                    .endControlFlow()
-                    .addStatement("database.execSQL($S)", "COMMIT;")
-                    .endControlFlow()
-                    .add("\n");
+                    .add(getUpgradeTableCopyBlock(element, table));
         } else if (table.autoAddColumns() && !table.autoDeleteColumns()) {
             recreateStatement
                     .add(initialRecreationBlock)
+                    .add("// Match database fields against class fields to see if anything needs to"
+                            + " be added / removed\n")
                     .beginControlFlow("for (final $T.Entry<$T, $T[]> entry : $L.entrySet())", MAP,
                             STRING, STRING, currentFieldsVar)
                     .addStatement("$L.append($S)", colsToSaveVarName, "`")
@@ -290,17 +325,22 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("$L.append($S)", colsToSaveVarName, "`")
                     .addStatement("$L.append($S)", colsToSaveVarName, ", ")
                     .beginControlFlow("if ($L.contains(entry.getKey()))", dbColsVarName)
-                    .addStatement("$L = $L.replaceAll(\"`?\" + entry.getKey() + \"`?[^,]+\", "
-                                    + "entry.getValue()[0])", createSqlStatementVarName,
+                    .add("// Replace the column definition of the create statement with the new "
+                            + "column definition\n")
+                    .addStatement("$L = $L.replaceAll(\n\"`?\" + entry.getKey() + \"`?[^,]+\", "
+                                    + "\nentry.getValue()[0])", createSqlStatementVarName,
                             createSqlStatementVarName)
                     .beginControlFlow("if (entry.getValue()[1].length() > 0)")
+                    .add("// Replace the foreign key definition of the create statement with the "
+                            + "new foreign key definition\n")
                     .addStatement("$T fk = entry.getValue()[1]", STRING)
-                    .addStatement("$L = $L.replaceAll(\"FOREIGN KEY\\\\(`?\" + entry.getKey() + \""
-                                    + "`?\\\\)[^,]+\", "
-                                    + "fk.substring(0, fk.length() - 2))", foreignKeysVarName,
-                            foreignKeysVarName)
+                    .addStatement("$L = $L.replaceAll(\n\"FOREIGN KEY\\\\(`?\" + entry.getKey() + "
+                                    + "\"`?\\\\)[^,]+\", \nfk.substring(0, fk.length() - 2))",
+                            foreignKeysVarName, foreignKeysVarName)
                     .endControlFlow()
                     .beginControlFlow("if (entry.getValue()[0].contains($S))", " UNIQUE")
+                    .add("// Mark column for UNIQUE constraint addition after table has been "
+                            + "recreated\n")
                     .addStatement("$L.add(entry.getValue()[0].split($S)[1])", newUniqueColsVarName,
                             "`")
                     .endControlFlow()
@@ -309,11 +349,18 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .endControlFlow()
                     .add("\n")
                     .addStatement("$L = true", shouldRecreateVarName)
-                    .addStatement("database.execSQL($S + entry.getValue()[0].replace($S, $S))",
+                    .add("// Adding the new column to the table so that the tables that will be "
+                            + "copied between have matching columns\n")
+                    .add("// Since UNIQUE columns can't be added, remove constraint if it exists. "
+                            + "\n// It will be added when the table is recreated\n")
+                    .addStatement("database.execSQL($S \n+ entry.getValue()[0].replace($S, $S))",
                             "ALTER TABLE `" + tableName + "` ADD COLUMN ", " UNIQUE", "")
+                    .add("// Add new column and foreign key definitions to create statement\n")
                     .addStatement("$L += entry.getValue()[1]", foreignKeysVarName)
                     .addStatement("$L += entry.getValue()[0] + $S", createSqlStatementVarName, ", ")
                     .endControlFlow()
+                    .add("\n// Saving any columns that were found in the database but are not in "
+                            + "the current class definition\n")
                     .beginControlFlow("for (final $T column : $L)", STRING, dbColsVarName)
                     .beginControlFlow("if (!$L.containsKey(column))", currentFieldsVar)
                     .addStatement("$L.append($S)", colsToSaveVarName, "`")
@@ -322,28 +369,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .addStatement("$L.append($S)", colsToSaveVarName, ", ")
                     .endControlFlow()
                     .endControlFlow()
-                    .beginControlFlow("if ($L.length() > 0)", colsToSaveVarName)
-                    .addStatement("$L = new $T($L.substring(0, $L.length() - 2))",
-                            colsToSaveVarName, STRING_BUILDER, colsToSaveVarName, colsToSaveVarName)
-                    .endControlFlow()
-                    .addStatement("$L = ($L + $L).substring(0, ($L + $L).length() - 2) + $S",
-                            createSqlStatementVarName, createSqlStatementVarName,
-                            foreignKeysVarName, createSqlStatementVarName,
-                            foreignKeysVarName, ");")
-                    .beginControlFlow("if ($L && $L)", shouldRecreateVarName, tableExistsVarName)
-                    .add(getRecreateStatement("database", tableName,
-                            createSqlStatementVarName, colsToSaveVarName))
-                    .endControlFlow()
-                    .beginControlFlow("if ($L.size() > 0)", newUniqueColsVarName)
-                    .addStatement("database.execSQL($S)", "BEGIN TRANSACTION;")
-                    .beginControlFlow("for (final String field : $L)", newUniqueColsVarName)
-                    .addStatement("database.execSQL($T.format("
-                                    + "\"CREATE UNIQUE INDEX `%s` ON $L(`%s`);\", field, field))",
-                            STRING, tableName)
-                    .endControlFlow()
-                    .addStatement("database.execSQL($S)", "COMMIT;")
-                    .endControlFlow()
-                    .add("\n");
+                    .add(getUpgradeTableCopyBlock(element, table));
         } else if (!table.autoAddColumns() && table.autoDeleteColumns()) {
             recreateStatement
                     .add(initialRecreationBlock)
@@ -665,13 +691,38 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
-//    private List<MethodSpec> buildOnUpgradeMethods() {
-//
-//    }
+    private List<MethodSpec> buildOnUpgradeSubMethods() {
+        final List<MethodSpec> ret = new ArrayList<>();
+
+        for (final Map.Entry<Element, SQLiteTable> tableElementEntry
+                : mTableElementMap.entrySet()) {
+
+            final CodeBlock.Builder code = CodeBlock.builder();
+            final SQLiteTable table = tableElementEntry.getValue();
+            final Element element = tableElementEntry.getKey();
+            final String tableName = getTableName(element);
+
+            code.add(getUpgradeBlock(element, table));
+            if (table.autoCreate()) {
+                code.nextControlFlow("else");
+                code.add("// $L did not exist, let's create it\n", tableName);
+                code.add(getCreateBlock(element, table));
+            }
+            code.endControlFlow();
+
+            ret.add(MethodSpec.methodBuilder(String.format("onUpgrade%s", element.getSimpleName()))
+                    .addModifiers(Modifier.PRIVATE)
+                    .addParameter(SQLITE_DATABASE, "database", Modifier.FINAL)
+                    .addCode(code.build())
+                    .build());
+        }
+
+        return ret;
+    }
 
     private MethodSpec buildOnUpgradeMethod() {
-        final CodeBlock.Builder code = CodeBlock.builder(),
-                onUpgradeStatements = CodeBlock.builder();
+        final CodeBlock.Builder onUpgradeStatements = CodeBlock.builder(),
+                code = CodeBlock.builder();
 
         int onUpgradeCounter = 0;
         for (final Element enclosed : mElement.getEnclosedElements()) {
@@ -714,21 +765,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         for (final Map.Entry<Element, SQLiteTable> tableElementEntry
                 : mTableElementMap.entrySet()) {
 
-
-            final SQLiteTable table = tableElementEntry.getValue();
-            final Element element = tableElementEntry.getKey();
-            final String tableName = getTableName(element);
-
-            code.addStatement("/****** BEGIN $L ******/", tableName);
-            code.add(getUpgradeBlock(element, table));
-            if (table.autoCreate()) {
-                code.nextControlFlow("else");
-                code.add("// $L did not exist, let's create it\n", tableName);
-                code.add(getCreateBlock(element, table));
-            }
-            code.endControlFlow();
-
-            code.addStatement("/******  END $L  ******/", tableName);
+            code.addStatement("onUpgrade$L(database)", tableElementEntry.getKey().getSimpleName());
         }
 
         code.add(onUpgradeStatements.build());
@@ -757,7 +794,6 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         buildDbVersionField(),
                         buildInstanceField()
                 ))
-//                .addMethods(buildOnUpgradeMethods())
                 .addMethods(Arrays.asList(
                         buildCtor(),
                         buildGetInstanceMethod(),
@@ -765,6 +801,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         buildOnCreateMethod(),
                         buildOnUpgradeMethod()
                 ))
+                .addMethods(buildOnUpgradeSubMethods())
                 .build();
 
         return JavaFile.builder(mPackageName, typeSpec)
