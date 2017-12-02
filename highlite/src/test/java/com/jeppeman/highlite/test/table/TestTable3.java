@@ -17,6 +17,9 @@ public class TestTable3 {
     @SQLiteField(notNull = true)
     public String str;
 
+    @SQLiteField(unique = true)
+    public String unique;
+
     @SQLiteField(foreignKey = @ForeignKey(fieldReference = "id"))
     public TestTable foreign;
 }

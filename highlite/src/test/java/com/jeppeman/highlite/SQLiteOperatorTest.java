@@ -373,12 +373,13 @@ public class SQLiteOperatorTest {
     }
 
     @Test
-    public void testOnUpgradeWithColumnChange() throws Exception {
+    public void testOnUpgradeWithColumnChangeToNotNull() throws Exception {
         getHelperInstance()
                 .getReadableDatabase()
                 .execSQL("CREATE TABLE testTable3 ("
                         + "    `xx` INTEGER PRIMARY KEY AUTOINCREMENT, "
                         + "    `str` TEXT,"
+                        + "    `unique` UNIQUE,"
                         + "    `foreign` INTEGER,"
                         + "    FOREIGN KEY(`foreign`) REFERENCES test_table(`unique`)"
                         + ");"
@@ -391,6 +392,32 @@ public class SQLiteOperatorTest {
         getHelperInstance().onUpgrade(getHelperInstance().getWritableDatabase(), 1, 2);
         exception.expect(SQLiteConstraintException.class);
         operator.save(new TestTable3()).executeBlocking();
+    }
+
+    @Test
+    public void testOnUpgradeWithColumnChangeToUnique() throws Exception {
+        getHelperInstance()
+                .getReadableDatabase()
+                .execSQL("CREATE TABLE testTable3 ("
+                        + "    `xx` INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "    `str` TEXT,"
+                        + "    `unique` TEXT,"
+                        + "    `foreign` INTEGER,"
+                        + "    FOREIGN KEY(`foreign`) REFERENCES test_table(`unique`)"
+                        + ");"
+                );
+
+        SQLiteOperator<TestTable3> operator = SQLiteOperator.from(getContext(), TestTable3.class);
+        getHelperInstance().onUpgrade(getHelperInstance().getWritableDatabase(), 1, 2);
+        exception.expect(SQLiteConstraintException.class);
+        TestTable3 t = new TestTable3();
+        t.str = "not null";
+        t.unique = "a";
+        operator.save(t).executeBlocking();
+        t = new TestTable3();
+        t.str = "xxx";
+        t.unique = "a";
+        operator.save(t).executeBlocking();
     }
 
     @Test
