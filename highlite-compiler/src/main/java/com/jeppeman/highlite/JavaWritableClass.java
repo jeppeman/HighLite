@@ -68,11 +68,11 @@ abstract class JavaWritableClass {
     static final ClassName CLASS_NOT_FOUND_EXCEPTION =
             ClassName.get(ClassNotFoundException.class);
 
-    static final Map<SQLiteFieldType, List<Class<?>>> SQLITE_FIELD_CLASS_MAPPING;
+    static final Map<SQLiteColumnType, List<Class<?>>> SQLITE_FIELD_CLASS_MAPPING;
 
     static {
         SQLITE_FIELD_CLASS_MAPPING = new HashMap<>();
-        SQLITE_FIELD_CLASS_MAPPING.put(SQLiteFieldType.INTEGER,
+        SQLITE_FIELD_CLASS_MAPPING.put(SQLiteColumnType.INTEGER,
                 new ArrayList<Class<?>>(Arrays.asList(
                         boolean.class,
                         int.class,
@@ -83,13 +83,13 @@ abstract class JavaWritableClass {
                         Short.class,
                         Long.class,
                         Date.class)));
-        SQLITE_FIELD_CLASS_MAPPING.put(SQLiteFieldType.REAL,
+        SQLITE_FIELD_CLASS_MAPPING.put(SQLiteColumnType.REAL,
                 new ArrayList<Class<?>>(Arrays.asList(
                         float.class,
                         double.class,
                         Float.class,
                         Double.class)));
-        SQLITE_FIELD_CLASS_MAPPING.put(SQLiteFieldType.TEXT, new ArrayList<Class<?>>(
+        SQLITE_FIELD_CLASS_MAPPING.put(SQLiteColumnType.TEXT, new ArrayList<Class<?>>(
                 Collections.singletonList(String.class)));
     }
 
@@ -116,7 +116,7 @@ abstract class JavaWritableClass {
                                     final String tableName,
                                     final boolean onlySearchPrimaryKey) {
         for (final Element enclosed : element.getEnclosedElements()) {
-            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
             final SQLiteRelationship rel = enclosed.getAnnotation(SQLiteRelationship.class);
             if (enclosed.getKind() != ElementKind.FIELD
                     || (field == null && rel == null)
@@ -194,7 +194,7 @@ abstract class JavaWritableClass {
     }
 
     String getDBFieldName(final Element element, final String activeTableName) {
-        final SQLiteField field = element.getAnnotation(SQLiteField.class);
+        final SQLiteColumn field = element.getAnnotation(SQLiteColumn.class);
         final String tableName = element.getEnclosingElement()
                 .getAnnotation(SQLiteTable.class) == null
                 ? null
@@ -208,9 +208,9 @@ abstract class JavaWritableClass {
 
     }
 
-    SQLiteFieldType getFieldTypeFromClass(final String cls) {
-        SQLiteFieldType ret = SQLiteFieldType.BLOB;
-        for (final Map.Entry<SQLiteFieldType, List<Class<?>>> entry
+    SQLiteColumnType getFieldTypeFromClass(final String cls) {
+        SQLiteColumnType ret = SQLiteColumnType.BLOB;
+        for (final Map.Entry<SQLiteColumnType, List<Class<?>>> entry
                 : SQLITE_FIELD_CLASS_MAPPING.entrySet()) {
 
             for (final Class<?> clazz : entry.getValue()) {
@@ -220,22 +220,22 @@ abstract class JavaWritableClass {
                 }
             }
 
-            if (ret != SQLiteFieldType.BLOB) break;
+            if (ret != SQLiteColumnType.BLOB) break;
         }
 
         return ret;
     }
 
-    String getFieldType(final Element element, final SQLiteField field) {
+    String getFieldType(final Element element, final SQLiteColumn field) {
         try {
             if (field.foreignKey().enabled()) {
                 final Element foreignRefElem = findForeignKeyReferencedField(element,
                         field.foreignKey());
                 return getFieldType(foreignRefElem,
-                        foreignRefElem.getAnnotation(SQLiteField.class));
+                        foreignRefElem.getAnnotation(SQLiteColumn.class));
             }
-            return field.fieldType() != SQLiteFieldType.UNSPECIFIED
-                    ? field.fieldType().toString()
+            return field.columnType() != SQLiteColumnType.UNSPECIFIED
+                    ? field.columnType().toString()
                     : getFieldTypeFromClass(element.asType().toString()).toString();
         } catch (Exception e) {
             return null;
@@ -251,11 +251,11 @@ abstract class JavaWritableClass {
                 continue;
             }
 
-            final SQLiteField field = enc.getAnnotation(SQLiteField.class);
+            final SQLiteColumn field = enc.getAnnotation(SQLiteColumn.class);
             if (field == null || (!field.primaryKey().enabled() && !field.unique())) {
                 throw new ProcessingException(enclosed,
                         String.format("Field %s in class %s needs to be declared as primary key or "
-                                + "unique with @SQLiteField to be referenced in "
+                                + "unique with @SQLiteColumn to be referenced in "
                                 + "@ForeignKey", enc.toString(), tableElem.toString()));
             }
 

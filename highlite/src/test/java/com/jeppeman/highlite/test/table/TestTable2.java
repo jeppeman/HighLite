@@ -1,7 +1,7 @@
 package com.jeppeman.highlite.test.table;
 
 import com.jeppeman.highlite.PrimaryKey;
-import com.jeppeman.highlite.SQLiteField;
+import com.jeppeman.highlite.SQLiteColumn;
 import com.jeppeman.highlite.SQLiteTable;
 
 /**
@@ -9,9 +9,9 @@ import com.jeppeman.highlite.SQLiteTable;
  */
 @SQLiteTable(database = TestDatabase.class)
 public class TestTable2 {
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
     public long id;
 
-    @SQLiteField
+    @SQLiteColumn
     public TestNonSerializable nonSerializable;
 }

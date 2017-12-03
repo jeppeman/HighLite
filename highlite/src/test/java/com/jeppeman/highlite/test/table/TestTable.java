@@ -1,7 +1,7 @@
 package com.jeppeman.highlite.test.table;
 
 import com.jeppeman.highlite.PrimaryKey;
-import com.jeppeman.highlite.SQLiteField;
+import com.jeppeman.highlite.SQLiteColumn;
 import com.jeppeman.highlite.SQLiteRelationship;
 import com.jeppeman.highlite.SQLiteTable;
 
@@ -14,28 +14,28 @@ import java.util.List;
 @SQLiteTable(database = TestDatabase.class, autoDeleteColumns = true)
 public class TestTable {
 
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
     public long id;
 
-    @SQLiteField(unique = true)
+    @SQLiteColumn(unique = true)
     public long unique;
 
-    @SQLiteField("testFieldName")
+    @SQLiteColumn("testFieldName")
     public String testString;
 
-    @SQLiteField
+    @SQLiteColumn
     public List<String> testList;
 
-    @SQLiteField
+    @SQLiteColumn
     public Boolean testBoolean;
 
-    @SQLiteField
+    @SQLiteColumn
     public TestSerializable testSerializable;
 
-    @SQLiteField
+    @SQLiteColumn
     public Date testDate;
 
-    @SQLiteField
+    @SQLiteColumn
     public int upgradeAddTester;
 
     @SQLiteRelationship(table = TestTable4.class, backReference = "foreignKey")

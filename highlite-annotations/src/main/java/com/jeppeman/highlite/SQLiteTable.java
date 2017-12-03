@@ -6,11 +6,11 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Annotate a class with {@link SQLiteTable} to be able to have a database table based on
  * {@link SQLiteTable#tableName()} and the class' enclosed properties annotated with
- * {@link SQLiteField} automatically created.
+ * {@link SQLiteColumn} automatically created.
  *
  *
  * @author jesper
- * @see {@link SQLiteField}
+ * @see {@link SQLiteColumn}
  */
 @Retention(RetentionPolicy.CLASS)
 public @interface SQLiteTable {

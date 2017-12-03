@@ -1,11 +1,11 @@
 package com.jeppeman.highlite.test.table;
 
-import com.jeppeman.highlite.SQLiteField;
+import com.jeppeman.highlite.SQLiteColumn;
 import com.jeppeman.highlite.SQLiteTable;
 
 @SQLiteTable(database = TestDatabase.class)
 public class TestTable9 extends TestTable7 {
 
-    @SQLiteField
+    @SQLiteColumn
     public String testingNine;
 }

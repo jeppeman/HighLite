@@ -209,7 +209,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 foreignKeysMap = new LinkedHashMap<>();
 
         for (final Element enclosed : getFields(element)) {
-            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
 
             if (field == null) continue;
 
@@ -450,7 +450,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
         final String endOfColumnSpec = ",\n" + getIndent(2);
 
         for (final Element enclosed : getFields(element)) {
-            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
             if (field == null) continue;
 
             final String tableName = getTableName(element);
@@ -613,7 +613,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 : mTableElementMap.entrySet()) {
 
             for (final Element enclosed : getFields(tableElementEntry.getKey())) {
-                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+                final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
                 if (!foundForeignKey && field != null && field.foreignKey().enabled()) {
 
                     code.beginControlFlow("if (!database.isReadOnly())")

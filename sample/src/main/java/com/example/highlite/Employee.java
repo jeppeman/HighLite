@@ -2,7 +2,7 @@ package com.example.highlite;
 
 import com.jeppeman.highlite.ForeignKey;
 import com.jeppeman.highlite.PrimaryKey;
-import com.jeppeman.highlite.SQLiteField;
+import com.jeppeman.highlite.SQLiteColumn;
 import com.jeppeman.highlite.SQLiteTable;
 
 @SQLiteTable(
@@ -11,16 +11,16 @@ import com.jeppeman.highlite.SQLiteTable;
 )
 public class Employee {
 
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
-    long id; // fields annotated with @SQLiteField need to be package local
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
+    long id; // fields annotated with @SQLiteColumn need to be package local
 
-    @SQLiteField("employeeName")
+    @SQLiteColumn("employeeName")
     String name;
 
-    @SQLiteField
+    @SQLiteColumn
     float salary;
 
-    @SQLiteField(foreignKey = @ForeignKey(
+    @SQLiteColumn(foreignKey = @ForeignKey(
             fieldReference = "id", // Note: this is the name of the field of the class you are
             // referring to, not the database column name; the field has to be unique
             cascadeOnDelete = true, // defaults to false

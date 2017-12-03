@@ -82,16 +82,16 @@ Then define a class for a table that links to the database class
 )
 public class Company {
     
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
-    long id; // fields annotated with @SQLiteField need to be at least package local
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
+    long id; // fields annotated with @SQLiteColumn need to be at least package local
     
-    @SQLiteField("companyName") // Column name becomes companyName here
+    @SQLiteColumn("companyName") // Column name becomes companyName here
     String name;
     
-    @SQLiteField
+    @SQLiteColumn
     Date created; // Dates are stored as INTEGER's with the amount of seconds since UNIX epoch
     
-    @SQLiteField
+    @SQLiteColumn
     List<String> employees; // Fields with types that cannot be matched against an SQLite data type will be serialized and stored as BLOB's 
 }
 ```
@@ -195,10 +195,10 @@ HighLite supports foreign keys and relationships, here's an example of how you c
 )
 public class Company {
     
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
     long id;
     
-    @SQLiteField("companyName")
+    @SQLiteColumn("companyName")
     String name;
     
     @SQLiteRelationship(table = Employee.class, backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
@@ -211,16 +211,16 @@ public class Company {
 )
 public class Employee {
     
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
-    long id; // fields annotated with @SQLiteField need to be package local
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
+    long id; // fields annotated with @SQLiteColumn need to be package local
     
-    @SQLiteField("employeeName")
+    @SQLiteColumn("employeeName")
     String name;
     
-    @SQLiteField
+    @SQLiteColumn
     float salary;
     
-    @SQLiteField(foreignKey = @ForeignKey(
+    @SQLiteColumn(foreignKey = @ForeignKey(
           fieldReference = "id", // Note: this is the name of the field of the class you are referring to, not the database column name; the field has to be unique
           cascadeOnDelete = true, // defaults to false
           cascadeOnUpdate = true // defaults to false
@@ -270,7 +270,7 @@ HighLite supports inheritance of classes annotated with `SQLiteTable`, consider 
 )
 public class Developer extends Employee {
 
-    @SQLiteField
+    @SQLiteColumn
     String type;
 }
 ```
@@ -315,10 +315,10 @@ in that case, the following works:
 ```java
 public class TimestampedModel {
 
-    @SQLiteField
+    @SQLiteColumn
     Date created;
     
-    @SQLiteField
+    @SQLiteColumn
     Date modified;
 }
 
@@ -328,10 +328,10 @@ public class TimestampedModel {
 )
 public class Company extends TimestampedModel {
     
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
     long id;
     
-    @SQLiteField("companyName")
+    @SQLiteColumn("companyName")
     String name;
     
     @SQLiteRelationship(table = Employee.class, backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to

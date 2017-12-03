@@ -75,7 +75,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private Element getPrimaryKeyField(final Element enclosing) {
         for (final Element enclosed : getFields(enclosing)) {
-            final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+            final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
             if (field == null) continue;
 
             final PrimaryKey pk = field.primaryKey();
@@ -98,7 +98,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         for (final Map.Entry<Element, List<Element>> typeFieldsEntry
                 : getTypeFieldMap(mElement).entrySet()) {
             for (final Element enclosed : typeFieldsEntry.getValue()) {
-                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+                final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
                 if (field == null) continue;
 
                 final PrimaryKey pk = field.primaryKey();
@@ -136,7 +136,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 foreignKeyRefElement.getSimpleName());
                         putStatement.endControlFlow();
                     }
-                } else if (SQLiteFieldType.valueOf(fieldType) == SQLiteFieldType.BLOB) {
+                } else if (SQLiteColumnType.valueOf(fieldType) == SQLiteColumnType.BLOB) {
                     putStatement.beginControlFlow("try")
                             .addStatement("final $T baos = new $T()", BYTE_ARRAY_OS, BYTE_ARRAY_OS)
                             .addStatement("final $T oos = new $T(baos)", OBJECT_OS, OBJECT_OS)
@@ -213,7 +213,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
             final List<Element> allElements = getFields(entry.getKey());
             for (int i = 0; i < allElements.size(); i++) {
                 final Element enclosed = allElements.get(i);
-                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+                final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
                 if (field == null) continue;
 
                 if (field.primaryKey().enabled() && primaryKeyAdded) continue;
@@ -333,7 +333,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         }
 
         final CodeBlock.Builder setIdAfterInsertion = CodeBlock.builder();
-        if (primaryKeyElement.getAnnotation(SQLiteField.class).primaryKey().autoIncrement()) {
+        if (primaryKeyElement.getAnnotation(SQLiteColumn.class).primaryKey().autoIncrement()) {
             setIdAfterInsertion.addStatement("mTarget.$L = ($T)id",
                     primaryKeyElement.getSimpleName(), ClassName.get(primaryKeyElement.asType()));
         }
@@ -614,9 +614,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
     private Element findRelatedForeignKeyElement(final Element enclosing,
                                                  final String relatedFieldName) {
         for (final Element enclosed : getFields(enclosing)) {
-            final SQLiteField sqliteField = enclosed.getAnnotation(SQLiteField.class);
-            if (sqliteField == null
-                    || !sqliteField.foreignKey().enabled()
+            final SQLiteColumn sqliteColumn = enclosed.getAnnotation(SQLiteColumn.class);
+            if (sqliteColumn == null
+                    || !sqliteColumn.foreignKey().enabled()
                     || !relatedFieldName.equals(enclosed.getSimpleName().toString())) {
                 continue;
             }
@@ -656,7 +656,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         boolean primaryKeyAdded = false;
         for (final Map.Entry<Element, List<Element>> entry : getTypeFieldMap(mElement).entrySet()) {
             for (final Element enclosed : getFields(entry.getKey())) {
-                final SQLiteField field = enclosed.getAnnotation(SQLiteField.class);
+                final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
                 if (field == null) {
                     final SQLiteRelationship relationship = enclosed
                             .getAnnotation(SQLiteRelationship.class);
@@ -674,7 +674,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
                     final Element relatedForeignElem = findRelatedForeignKeyElement(
                             relationClassElem, relationship.backReference());
-                    final SQLiteField f = relatedForeignElem.getAnnotation(SQLiteField.class);
+                    final SQLiteColumn f = relatedForeignElem.getAnnotation(SQLiteColumn.class);
 
                     final TypeName tn = ClassName.get(
                             mElementUtils.getPackageOf(relatedForeignElem).toString(),
@@ -803,7 +803,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final Element pkElement = getPrimaryKeyField();
         final CodeBlock.Builder fetchFromCacheStatement = CodeBlock.builder();
         if (pkElement != null) {
-            final SQLiteField field = pkElement.getAnnotation(SQLiteField.class);
+            final SQLiteColumn field = pkElement.getAnnotation(SQLiteColumn.class);
             final PrimaryKey pk = field.primaryKey();
             if (pk.enabled()) {
                 final TypeName pkTypeName = ClassName.get(pkElement.asType());

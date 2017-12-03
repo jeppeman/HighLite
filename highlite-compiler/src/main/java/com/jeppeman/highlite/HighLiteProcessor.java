@@ -52,11 +52,11 @@ public class HighLiteProcessor extends AbstractProcessor {
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
 
-        for (final Element element : roundEnv.getElementsAnnotatedWith(SQLiteField.class)) {
-            final SQLiteField field = element.getAnnotation(SQLiteField.class);
+        for (final Element element : roundEnv.getElementsAnnotatedWith(SQLiteColumn.class)) {
+            final SQLiteColumn field = element.getAnnotation(SQLiteColumn.class);
             if (field.primaryKey().enabled() && field.foreignKey().enabled()) {
                 error(element, String.format("%s can't have both %s and %s set to enabled",
-                        SQLiteField.class.getCanonicalName(), PrimaryKey.class.getCanonicalName(),
+                        SQLiteColumn.class.getCanonicalName(), PrimaryKey.class.getCanonicalName(),
                         ForeignKey.class.getCanonicalName()));
                 return true;
             }
@@ -64,7 +64,7 @@ public class HighLiteProcessor extends AbstractProcessor {
             final SQLiteRelationship relationship = element.getAnnotation(SQLiteRelationship.class);
             if (relationship != null) {
                 error(element, String.format("Fields are not allowed to be annotated with both"
-                                + "%s and %s", SQLiteField.class.getCanonicalName(),
+                                + "%s and %s", SQLiteColumn.class.getCanonicalName(),
                         SQLiteRelationship.class.getCanonicalName()));
             }
         }
@@ -204,7 +204,7 @@ public class HighLiteProcessor extends AbstractProcessor {
 
         annotations.add(ForeignKey.class);
         annotations.add(PrimaryKey.class);
-        annotations.add(SQLiteField.class);
+        annotations.add(SQLiteColumn.class);
         annotations.add(SQLiteTable.class);
         annotations.add(SQLiteDatabaseDescriptor.class);
         annotations.add(OnCreate.class);

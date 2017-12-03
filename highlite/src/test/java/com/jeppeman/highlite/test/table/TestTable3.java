@@ -2,7 +2,7 @@ package com.jeppeman.highlite.test.table;
 
 import com.jeppeman.highlite.ForeignKey;
 import com.jeppeman.highlite.PrimaryKey;
-import com.jeppeman.highlite.SQLiteField;
+import com.jeppeman.highlite.SQLiteColumn;
 import com.jeppeman.highlite.SQLiteTable;
 
 /**
@@ -11,15 +11,15 @@ import com.jeppeman.highlite.SQLiteTable;
 @SQLiteTable(database = TestDatabase.class, tableName = "testTable3", autoCreate = false)
 public class TestTable3 {
 
-    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
+    @SQLiteColumn(primaryKey = @PrimaryKey(autoIncrement = true))
     long xx;
 
-    @SQLiteField(notNull = true)
+    @SQLiteColumn(notNull = true)
     public String str;
 
-    @SQLiteField(unique = true)
+    @SQLiteColumn(unique = true)
     public String unique;
 
-    @SQLiteField(foreignKey = @ForeignKey(fieldReference = "id"))
+    @SQLiteColumn(foreignKey = @ForeignKey(fieldReference = "id"))
     public TestTable foreign;
 }

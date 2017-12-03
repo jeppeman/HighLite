@@ -6,13 +6,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * A field annotated with {@link SQLiteField} will have a corresponding database field
+ * A field annotated with {@link SQLiteColumn} will have a corresponding database field
  *
  * @author jesper
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.FIELD)
-public @interface SQLiteField {
+public @interface SQLiteColumn {
     /**
      * The name of the database field, if left empty the name of the class field will be used
      *
@@ -24,9 +24,9 @@ public @interface SQLiteField {
      * The SQLite type of the field
      *
      * @return the SQLite type of the field
-     * @see {@link SQLiteFieldType}
+     * @see {@link SQLiteColumnType}
      */
-    SQLiteFieldType fieldType() default SQLiteFieldType.UNSPECIFIED;
+    SQLiteColumnType columnType() default SQLiteColumnType.UNSPECIFIED;
 
     /**
      * Creates a PRIMARY KEY constraint for the corresponding database column if set to true

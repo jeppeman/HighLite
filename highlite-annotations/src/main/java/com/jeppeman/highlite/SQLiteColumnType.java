@@ -1,14 +1,14 @@
 package com.jeppeman.highlite;
 
 /**
- * Enum representation of SQLite field types
+ * Enum representation of SQLite column types
  *
  * @author jesper
  */
-public enum SQLiteFieldType {
+public enum SQLiteColumnType {
     /**
      * A suitable SQLite type will try to be found based on the type of the field in question,
-     * if none can be found {@link SQLiteFieldType#BLOB} will be used
+     * if none can be found {@link SQLiteColumnType#BLOB} will be used
      */
     UNSPECIFIED,
     /**
@@ -27,7 +27,8 @@ public enum SQLiteFieldType {
     REAL,
     /**
      * The BLOB SQLite field type, used by default if a match couldn't be found for
-     * {@link SQLiteFieldType#TEXT}, {@link SQLiteFieldType#INTEGER} or {@link SQLiteFieldType#REAL}
+     * {@link SQLiteColumnType#TEXT}, {@link SQLiteColumnType#INTEGER} or
+     * {@link SQLiteColumnType#REAL}
      */
     BLOB
 }
