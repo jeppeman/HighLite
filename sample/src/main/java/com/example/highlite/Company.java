@@ -11,7 +11,7 @@ import java.util.List;
  * @author jesper
  */
 @SQLiteTable(database = CompanyDatabase.class, tableName = "myLittleTable")
-public class Company {
+public class Company extends TimestampedModel {
 
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
     long id; // fields annotated with @SQLiteField need to be at least package local

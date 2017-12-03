@@ -190,7 +190,7 @@ HighLite supports foreign keys and relationships, here's an example of how you c
 
 ```java
 @SQLiteTable(
-        database = MyDatabase.class, 
+        database = CompanyDatabase.class, 
         tableName = "companies"
 )
 public class Company {
@@ -206,7 +206,7 @@ public class Company {
 }
 
 @SQLiteTable(
-        database = MyDatabase.class, 
+        database = CompanyDatabase.class, 
         tableName = "employees"
 )
 public class Employee {
@@ -260,4 +260,98 @@ Log.d("employees", companyFromDatabase.employeeList /* <- this is now [john, bob
 ```
 
 Inheritance
----
+-----------
+
+HighLite supports inheritance of classes annotated with `SQLiteTable`, consider the following:
+
+```java
+@SQLiteTable(
+        database = CompanyDatabase.class
+)
+public class Developer extends Employee {
+
+    @SQLiteField
+    String type;
+}
+```
+
+Here the class `Developer` extends `Employee`, which is already annotated with `SQLiteTable`, the 
+create statement that is generated from this setup looks like this:
+
+```roomsql
+CREATE TABLE IF NOT EXISTS developer (
+    `type` TEXT,
+    `employees_ptr_id` INTEGER PRIMARY KEY NOT NULL,
+    FOREIGN KEY(`employees_ptr_id`) REFERENCES employees(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+);
+```
+
+So we have a one-to-one relationship between `Developer` and `Employee`, therefore the primary key
+for `Developer` is automatically created as a pointer to the primary key of `Employee`.
+
+Let's illustrate what happens when we use operations on the `Developer` class.
+
+```java
+SQLiteOperator operator = SQLiteOperator.from(getContext(), Developer.class);
+Developer dev = new Developer();
+dev.name = "Bob";
+dev.salary = 10000f;
+dev.company = company;
+dev.type = "Android";
+
+// When we save the object, the values of the fields are saved to the table they correspond to in
+// the class hierarchy; in this case, name, salary and company are saved to the employees table,
+// whereas type is saved to the developer table
+operator.save(dev).executeBlocking();
+
+// Now if we fetch all developers from the database, a JOIN will be performed on the developer and
+// employees tables and fields will be populated accordingly.
+List<Developer> devsFromDb = operator.getList().executeBlocking();
+```
+
+You may also want to inherit from a base class that is not corresponding to a table in the database,
+in that case, the following works:
+
+```java
+public class TimestampedModel {
+
+    @SQLiteField
+    Date created;
+    
+    @SQLiteField
+    Date modified;
+}
+
+@SQLiteTable(
+        database = CompanyDatabase.class, 
+        tableName = "companies"
+)
+public class Company extends TimestampedModel {
+    
+    @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
+    long id;
+    
+    @SQLiteField("companyName")
+    String name;
+    
+    @SQLiteRelationship(table = Employee.class, backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
+    List<Employee> employeeList; // When a company is fetched from the database, its related employees gets fetched as well
+}
+```
+
+With this setup, the following create statement is generated:
+
+```roomsql
+CREATE TABLE IF NOT EXISTS myLittleTable (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `companyName` TEXT,
+    `created` INTEGER,
+    `employees` BLOB,
+    `created` INTEGER,
+    `modified` INTEGER
+);
+```
+
+
+
+
