@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS developer (
 So we have a one-to-one relationship between `Developer` and `Employee`, therefore the primary key
 for `Developer` is automatically created as a pointer to the primary key of `Employee`.
 
-Let's illustrate what happens when we use operations on the `Developer` class.
+Let's have a look at what happens when we use operations on the `Developer` class.
 
 ```java
 SQLiteOperator operator = SQLiteOperator.from(getContext(), Developer.class);
