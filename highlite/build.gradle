@@ -1,5 +1,4 @@
 apply plugin: 'com.android.library'
-apply plugin: 'com.kageiit.lintrules'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion

@@ -28,8 +28,8 @@ dependencies {
     testImplementation deps.junit
     implementation deps.appcompat
 
-//    compile 'com.jeppeman:highlite:1.0-SNAPSHOT'
-//    apt 'com.jeppeman:highlite-compiler:1.0-SNAPSHOT'
+//    compile 'com.jeppeman:highlite:1.0-beta1'
+//    apt 'com.jeppeman:highlite-compiler:1.0-beta1'
     implementation deps.rxjava
     implementation deps.rxandroid
     implementation project(':highlite')
