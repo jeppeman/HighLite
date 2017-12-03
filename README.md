@@ -34,6 +34,8 @@ dependencies {
 
 ```
 
+Kotlin users will have to replace `annotationProcessor` with `kapt`.
+
 Basic setup
 ---
 Annotate a class with ```@SQLiteDatabaseDescriptor``` as follows:
