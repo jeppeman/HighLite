@@ -29,6 +29,7 @@ checkstyle {
 task createProperties(dependsOn: processResources) << {
     Properties properties = new Properties()
     File localProps = project.rootProject.file('local.properties')
+
     def sdkToolsDir
     if (localProps.exists()) {
         properties.load(localProps.newDataInputStream())
@@ -37,7 +38,7 @@ task createProperties(dependsOn: processResources) << {
         sdkToolsDir = ""
     }
 
-    File file = new File("$buildDir/classes/test/com/jeppeman/highlite/tests")
+    File file = new File("$buildDir/resources/main")
     if (!file.exists()) {
         file.mkdirs()
     }
