@@ -98,11 +98,30 @@ public class Company {
 }
 ```
 
-That's it, you're now ready to start doing some actual database operations
+That's it, you're now ready to start doing some actual database operations.
+
+<b>Note to Kotlin users</b>
+For now, Kotlin properties has to be annotated with `@JvmField` as follows:
+
+```kotlin
+@SQLiteTable(database = CompanyDatabase::class)
+class Company {
+    
+    @JvmField
+    @SQLiteColumn(primaryKey = PrimaryKey(autoIncrement = true))
+    var id : Int = 0
+    
+    @JvmField
+    @SQLiteColumn("companyName")
+    var name : String = ""
+}
+```
+
+This is because a Kotlin property by default is compiled to a private Java field with a getter 
+and a setter method. I will address this soon.
 
 Operations
 ---
-The operations
 
 ### Insert an object
 
@@ -359,6 +378,7 @@ Upcoming features
 
 * More flexibility when it comes to the migrations
 * Composite primary key support
+* Kotlin improvements
 
 
 
