@@ -101,6 +101,8 @@ public class Company {
 That's it, you're now ready to start doing some actual database operations.
 
 <b>Note to Kotlin users</b>
+
+
 For now, Kotlin properties has to be annotated with `@JvmField` as follows:
 
 ```kotlin
