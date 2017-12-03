@@ -12,7 +12,7 @@ HighLite is an SQLite library for Android that makes use of annotation processin
 * Easy to use API with simple but flexible operations for get, save and delete.
 * Reactive! Each operation can be Rx-ified for those who use RxJava.
 * Supports inheritance of database models
-* Annotation driven design, which includes support for foreign keys and relationships.
+* Support for foreign keys and relationships in database models.
 * Support for the rest of the column constraints available for SQLite, i.e. UNIQUE, NOT NULL and AUTOINCREMENT
 
 <b>Other positives:</b>
