@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * @author jesper
  */
-@SQLiteTable(database = CompanyDatabase.class, tableName = "myLittleTable")
+@SQLiteTable(database = CompanyDatabase.class)
 public class Company extends TimestampedModel {
 
     @SQLiteField(primaryKey = @PrimaryKey(autoIncrement = true))
