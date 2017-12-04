@@ -18,7 +18,7 @@ import rx.schedulers.Schedulers;
  * @param <T> the type of object to save
  * @author jesper
  */
-public class SaveOperation<T> extends RawQueryableOperation<SaveOperation<T>> {
+public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
 
     private final Context mContext;
     @Nullable
