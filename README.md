@@ -14,6 +14,7 @@ HighLite is an SQLite library for Android that makes use of annotation processin
 * Supports inheritance of database models
 * Support for foreign keys and relationships in database models.
 * Support for the rest of the column constraints available for SQLite, i.e. UNIQUE, NOT NULL and AUTOINCREMENT
+* Support for multiple databases
 
 <b>Other positives:</b>
 
@@ -103,7 +104,7 @@ That's it, you're now ready to start doing some actual database operations.
 <b>Note to Kotlin users</b>
 
 
-For now, Kotlin properties has to be annotated with `@JvmField` as follows:
+For now, Kotlin properties have to be annotated with `@JvmField` as follows:
 
 ```kotlin
 @SQLiteTable(database = CompanyDatabase::class)
@@ -315,7 +316,7 @@ for `Developer` is automatically created as a pointer to the primary key of `Emp
 Let's have a look at what happens when we use operations on the `Developer` class.
 
 ```java
-SQLiteOperator operator = SQLiteOperator.from(getContext(), Developer.class);
+SQLiteOperator<Developer> operator = SQLiteOperator.from(getContext(), Developer.class);
 Developer dev = new Developer();
 dev.name = "Bob";
 dev.salary = 10000f;
