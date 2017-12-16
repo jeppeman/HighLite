@@ -91,6 +91,73 @@ public class SQLiteOperatorTest {
     }
 
     @Test
+    public void testSaveByQuery() throws Exception {
+        SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
+        TestTable t1 = new TestTable(),
+                t2 = new TestTable(),
+                t3 = new TestTable();
+
+        t1.unique = 1;
+        t2.unique = 2;
+        t3.unique = 3;
+
+        operator.save(t1, t2, t3).executeBlocking();
+
+        operator.save().withQuery(
+                SQLiteQuery.builder()
+                        .set("testFieldName", "test :)")
+                        .set("upgradeAddTester", 10)
+                        .set("testDate", new Date(new Date().getTime() + 1000 * 3600))
+                        .where("`id` > ?", 1)
+                        .build()
+        ).executeBlocking();
+
+        assertEquals(2, operator.getList().withQuery(
+                SQLiteQuery.builder()
+                .where("testFieldName = ? AND upgradeAddTester = ? AND testDate > ?",
+                        "test :)", 10, new Date().getTime())
+                .build()
+        ).executeBlocking().size());
+    }
+
+    @Test
+    public void testDeleteByQuery() throws Exception {
+        SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
+        TestTable t1 = new TestTable(),
+                t2 = new TestTable(),
+                t3 = new TestTable();
+
+        t1.unique = 1;
+        t2.unique = 2;
+        t3.unique = 3;
+
+        operator.save(t1, t2, t3).executeBlocking();
+
+        operator.save().withQuery(
+                SQLiteQuery.builder()
+                        .set("testFieldName", "test :)")
+                        .set("upgradeAddTester", 10)
+                        .set("testDate", new Date(new Date().getTime() + 1000 * 3600))
+                        .where("`id` > ?", 1)
+                        .build()
+        ).executeBlocking();
+
+        operator.delete().withQuery(
+                SQLiteQuery.builder()
+                        .where("testFieldName = ? AND upgradeAddTester = ? AND testDate > ? AND id > ?",
+                                "test :)", 10, new Date().getTime(), 2)
+                        .build()
+        ).executeBlocking();
+
+        assertEquals(1, operator.getList().withQuery(
+                SQLiteQuery.builder()
+                        .where("testFieldName = ? AND upgradeAddTester = ? AND testDate > ?",
+                                "test :)", 10, new Date().getTime())
+                        .build()
+        ).executeBlocking().size());
+    }
+
+    @Test
     public void testSaveAndGetSingleByRawQuery() throws Exception {
         SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
         TestTable table = operator

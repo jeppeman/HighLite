@@ -3,6 +3,7 @@ package com.jeppeman.highlite;
 import android.content.Context;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Interface implemented by generated DAO classes to enable to enable the {@link SQLiteOperator}
@@ -12,7 +13,10 @@ import java.util.List;
  */
 public interface SQLiteDAO<T> {
     int save(Context context);
-    int saveByQuery(Context context, String whereClause, String[] whereArgs);
+    int saveByQuery(Context context,
+                    Map<String, Object> colsToSave,
+                    String whereClause,
+                    String[] whereArgs);
     int delete(Context context);
     int deleteByQuery(Context context, String whereClause, String[] whereArgs);
     T getSingle(Context context, Object id);

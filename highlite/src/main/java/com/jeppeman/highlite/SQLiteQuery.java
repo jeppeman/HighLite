@@ -3,6 +3,9 @@ package com.jeppeman.highlite;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Query builder for SQLite queries designed to not have to deal with the annoying null argument
  * passing to the {@link android.database.sqlite.SQLiteDatabase#query(boolean, String, String[],
@@ -19,6 +22,7 @@ public final class SQLiteQuery {
     String mOrderByClause;
     String mWhereClause;
     Object[] mWhereArgs;
+    Map<String, Object> mColsToBeSaved;
 
     private SQLiteQuery() {
 
@@ -69,6 +73,14 @@ public final class SQLiteQuery {
 
         public Builder limit(final @NonNull String limitClause) {
             mQuery.mLimitClause = limitClause;
+            return this;
+        }
+
+        public Builder set(final @NonNull String key, final @NonNull Object value) {
+            if (mQuery.mColsToBeSaved == null) {
+                mQuery.mColsToBeSaved = new HashMap<>();
+            }
+            mQuery.mColsToBeSaved.put(key, value);
             return this;
         }
 

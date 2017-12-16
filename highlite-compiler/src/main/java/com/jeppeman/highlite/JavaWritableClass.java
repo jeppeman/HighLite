@@ -45,6 +45,7 @@ abstract class JavaWritableClass {
     static final ClassName STRING_BUILDER = ClassName.get(StringBuilder.class);
     static final ClassName LIST = ClassName.get(List.class);
     static final ClassName MAP = ClassName.get(Map.class);
+    static final ClassName MAP_ENTRY = ClassName.get(Map.Entry.class);
     static final ClassName HASHMAP = ClassName.get(HashMap.class);
     static final ClassName LINKED_HASHMAP = ClassName.get(LinkedHashMap.class);
     static final ClassName CONCURRENT_MAP = ClassName.get(ConcurrentMap.class);

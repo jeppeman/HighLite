@@ -41,7 +41,7 @@ public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
      */
     @WorkerThread
     public int executeBlocking() {
-        if (mObjectsToSave != null) {
+        if (mObjectsToSave != null && mObjectsToSave.length > 0) {
             int nSavedObjects = 0;
             for (final SQLiteDAO<T> objectToUpdate : mObjectsToSave) {
                 nSavedObjects += objectToUpdate.save(mContext);
@@ -58,7 +58,7 @@ public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
                 whereArgsAsStringArray = null;
             }
 
-            return mGenerated.saveByQuery(mContext, mQuery.mWhereClause,
+            return mGenerated.saveByQuery(mContext, mQuery.mColsToBeSaved, mQuery.mWhereClause,
                     whereArgsAsStringArray);
         }
 

@@ -41,7 +41,7 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>> {
      */
     @WorkerThread
     public int executeBlocking() {
-        if (mObjectsToDelete != null) {
+        if (mObjectsToDelete != null && mObjectsToDelete.length > 0) {
             int nDeletedObjects = 0;
             for (final SQLiteDAO<T> objectToDelete : mObjectsToDelete) {
                 nDeletedObjects += objectToDelete.delete(mContext);
