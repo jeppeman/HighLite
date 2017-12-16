@@ -104,7 +104,7 @@ That's it, you're now ready to start doing some actual database operations.
 <b>Note to Kotlin users</b>
 
 
-For now, Kotlin properties have to be annotated with `@JvmField` as follows:
+For now, Kotlin properties with primitive types have to be annotated with `@JvmField`, and non-primitive have to be marked with `lateinit` or be annotated with `@JvmField`. Here follows an example:
 
 ```kotlin
 @SQLiteTable(database = CompanyDatabase::class)
@@ -112,16 +112,15 @@ class Company {
     
     @JvmField
     @SQLiteColumn(primaryKey = PrimaryKey(autoIncrement = true))
-    var id : Int = 0
+    var id : Int = 0 // Primitive type, annotate with @JvmField
     
-    @JvmField
     @SQLiteColumn("companyName")
-    var name : String = ""
+    lateinit var name : String // Non-primitive, mark with lateinit
 }
 ```
 
-This is because a Kotlin property by default is compiled to a private Java field with a getter 
-and a setter method. I will address this soon.
+The reason for this is that a Kotlin property by default is compiled to a private Java field with a getter 
+and a setter method. With `@JvmField` and `lateinit` the compiled java class has its corresponding field exposed publicly
 
 Operations
 ---
