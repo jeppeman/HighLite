@@ -207,6 +207,21 @@ operator
     ).executeBlocking();
 ```
 
+### Save by query
+
+```java
+operator
+    .save()
+    .withQuery(
+        SQLiteQuery
+            .builder()
+            .set("companyName", "Changed name")
+            .set("created", new Date())
+            .where("`id` = ?", 1)
+            .build()
+    ).executeBlocking();
+```
+
 Foreign keys and relationships
 ---
 
