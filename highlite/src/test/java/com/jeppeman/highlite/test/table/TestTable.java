@@ -40,4 +40,10 @@ public class TestTable {
 
     @SQLiteRelationship(table = TestTable4.class, backReference = "foreignKey")
     public List<TestTable4> table4Relation;
+
+    @SQLiteRelationship(table = TestTable10.class, backReference = "fk1")
+    public List<TestTable10> table10rel1;
+
+    @SQLiteRelationship(table = TestTable10.class, backReference = "fk2")
+    public List<TestTable10> table10rel2;
 }
