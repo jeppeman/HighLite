@@ -694,6 +694,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
         final CodeBlock.Builder sqliteFieldsBuilder = CodeBlock.builder(),
                 relationshipsBuilder = CodeBlock.builder();
         boolean primaryKeyAdded = false;
+        int relCounter = 1;
         for (final Map.Entry<Element, List<Element>> entry : getTypeFieldMap(mElement).entrySet()) {
             for (final Element enclosed : getFields(entry.getKey())) {
                 final SQLiteColumn field = enclosed.getAnnotation(SQLiteColumn.class);
@@ -723,12 +724,12 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     final String dbFieldName = getDBFieldName(relatedForeignElem, null);
 
                     final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
-                            .addStatement("final $T dao = new $T(null)", tn, tn)
-                            .addStatement("ret.$L = dao.getList(\ncontext, \n\"`$L` = \" + "
+                            .addStatement("final $T dao$L = new $T(null)", tn, relCounter, tn)
+                            .addStatement("ret.$L = dao$L.getList(\ncontext, \n\"`$L` = \" + "
                                             + "\n$T.valueOf(ret.$L), "
                                             + "\nnull, \nnull, \nnull, \nnull, \nnull, "
                                             + "\ntrue)",
-                                    enclosed.getSimpleName(), dbFieldName, STRING,
+                                    enclosed.getSimpleName(), relCounter++, dbFieldName, STRING,
                                     f.foreignKey().fieldReference());
 
                     relationshipsBuilder.add(relationshipBuilder.build());
