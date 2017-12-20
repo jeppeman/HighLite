@@ -11,6 +11,7 @@ import com.jeppeman.highlite.test.table.TestDatabase;
 import com.jeppeman.highlite.test.table.TestNonSerializable;
 import com.jeppeman.highlite.test.table.TestSerializable;
 import com.jeppeman.highlite.test.table.TestTable;
+import com.jeppeman.highlite.test.table.TestTable10;
 import com.jeppeman.highlite.test.table.TestTable2;
 import com.jeppeman.highlite.test.table.TestTable3;
 import com.jeppeman.highlite.test.table.TestTable4;
@@ -114,9 +115,9 @@ public class SQLiteOperatorTest {
 
         assertEquals(2, operator.getList().withQuery(
                 SQLiteQuery.builder()
-                .where("testFieldName = ? AND upgradeAddTester = ? AND testDate > ?",
-                        "test :)", 10, new Date().getTime())
-                .build()
+                        .where("testFieldName = ? AND upgradeAddTester = ? AND testDate > ?",
+                                "test :)", 10, new Date().getTime())
+                        .build()
         ).executeBlocking().size());
     }
 
@@ -591,5 +592,22 @@ public class SQLiteOperatorTest {
 
         assertTrue(testTableCols.contains(upgradeAddColName));
         assertTrue(!testTableCols.contains(upgradeDeleteColName));
+    }
+
+    @Test
+    public void testMultiForeignKey() throws Exception {
+        SQLiteOperator<TestTable> t = SQLiteOperator.from(getContext(), TestTable.class);
+        SQLiteOperator<TestTable10> t2 = SQLiteOperator.from(getContext(), TestTable10.class);
+        TestTable tt = new TestTable(),
+                tt2 = new TestTable();
+        tt.unique = 1;
+        tt2.unique = 2;
+
+        t.save(tt, tt2).executeBlocking();
+
+        TestTable10 t10 = new TestTable10();
+        t10.fk1 = tt;
+        t10.fk2 = tt2;
+        t2.save(t10).executeBlocking();
     }
 }
