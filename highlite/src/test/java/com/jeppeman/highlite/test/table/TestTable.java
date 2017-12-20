@@ -20,6 +20,9 @@ public class TestTable {
     @SQLiteColumn(unique = true)
     public long unique;
 
+    @SQLiteColumn
+    public TestEnum testEnum;
+
     @SQLiteColumn("testFieldName")
     public String testString;
 

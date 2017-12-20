@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.almworks.sqlite4java.SQLite;
 import com.jeppeman.highlite.test.table.TestDatabase;
+import com.jeppeman.highlite.test.table.TestEnum;
 import com.jeppeman.highlite.test.table.TestNonSerializable;
 import com.jeppeman.highlite.test.table.TestSerializable;
 import com.jeppeman.highlite.test.table.TestTable;
@@ -101,8 +102,15 @@ public class SQLiteOperatorTest {
         t1.unique = 1;
         t2.unique = 2;
         t3.unique = 3;
+        t1.testEnum = TestEnum.TEST2;
+        t2.testEnum = TestEnum.TEST3;
+        t3.testEnum = TestEnum.TEST4;
 
         operator.save(t1, t2, t3).executeBlocking();
+
+        assertEquals(t1.testEnum, operator.getSingle(1).executeBlocking().testEnum);
+        assertEquals(t2.testEnum, operator.getSingle(2).executeBlocking().testEnum);
+        assertEquals(t3.testEnum, operator.getSingle(3).executeBlocking().testEnum);
 
         operator.save().withQuery(
                 SQLiteQuery.builder()
