@@ -664,7 +664,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
             return enclosed;
         }
 
-        throw new ProcessingException(enclosing, "No proper");
+        throw new ProcessingException(enclosing, String.format("Back reference %s not found, "
+                + " referenced by %s", relatedFieldName, enclosing.getSimpleName()));
     }
 
     private String getCursorMethodFromTypeName(final TypeName typeName) {
