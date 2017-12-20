@@ -27,7 +27,6 @@ dependencies {
 
     api project(':highlite-annotations')
     api deps.supportAnnotations
-    implementation deps.supportcompat
     implementation deps.rxandroid
     implementation deps.rxjava
 }
