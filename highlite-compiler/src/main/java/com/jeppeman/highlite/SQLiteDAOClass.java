@@ -805,8 +805,9 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                             + "new $T[] { $T.valueOf($L) }, true)",
                                     fieldName, String.format("SELECT * FROM %s WHERE"
                                                     + " `%s` = ? LIMIT 1",
-                                            getTableName(
-                                                    foreignKeyRefElement.getEnclosingElement()),
+                                            findTableNameOfElement(
+                                                    mTypeUtils.asElement(enclosed.asType()),
+                                                    foreignKeyRefElement),
                                             dbFieldName),
                                     STRING, STRING, cursorBlock.toString())
                             .build();
