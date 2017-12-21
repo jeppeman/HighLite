@@ -13,6 +13,7 @@ import com.jeppeman.highlite.test.table.TestNonSerializable;
 import com.jeppeman.highlite.test.table.TestSerializable;
 import com.jeppeman.highlite.test.table.TestTable;
 import com.jeppeman.highlite.test.table.TestTable10;
+import com.jeppeman.highlite.test.table.TestTable12;
 import com.jeppeman.highlite.test.table.TestTable2;
 import com.jeppeman.highlite.test.table.TestTable3;
 import com.jeppeman.highlite.test.table.TestTable4;
@@ -617,5 +618,18 @@ public class SQLiteOperatorTest {
         t10.fk1 = tt;
         t10.fk2 = tt2;
         t2.save(t10).executeBlocking();
+    }
+
+    @Test
+    public void testIdAndForeignKeyInSuperClasses() throws Exception {
+        SQLiteOperator<TestTable12> operator = SQLiteOperator.from(getContext(), TestTable12.class);
+        SQLiteOperator<TestTable> operator1 = SQLiteOperator.from(getContext(), TestTable.class);
+        TestTable table = new TestTable();
+        operator1.save(table).executeBlocking();
+        TestTable12 t12 = new TestTable12();
+        t12.tttt = table;
+        operator.save(t12).executeBlocking();
+        TestTable12 t122 = operator.getSingle(1).executeBlocking();
+        assertNotNull(t122);
     }
 }

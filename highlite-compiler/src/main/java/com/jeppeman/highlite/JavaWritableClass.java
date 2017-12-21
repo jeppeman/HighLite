@@ -112,6 +112,34 @@ abstract class JavaWritableClass {
                 : table.tableName();
     }
 
+    String findTableNameOfElement(final Element root, final Element element) {
+        return findTableNameOfElement(root, getTableName(root), element);
+    }
+
+    private String findTableNameOfElement(final Element root,
+                                          String currentTableName,
+                                          final Element element) {
+        for (final Element enclosed : root.getEnclosedElements()) {
+            if (!element.equals(enclosed)) continue;
+
+            currentTableName = element.getAnnotation(SQLiteTable.class) != null
+                    ? getTableName(element)
+                    : currentTableName;
+        }
+
+        for (final TypeMirror superType : mTypeUtils.directSupertypes(root.asType())) {
+            final DeclaredType declared = (DeclaredType) superType;
+            if (declared == null) continue;
+
+            final Element superElement = declared.asElement();
+            if (superElement.getKind().equals(ElementKind.INTERFACE)) continue;
+
+            return findTableNameOfElement(superElement, currentTableName, element);
+        }
+
+        return currentTableName;
+    }
+
     private List<Element> getFields(final Element element,
                                     final List<Element> current,
                                     final String tableName,

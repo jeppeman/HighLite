@@ -223,8 +223,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
             final PrimaryKey primaryKey = field.primaryKey();
             if (primaryKey.enabled()) {
+                final String tableNameOfPrimary = findTableNameOfElement(element, enclosed);
                 fieldCreator.append(" PRIMARY KEY");
-                if (tableName.equals(getTableName(enclosed.getEnclosingElement()))) {
+                if (tableName.equals(tableNameOfPrimary)) {
                     fieldCreator.append(
                             primaryKey.autoIncrement()
                                     ? " AUTOINCREMENT"
@@ -234,7 +235,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     fieldCreator.append(" NOT NULL");
                     String foreignKeyBuilder = String.format(
                             "FOREIGN KEY(`%s`) REFERENCES %s(`%s`)", fieldName,
-                            getTableName(enclosed.getEnclosingElement()),
+                            tableNameOfPrimary,
                             getDBFieldName(enclosed, null))
                             + " ON DELETE CASCADE"
                             + " ON UPDATE CASCADE, ";
@@ -258,7 +259,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 final StringBuilder foreignKeyBuilder = new StringBuilder();
                 foreignKeyBuilder.append(
                         String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
-                                fieldName, getTableName(foreignKeyRefElement.getEnclosingElement()),
+                                fieldName, findTableNameOfElement(
+                                        mTypeUtils.asElement(enclosed.asType()),
+                                        foreignKeyRefElement),
                                 getDBFieldName(foreignKeyRefElement, null)));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeyBuilder.append(" ON DELETE CASCADE");
@@ -463,8 +466,9 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
             final PrimaryKey primaryKey = field.primaryKey();
             if (primaryKey.enabled()) {
+                final String tableNameOfPrimaryKey = findTableNameOfElement(element, enclosed);
                 createStatement.append(" PRIMARY KEY");
-                if (tableName.equals(getTableName(enclosed.getEnclosingElement()))) {
+                if (tableName.equals(tableNameOfPrimaryKey)) {
                     createStatement.append(
                             primaryKey.autoIncrement()
                                     ? " AUTOINCREMENT"
@@ -473,7 +477,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 } else {
                     createStatement.append(" NOT NULL");
                     foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
-                            fieldName, getTableName(enclosed.getEnclosingElement()),
+                            fieldName, tableNameOfPrimaryKey,
                             getDBFieldName(enclosed, null)));
                     foreignKeys.append(" ON DELETE CASCADE");
                     foreignKeys.append(" ON UPDATE CASCADE");
@@ -494,7 +498,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 final Element foreignKeyRefElement = findForeignKeyReferencedField(enclosed,
                         foreignKey);
                 foreignKeys.append(String.format("FOREIGN KEY(`%s`) REFERENCES %s(`%s`)",
-                        fieldName, getTableName(foreignKeyRefElement.getEnclosingElement()),
+                        fieldName, findTableNameOfElement(mTypeUtils.asElement(enclosed.asType()),
+                                foreignKeyRefElement),
                         getDBFieldName(foreignKeyRefElement, null)));
                 if (foreignKey.cascadeOnDelete()) {
                     foreignKeys.append(" ON DELETE CASCADE");
