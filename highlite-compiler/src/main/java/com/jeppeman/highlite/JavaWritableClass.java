@@ -247,7 +247,7 @@ abstract class JavaWritableClass {
                                           final ForeignKey foreignKey) {
         Element fieldRefElement = null;
         Element tableElem = mTypeUtils.asElement(enclosed.asType());
-        for (final Element enc : tableElem.getEnclosedElements()) {
+        for (final Element enc : getFields(tableElem)) {
             if (!enc.getSimpleName().toString().equals(foreignKey.fieldReference())) {
                 continue;
             }
