@@ -29,8 +29,8 @@ Getting started
 ---
 ```groovy
 dependencies {
-    compile 'com.jeppeman:highlite:1.0-beta4'
-    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta4'
+    compile 'com.jeppeman:highlite:1.0-beta5'
+    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta5'
 }
 
 ```
@@ -239,7 +239,7 @@ public class Company {
     @SQLiteColumn("companyName")
     String name;
     
-    @SQLiteRelationship(table = Employee.class, backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
+    @SQLiteRelationship(backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
     List<Employee> employeeList; // When a company is fetched from the database, its related employees gets fetched as well
 }
 
@@ -372,7 +372,7 @@ public class Company extends TimestampedModel {
     @SQLiteColumn("companyName")
     String name;
     
-    @SQLiteRelationship(table = Employee.class, backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
+    @SQLiteRelationship(backReference = "company") // backReference needs to be the name of the foreign key field of the class it is referring to
     List<Employee> employeeList; // When a company is fetched from the database, its related employees gets fetched as well
 }
 ```
