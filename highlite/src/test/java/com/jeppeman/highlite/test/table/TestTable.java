@@ -41,12 +41,12 @@ public class TestTable {
     @SQLiteColumn
     public int upgradeAddTester;
 
-    @SQLiteRelationship(table = TestTable4.class, backReference = "foreignKey")
+    @SQLiteRelationship(backReference = "foreignKey")
     public List<TestTable4> table4Relation;
 
-    @SQLiteRelationship(table = TestTable10.class, backReference = "fk1")
+    @SQLiteRelationship(backReference = "fk1")
     public List<TestTable10> table10rel1;
 
-    @SQLiteRelationship(table = TestTable10.class, backReference = "fk2")
-    public List<TestTable10> table10rel2;
+    @SQLiteRelationship(backReference = "fk2")
+    public TestTable10 table10rel2;
 }

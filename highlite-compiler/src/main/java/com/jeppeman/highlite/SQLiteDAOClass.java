@@ -12,6 +12,7 @@ import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -19,7 +20,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -54,6 +55,10 @@ final class SQLiteDAOClass extends JavaWritableClass {
         mElement = element;
         mElementUtils = elementUtils;
         mTypeUtils = typeUtils;
+    }
+
+    private TypeMirror getTypeMirror(Class<?> cls) {
+        return mElementUtils.getTypeElement(cls.getName()).asType();
     }
 
     private String getPackageName() {
@@ -704,15 +709,31 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             .getAnnotation(SQLiteRelationship.class);
                     if (relationship == null) continue;
 
-                    TypeMirror mirror = null;
-                    try {
-                        relationship.table();
-                    } catch (MirroredTypeException ex) {
-                        mirror = ex.getTypeMirror();
-                    }
+                    final Element typeElement = mTypeUtils.asElement(enclosed.asType());
+                    final Element relationClassElem;
 
-                    final Element relationClassElem = mTypeUtils.asElement(mirror);
-                    final String tableName = getTableName(relationClassElem);
+                    if (mTypeUtils.isSameType(mTypeUtils.erasure(enclosed.asType()),
+                            enclosed.asType())
+                            && typeElement.getAnnotation(SQLiteTable.class) != null) {
+                        relationClassElem = typeElement;
+                    } else if (mTypeUtils.isAssignable(mTypeUtils.erasure(enclosed.asType()),
+                            getTypeMirror(List.class))) {
+
+                        List<? extends TypeMirror> typeArgs = ((DeclaredType) enclosed.asType())
+                                .getTypeArguments();
+
+                        if (typeArgs.size() == 0) {
+                            throw new ProcessingException(enclosed, String.format("Missing "
+                                            + "generic type parameter for field %s in class %s",
+                                    enclosed.getSimpleName(), mElement.getSimpleName()));
+                        }
+                        relationClassElem = mTypeUtils.asElement(typeArgs.get(0));
+                    } else {
+                        throw new ProcessingException(enclosed, String.format("%s needs to be "
+                                        + "assignable from %s or be annotated with %s",
+                                enclosed.asType(), List.class.getCanonicalName(),
+                                SQLiteTable.class.getCanonicalName()));
+                    }
 
                     final Element relatedForeignElem = findRelatedForeignKeyElement(
                             relationClassElem, relationship.backReference());
@@ -725,13 +746,28 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     final String dbFieldName = getDBFieldName(relatedForeignElem, null);
 
                     final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
-                            .addStatement("final $T dao$L = new $T(null)", tn, relCounter, tn)
-                            .addStatement("ret.$L = dao$L.getList(\ncontext, \n\"`$L` = \" + "
-                                            + "\n$T.valueOf(ret.$L), "
-                                            + "\nnull, \nnull, \nnull, \nnull, \nnull, "
-                                            + "\ntrue)",
-                                    enclosed.getSimpleName(), relCounter++, dbFieldName, STRING,
-                                    f.foreignKey().fieldReference());
+                            .addStatement("final $T dao$L = new $T(null)", tn, relCounter, tn);
+
+                    if (mTypeUtils.isSameType(mTypeUtils.erasure(enclosed.asType()),
+                            enclosed.asType())) {
+                        relationshipBuilder
+                                .addStatement("ret.$L = dao$L.getSingle(\ncontext, \n\"`$L` = \" + "
+                                                + "\n$T.valueOf(ret.$L), "
+                                                + "\nnull, \nnull, \nnull, \nnull, "
+                                                + "\ntrue)",
+                                        enclosed.getSimpleName(), relCounter++, dbFieldName, STRING,
+                                        f.foreignKey().fieldReference());
+                    } else if (mTypeUtils.isAssignable(mTypeUtils.erasure(enclosed.asType()),
+                            getTypeMirror(Collection.class))) {
+                        relationshipBuilder
+                                .addStatement("ret.$L = dao$L.getList(\ncontext, \n\"`$L` = \" + "
+                                                + "\n$T.valueOf(ret.$L), "
+                                                + "\nnull, \nnull, \nnull, \nnull, \nnull, "
+                                                + "\ntrue)",
+                                        enclosed.getSimpleName(), relCounter++, dbFieldName, STRING,
+                                        f.foreignKey().fieldReference());
+                    }
+
 
                     relationshipsBuilder.add(relationshipBuilder.build());
 
