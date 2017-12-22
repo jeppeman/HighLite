@@ -792,11 +792,12 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
                     final CodeBlock cursorBlock = CodeBlock.of("cursor.$L(i)",
                             getCursorMethodFromTypeName(foreignKeyRefElementTypeName));
-                    final Element foreignEnclosing = foreignKeyRefElement.getEnclosingElement();
 
                     final TypeName tn = ClassName.get(
                             mElementUtils.getPackageOf(foreignKeyRefElement).toString(),
-                            mTypeUtils.asElement(foreignEnclosing.asType())
+                            findTableElementFromChild(
+                                    mTypeUtils.asElement(enclosed.asType()),
+                                    foreignKeyRefElement)
                                     .getSimpleName().toString() + "_DAO");
 
                     assignmentStatement = CodeBlock.builder()

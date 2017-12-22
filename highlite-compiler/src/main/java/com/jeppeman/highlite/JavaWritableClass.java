@@ -112,13 +112,41 @@ abstract class JavaWritableClass {
                 : table.tableName();
     }
 
+    Element findTableElementFromChild(final Element root, final Element child) {
+        return findTableElementFromChild(root, child, root);
+    }
+
+    private Element findTableElementFromChild(final Element root,
+                                              final Element child,
+                                              Element currTableElem) {
+        for (final Element enclosed : root.getEnclosedElements()) {
+            if (!child.equals(enclosed)) continue;
+
+            currTableElem = root.getAnnotation(SQLiteTable.class) != null
+                    ? root
+                    : currTableElem;
+        }
+
+        for (final TypeMirror superType : mTypeUtils.directSupertypes(root.asType())) {
+            final DeclaredType declared = (DeclaredType) superType;
+            if (declared == null) continue;
+
+            final Element superElement = declared.asElement();
+            if (superElement.getKind().equals(ElementKind.INTERFACE)) continue;
+
+            return findTableElementFromChild(superElement, child, currTableElem);
+        }
+
+        return currTableElem;
+    }
+
     String findTableNameOfElement(final Element root, final Element element) {
-        return findTableNameOfElement(root, getTableName(root), element);
+        return findTableNameOfElement(root, element, getTableName(root));
     }
 
     private String findTableNameOfElement(final Element root,
-                                          String currentTableName,
-                                          final Element element) {
+                                          final Element element,
+                                          String currentTableName) {
         for (final Element enclosed : root.getEnclosedElements()) {
             if (!element.equals(enclosed)) continue;
 
@@ -134,7 +162,7 @@ abstract class JavaWritableClass {
             final Element superElement = declared.asElement();
             if (superElement.getKind().equals(ElementKind.INTERFACE)) continue;
 
-            return findTableNameOfElement(superElement, currentTableName, element);
+            return findTableNameOfElement(superElement, element, currentTableName);
         }
 
         return currentTableName;
