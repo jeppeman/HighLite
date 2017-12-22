@@ -135,7 +135,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 foreignKeyRefElement.getSimpleName());
                         putStatement.endControlFlow();
                     } else {
-                        putStatement.beginControlFlow("if (mTarget.$L != null");
+                        putStatement.beginControlFlow("if (mTarget.$L != null",
+                                enclosed.getSimpleName());
                         putStatement.addStatement("$L.put($S, mTarget.$L.$L)", contentValsVar,
                                 fieldName, enclosed.getSimpleName(),
                                 foreignKeyRefElement.getSimpleName());
