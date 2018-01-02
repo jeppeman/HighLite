@@ -7,13 +7,13 @@ import android.support.annotation.WorkerThread;
 
 import java.util.concurrent.Callable;
 
-import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * This class deletes one or more rows from a table. The deletion can be blocking or non-blocking
- * returning {@link rx.Single}s
+ * returning {@link Single}s
  *
  * @param <T> the type of object to delete
  * @author jesper
@@ -68,8 +68,8 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>> {
     /**
      * Deletes one or more records from a table, non-blocking operation.
      *
-     * @return a {@link rx.Single<Integer>} where the number of records deleted is passed
-     * as the parameter to {@link rx.SingleSubscriber#onSuccess(Object)}
+     * @return a {@link Single<Integer>} where the number of records deleted is passed
+     * as the parameter to {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
      */
     public Single<Integer> execute() {
         return Single.fromCallable(new Callable<Integer>() {

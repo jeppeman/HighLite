@@ -7,13 +7,13 @@ import android.support.annotation.WorkerThread;
 
 import java.util.concurrent.Callable;
 
-import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * This class fetches single rows from a table and maps them to objects of type {@link T}. The
- * fetching can be blocking or non-blocking returning {@link rx.Single}s
+ * fetching can be blocking or non-blocking returning {@link Single<T>}s
  *
  * @param <T> the type of object to map rows to
  * @author jesper
@@ -80,8 +80,9 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
      * Fetches a single row from a database and maps it to and object of type {@link T},
      * non-blocking operation.
      *
-     * @return a {@link rx.Single<T>} where an object of type {@link T} mapped from a database
-     * record is passed as the parameter to {@link rx.SingleSubscriber#onSuccess(Object)}
+     * @return a {@link Single<T>} where an object of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
      */
     public Single<T> execute() {
         return Single.fromCallable(new Callable<T>() {

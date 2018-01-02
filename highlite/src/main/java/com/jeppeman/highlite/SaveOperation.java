@@ -7,13 +7,14 @@ import android.support.annotation.WorkerThread;
 
 import java.util.concurrent.Callable;
 
-import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
 
 /**
  * This class saves (inserts or updates) one or more rows in a table based on a mapping from the
- * type {@link T}. The saving can be blocking or non-blocking returning {@link rx.Single}s
+ * type {@link T}. The saving can be blocking or non-blocking returning {@link Single}s
  *
  * @param <T> the type of object to save
  * @author jesper
@@ -68,8 +69,8 @@ public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
     /**
      * Saves one or more records in a table, non-blocking operation.
      *
-     * @return a {@link rx.Single<Integer>} where the number of records saved is passed
-     * as the parameter to {@link rx.SingleSubscriber#onSuccess(Object)}
+     * @return a {@link Single<Integer>} where the number of records saved is passed
+     * as the parameter to {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
      */
     public Single<Integer> execute() {
         return Single.fromCallable(new Callable<Integer>() {

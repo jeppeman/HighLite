@@ -2,9 +2,9 @@ package com.example.highlite;
 
 import com.jeppeman.highlite.PrimaryKey;
 import com.jeppeman.highlite.SQLiteColumn;
+import com.jeppeman.highlite.SQLiteRelationship;
 import com.jeppeman.highlite.SQLiteTable;
 
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -19,9 +19,6 @@ public class Company extends TimestampedModel {
     @SQLiteColumn("companyName")
     String name;
 
-    @SQLiteColumn
-    Date created; // Dates are stored as INTEGER's with the amount of seconds since UNIX epoch
-
-    @SQLiteColumn
-    List<String> employees; // This will get saved as a BLOB in the database
+    @SQLiteRelationship(backReference = "company")
+    List<Employee> employees;
 }

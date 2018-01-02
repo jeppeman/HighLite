@@ -30,8 +30,8 @@ dependencies {
     implementation deps.appcompat
     implementation deps.rxjava
     implementation deps.rxandroid
-    implementation 'com.jeppeman:highlite:1.0-beta1'
-    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta1'
-//    implementation project(':highlite')
-//    annotationProcessor project(':highlite-compiler')
+//    implementation 'com.jeppeman:highlite:1.0-beta1'
+//    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta1'
+    implementation project(':highlite')
+    annotationProcessor project(':highlite-compiler')
 }
