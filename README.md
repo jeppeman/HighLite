@@ -29,8 +29,8 @@ Getting started
 ---
 ```groovy
 dependencies {
-    compile 'com.jeppeman:highlite:1.0-beta11'
-    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta11'
+    compile 'com.jeppeman:highlite:1.0-beta12'
+    annotationProcessor 'com.jeppeman:highlite-compiler:1.0-beta12'
 }
 
 ```
@@ -140,22 +140,17 @@ operator.save(companyObject).executeBlocking(); // the save method inserts if th
 // Non-blocking
 operator.save(companyObject)
     .execute()
-    .subscribe(new Completable.CompletableSubscriber() {
+    .subscribe(new DisposableSingleObserver<Integer>() {
         @Override
-        public void onCompleted() {
-                       
+        public void onSuccess(Integer nSaved) {
+                                      
         }
-
+               
         @Override
         public void onError(Throwable e) {
-
+               
         }
-
-        @Override
-        public void onSubscribe(Subscription d) {
-                        
-        }
-});
+    });
 ```
 
 ### Fetch by id and update
