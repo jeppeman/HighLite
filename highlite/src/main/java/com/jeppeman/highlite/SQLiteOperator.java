@@ -14,8 +14,8 @@ import java.util.Map;
 
 /**
  * Performs database operations by delegating calls to a generated DAO. Operations can
- * be blocking or non-blocking returning {@link rx.Observable}s, {@link rx.Single}s or
- * {@link rx.Completable}s
+ * be blocking or non-blocking returning {@link io.reactivex.Observable}s,
+ * {@link io.reactivex.Maybe}s or {@link io.reactivex.Completable}s
  *
  * @author jesper
  */

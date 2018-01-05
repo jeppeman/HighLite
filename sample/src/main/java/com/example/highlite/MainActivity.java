@@ -10,9 +10,12 @@ import java.util.List;
 
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
+import io.reactivex.observers.DisposableMaybeObserver;
 import io.reactivex.observers.DisposableSingleObserver;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +29,25 @@ public class MainActivity extends AppCompatActivity {
 
         final Company m = new Company();
         m.name = "My awesome company";
+
+        employeeOperator.getSingle(1).execute()
+                .subscribe(new DisposableMaybeObserver<Employee>() {
+
+                    @Override
+                    public void onSuccess(Employee employee) {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        Log.d(TAG, "Maybe?");
+                    }
+                });
 
         companyOperator
                 .save(m)
@@ -52,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(List<Employee> employees) {
                         for (Employee employee : employees) {
-                            Log.d("MainActivity", "Employee: " + employee.name);
+                            Log.d(TAG, "Employee: " + employee.name);
                         }
                     }
 

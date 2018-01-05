@@ -7,6 +7,7 @@ import android.support.annotation.WorkerThread;
 
 import java.util.concurrent.Callable;
 
+import io.reactivex.Maybe;
 import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
@@ -80,12 +81,12 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
      * Fetches a single row from a database and maps it to and object of type {@link T},
      * non-blocking operation.
      *
-     * @return a {@link Single<T>} where an object of type {@link T} mapped from a database
+     * @return a {@link Maybe<T>} where an object of type {@link T} mapped from a database
      * record is passed as the parameter to
-     * {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
+     * {@link io.reactivex.observers.DisposableMaybeObserver#onSuccess(Object)}
      */
-    public Single<T> execute() {
-        return Single.fromCallable(new Callable<T>() {
+    public Maybe<T> execute() {
+        return Maybe.fromCallable(new Callable<T>() {
             @Override
             public T call() throws Exception {
                 return executeBlocking();
