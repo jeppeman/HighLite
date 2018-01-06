@@ -5,13 +5,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import com.jeppeman.highlite.SQLiteOperator;
+import com.jeppeman.highlite.SQLiteQuery;
 
 import java.util.List;
 
+import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
-import io.reactivex.observers.DisposableMaybeObserver;
-import io.reactivex.observers.DisposableSingleObserver;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,28 +31,28 @@ public class MainActivity extends AppCompatActivity {
         final Company m = new Company();
         m.name = "My awesome company";
 
-        employeeOperator.getSingle(1).execute()
-                .subscribe(new DisposableMaybeObserver<Employee>() {
-
+        employeeOperator
+                .delete()
+                .withQuery(SQLiteQuery.builder().where("`id` > ?", 0).build())
+                .asSingle()
+                .flatMap(new Function<Integer, Single<Integer>>() {
                     @Override
-                    public void onSuccess(Employee employee) {
-
+                    public Single<Integer> apply(Integer integer) throws Exception {
+                        return companyOperator
+                                .delete()
+                                .withQuery(
+                                        SQLiteQuery.builder().where("`id` > ?", 0).build()
+                                ).asSingle();
                     }
-
+                })
+                .flatMap(new Function<Integer, Single<Integer>>() {
                     @Override
-                    public void onError(Throwable e) {
-
+                    public Single<Integer> apply(Integer integer) throws Exception {
+                        return companyOperator
+                                .save(m)
+                                .asSingle();
                     }
-
-                    @Override
-                    public void onComplete() {
-                        Log.d(TAG, "Maybe?");
-                    }
-                });
-
-        companyOperator
-                .save(m)
-                .execute()
+                })
                 .flatMap(new Function<Integer, Single<Integer>>() {
                     @Override
                     public Single<Integer> apply(Integer integer) throws Exception {
@@ -61,26 +62,22 @@ public class MainActivity extends AppCompatActivity {
                         john.company = m;
                         bob.name = "Bob";
                         bob.company = m;
-                        return employeeOperator.save(john, bob).execute();
+                        Log.d(TAG, "Saving emps");
+                        return employeeOperator.save(john, bob).asSingle();
                     }
                 })
-                .flatMap(new Function<Integer, Single<List<Employee>>>() {
+                .flatMapObservable(new Function<Integer, Observable<Employee>>() {
                     @Override
-                    public Single<List<Employee>> apply(Integer integer) throws Exception {
-                        return employeeOperator.getList().execute();
+                    public Observable<Employee> apply(Integer integer) throws Exception {
+                        List<Employee> l = employeeOperator.getList().executeBlocking();
+                        Log.d(TAG, "Fetching emps");
+                        return employeeOperator.getList().asObservable();
                     }
                 })
-                .subscribe(new DisposableSingleObserver<List<Employee>>() {
+                .subscribe(new Consumer<Employee>() {
                     @Override
-                    public void onSuccess(List<Employee> employees) {
-                        for (Employee employee : employees) {
-                            Log.d(TAG, "Employee: " + employee.name);
-                        }
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-
+                    public void accept(Employee employee) throws Exception {
+                        Log.d(TAG, "Employee received: " + employee.name);
                     }
                 });
     }

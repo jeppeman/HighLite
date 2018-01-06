@@ -7,8 +7,16 @@ import android.support.annotation.WorkerThread;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.FlowableEmitter;
+import io.reactivex.FlowableOnSubscribe;
+import io.reactivex.Maybe;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Single;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
 /**
@@ -18,7 +26,8 @@ import io.reactivex.schedulers.Schedulers;
  * @param <T> the type of object to map rows to
  * @author jesper
  */
-public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<T>> {
+public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<T>>
+        implements Operation<T, List<T>> {
 
     private final Context mContext;
     private final SQLiteDAO<T> mGenerated;
@@ -73,17 +82,97 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
      * Fetches multiple rows from a database and maps them to objects of type {@link T},
      * non-blocking operation.
      *
-     * @return an {@link Single<T>} where an object of type {@link T} mapped from a database
+     * @param strategy the backpressure strategy used for the {@link Flowable}.
+     *                 (see {@link BackpressureStrategy})
+     * @return an {@link Flowable<T>} where an object of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableObserver#onNext(Object)}
+     */
+    @Override
+    public Flowable<T> asFlowable(BackpressureStrategy strategy) {
+        return Flowable.create(new FlowableOnSubscribe<T>() {
+            @Override
+            public void subscribe(FlowableEmitter<T> e) throws Exception {
+                final List<T> items = executeBlocking();
+                for (final T item : items) {
+                    e.onNext(item);
+                }
+                e.onComplete();
+            }
+        }, strategy).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches multiple rows from a database and maps them to objects of type {@link T},
+     * non-blocking operation.
+     *
+     * @return an {@link Observable<T>} where an object of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableObserver#onNext(Object)}
+     */
+    @Override
+    public Observable<T> asObservable() {
+        return Observable.create(new ObservableOnSubscribe<T>() {
+            @Override
+            public void subscribe(ObservableEmitter<T> e) throws Exception {
+                final List<T> items = executeBlocking();
+                for (final T item : items) {
+                    e.onNext(item);
+                }
+                e.onComplete();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches multiple rows from a database and maps them to objects of type {@link T},
+     * non-blocking operation.
+     *
+     * @return an {@link Single<T>} where a list of objects of type {@link T} mapped from a database
      * record is passed as the parameter to
      * {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
      */
-    public Single<List<T>> execute() {
+    @Override
+    public Single<List<T>> asSingle() {
         return Single.fromCallable(new Callable<List<T>>() {
             @Override
             public List<T> call() throws Exception {
                 return executeBlocking();
             }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches multiple rows from a database and maps them to objects of type {@link T},
+     * non-blocking operation.
+     *
+     * @return an {@link Maybe<T>} where a list of objects of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableMaybeObserver#onSuccess(Object)}
+     */
+    @Override
+    public Maybe<List<T>> asMaybe() {
+        return Maybe.fromCallable(new Callable<List<T>>() {
+            @Override
+            public List<T> call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches multiple rows from a database and maps them to objects of type {@link T},
+     * non-blocking operation.
+     *
+     * @return an {@link Completable<T>}
+     */
+    @Override
+    public Completable asCompletable() {
+        return Completable.fromCallable(new Callable<List<T>>() {
+            @Override
+            public List<T> call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
     }
 }

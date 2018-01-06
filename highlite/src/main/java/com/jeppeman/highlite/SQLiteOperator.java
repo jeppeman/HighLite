@@ -8,14 +8,15 @@ import android.support.annotation.Nullable;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Performs database operations by delegating calls to a generated DAO. Operations can
- * be blocking or non-blocking returning {@link io.reactivex.Observable}s,
- * {@link io.reactivex.Maybe}s or {@link io.reactivex.Completable}s
+ * be blocking or non-blocking returning {@link io.reactivex.Flowable}s,
+ * {@link io.reactivex.Observable}s, {@link io.reactivex.Single}s, {@link io.reactivex.Maybe}s
+ * or {@link io.reactivex.Completable}s
  *
  * @author jesper
  */
@@ -183,7 +184,7 @@ public final class SQLiteOperator<T> {
         return new SaveOperation<>(mContext, generated, generatedObjects);
     }
 
-    public SaveOperation<T> save(final @NonNull List<T> objectsToInsert) {
+    public SaveOperation<T> save(final @NonNull Collection<T> objectsToInsert) {
         return save((T[]) objectsToInsert.toArray());
     }
 
@@ -208,7 +209,7 @@ public final class SQLiteOperator<T> {
         return new DeleteOperation<>(mContext, generated, generatedObjects);
     }
 
-    public DeleteOperation<T> delete(final @NonNull List<T> objectsToDelete) {
+    public DeleteOperation<T> delete(final @NonNull Collection<T> objectsToDelete) {
         return delete((T[]) objectsToDelete.toArray());
     }
 }

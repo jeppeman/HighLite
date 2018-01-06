@@ -7,8 +7,12 @@ import android.support.annotation.WorkerThread;
 
 import java.util.concurrent.Callable;
 
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Maybe;
+import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
 
@@ -19,7 +23,8 @@ import io.reactivex.schedulers.Schedulers;
  * @param <T> the type of object to save
  * @author jesper
  */
-public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
+public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>>
+        implements Operation<Integer, Integer> {
 
     private final Context mContext;
     @Nullable
@@ -69,16 +74,81 @@ public class SaveOperation<T> extends QueryableOperation<SaveOperation<T>> {
     /**
      * Saves one or more records in a table, non-blocking operation.
      *
+     * @param strategy the backpressure strategy used for the {@link Flowable}.
+     *                 (see {@link BackpressureStrategy})
+     * @return a {@link Flowable<Integer>} where the number of records saved is passed
+     * as the parameter to {@link io.reactivex.observers.DisposableObserver#onNext(Object)}
+     */
+    @Override
+    public Flowable<Integer> asFlowable(BackpressureStrategy strategy) {
+        return Flowable.fromCallable(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Saves one or more records in a table, non-blocking operation.
+     *
+     * @return a {@link Observable<Integer>} where the number of records saved is passed
+     * as the parameter to {@link io.reactivex.observers.DisposableObserver#onNext(Object)}
+     */
+    @Override
+    public Observable<Integer> asObservable() {
+        return Observable.fromCallable(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Saves one or more records in a table, non-blocking operation.
+     *
      * @return a {@link Single<Integer>} where the number of records saved is passed
      * as the parameter to {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
      */
-    public Single<Integer> execute() {
+    @Override
+    public Single<Integer> asSingle() {
         return Single.fromCallable(new Callable<Integer>() {
             @Override
             public Integer call() throws Exception {
                 return executeBlocking();
             }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Saves one or more records in a table, non-blocking operation.
+     *
+     * @return a {@link Maybe<Integer>} where the number of records saved is passed
+     * as the parameter to {@link io.reactivex.observers.DisposableMaybeObserver#onSuccess(Object)}
+     */
+    @Override
+    public Maybe<Integer> asMaybe() {
+        return Maybe.fromCallable(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Saves one or more records in a table, non-blocking operation.
+     *
+     * @return a {@link Completable}
+     */
+    @Override
+    public Completable asCompletable() {
+        return Completable.fromCallable(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
     }
 }

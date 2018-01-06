@@ -7,9 +7,12 @@ import android.support.annotation.WorkerThread;
 
 import java.util.concurrent.Callable;
 
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
 import io.reactivex.Maybe;
+import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
 /**
@@ -19,7 +22,8 @@ import io.reactivex.schedulers.Schedulers;
  * @param <T> the type of object to map rows to
  * @author jesper
  */
-public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperation<T>> {
+public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperation<T>>
+        implements Operation<T, T> {
 
     private final Context mContext;
     private final SQLiteDAO<T> mGenerated;
@@ -81,17 +85,89 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
      * Fetches a single row from a database and maps it to and object of type {@link T},
      * non-blocking operation.
      *
-     * @return a {@link Maybe<T>} where an object of type {@link T} mapped from a database
+     * @param strategy the backpressure strategy used for the {@link Flowable}.
+     *                 (see {@link BackpressureStrategy})
+     * @return a {@link Flowable<T>} where an object of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableObserver#onNext(Object)}
+     */
+    @Override
+    public Flowable<T> asFlowable(BackpressureStrategy strategy) {
+        return Flowable.fromCallable(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches a single row from a database and maps it to and object of type {@link T},
+     * non-blocking operation.
+     *
+     * @return a {@link Observable<T>} where an object of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableObserver#onNext(Object)}}
+     */
+    @Override
+    public Observable<T> asObservable() {
+        return Observable.fromCallable(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches a single row from a database and maps it to and object of type {@link T},
+     * non-blocking operation.
+     *
+     * @return a {@link Single<T>} where an object of type {@link T} mapped from a database
+     * record is passed as the parameter to
+     * {@link io.reactivex.observers.DisposableSingleObserver#onSuccess(Object)}
+     */
+    @Override
+    public Single<T> asSingle() {
+        return Single.fromCallable(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches a single row from a database and maps it to and object of type {@link T},
+     * non-blocking operation.
+     *
+     * @return a {@link Single<T>} where an object of type {@link T} mapped from a database
      * record is passed as the parameter to
      * {@link io.reactivex.observers.DisposableMaybeObserver#onSuccess(Object)}
      */
-    public Maybe<T> execute() {
+    @Override
+    public Maybe<T> asMaybe() {
         return Maybe.fromCallable(new Callable<T>() {
             @Override
             public T call() throws Exception {
                 return executeBlocking();
             }
-        }).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io());
+        }).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Fetches a single row from a database and maps it to and object of type {@link T},
+     * non-blocking operation.
+     *
+     * @return a {@link Completable}
+     */
+    @Override
+    public Completable asCompletable() {
+        return Completable.fromCallable(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return executeBlocking();
+            }
+        }).subscribeOn(Schedulers.io());
     }
 }
