@@ -3,3 +3,5 @@ Handle inheritance
 Handle one-to-one and one-to-many rels
 Handle save by query
 Remove foreign keys on column upgrades
+boolean in SQLiteQuery
+Fix getWritable/getReadableDatabase
