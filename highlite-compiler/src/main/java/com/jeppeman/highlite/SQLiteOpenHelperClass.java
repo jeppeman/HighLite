@@ -330,8 +330,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                     .beginControlFlow("if ($L.contains(entry.getKey()))", dbColsVarName)
                     .add("// Replace the column definition of the create statement with the new "
                             + "column definition\n")
-                    .addStatement("$L = $L.replaceAll(\n\"`?\" + entry.getKey() + \"`?[^,]+\", "
-                                    + "\nentry.getValue()[0])", createSqlStatementVarName,
+                    .addStatement("$L = $L.replaceAll(\n\"`?\" + entry.getKey() + \"`?\\\\s[^,]+\","
+                                    + " \nentry.getValue()[0])", createSqlStatementVarName,
                             createSqlStatementVarName)
                     .beginControlFlow("if (entry.getValue()[1].length() > 0)")
                     .add("// Replace the foreign key definition of the create statement with the "

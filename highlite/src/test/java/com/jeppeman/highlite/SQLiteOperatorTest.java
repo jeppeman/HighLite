@@ -553,6 +553,25 @@ public class SQLiteOperatorTest {
     }
 
     @Test
+    public void testOnUpgradeWithSimilarFieldName() throws Exception {
+        getHelperInstance()
+                .getWritableDatabase()
+                .execSQL("DROP TABLE test_table2;");
+
+        getHelperInstance()
+                .getWritableDatabase()
+                .execSQL("\n"
+                        + "    CREATE TABLE IF NOT EXISTS test_table2 (\n"
+                        + "      `id` INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+                        + "      `nonSerializable` BLOB,\n"
+                        + "      `testString` INTEGER,\n"
+                        + "      `testStringLonger` TEXT\n"
+                        + "    );");
+
+        getHelperInstance().onUpgrade(getHelperInstance().getWritableDatabase(), 1, 2);
+    }
+
+    @Test
     public void testOnUpgradeWithAddAndDeleteColumn() throws Exception {
         getHelperInstance()
                 .getWritableDatabase()
@@ -563,6 +582,7 @@ public class SQLiteOperatorTest {
                 .execSQL("CREATE TABLE test_table (\n" +
                         "      `id` INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
                         "      `testFieldName` TEXT,\n" +
+                        "      `testFieldNameSomething` TEXT,\n" +
                         "      `testList` BLOB,\n" +
                         "      `testBoolean` INTEGER,\n" +
                         "      `testSerializable` BLOB,\n" +

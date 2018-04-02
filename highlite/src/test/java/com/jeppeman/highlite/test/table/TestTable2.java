@@ -14,4 +14,10 @@ public class TestTable2 {
 
     @SQLiteColumn
     public TestNonSerializable nonSerializable;
+
+    @SQLiteColumn
+    public String testString;
+
+    @SQLiteColumn
+    public String testStringLonger;
 }
