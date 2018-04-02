@@ -19,6 +19,8 @@ import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
@@ -33,6 +35,7 @@ import javax.tools.Diagnostic;
  * @author jesper
  */
 @AutoService(Processor.class)
+@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class HighLiteProcessor extends AbstractProcessor {
 
     private Messager mMessager;
