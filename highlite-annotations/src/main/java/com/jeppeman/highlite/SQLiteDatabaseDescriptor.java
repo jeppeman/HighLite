@@ -10,7 +10,7 @@ import java.lang.annotation.RetentionPolicy;
  *
  * @author jesper
  */
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface SQLiteDatabaseDescriptor {
     /**
      * The name of the database

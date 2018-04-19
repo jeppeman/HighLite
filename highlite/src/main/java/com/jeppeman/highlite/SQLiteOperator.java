@@ -35,7 +35,6 @@ public final class SQLiteOperator<T> {
     }
 
     /**
-     *
      * @param context
      * @param cls
      * @param <T>
@@ -47,7 +46,6 @@ public final class SQLiteOperator<T> {
     }
 
     /**
-     *
      * @param context
      * @param cls
      * @return
@@ -58,7 +56,6 @@ public final class SQLiteOperator<T> {
     }
 
     /**
-     *
      * @param context
      * @param cls
      * @return
@@ -68,6 +65,12 @@ public final class SQLiteOperator<T> {
         return getGeneratedHelper(context, cls).getWritableDatabase();
     }
 
+    public static void deleteDatabase(final @NonNull Context context,
+                                      final @NonNull Class<?> cls) {
+        HighLiteOpenHelper helper = (HighLiteOpenHelper) getGeneratedHelper(context, cls);
+        helper.deleteDatabase(context);
+    }
+
     private static SQLiteOpenHelper getGeneratedHelper(final @NonNull Context context,
                                                        final @NonNull Class<?> cls) {
         SQLiteOpenHelper helper;
@@ -75,8 +78,15 @@ public final class SQLiteOperator<T> {
             helper = HELPER_CACHE.get(cls);
             if (helper != null) return helper;
 
+            final SQLiteDatabaseDescriptor descriptor =
+                    cls.getAnnotation(SQLiteDatabaseDescriptor.class);
+            final String dbName = descriptor.dbName();
+            final String helperClassName = String.valueOf(dbName.charAt(0)).toUpperCase()
+                    + dbName.substring(1);
+
             final Class<? extends SQLiteOpenHelper> clazz = (Class<? extends SQLiteOpenHelper>)
-                    Class.forName(cls.getCanonicalName() + "_OpenHelper");
+                    Class.forName(
+                            cls.getPackage().getName() + "." + helperClassName + "_OpenHelper");
 
             helper = (SQLiteOpenHelper) clazz.getMethod("getInstance", Context.class)
                     .invoke(null, context);

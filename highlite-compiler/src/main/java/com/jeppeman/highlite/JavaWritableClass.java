@@ -61,6 +61,8 @@ abstract class JavaWritableClass {
     static final ClassName SQLITE_DAO = ClassName.get("com.jeppeman.highlite", "SQLiteDAO");
     static final ClassName SQLITE_OPERATOR = ClassName.get("com.jeppeman.highlite",
             "SQLiteOperator");
+    static final ClassName HIGHLITE_OPEN_HELPER = ClassName.get("com.jeppeman.highlite",
+            "HighLiteOpenHelper");
     static final ClassName SQLITE_QUERY = ClassName.get("com.jeppeman.highlite", "SQLiteQuery");
     static final ClassName SQLITE_DATABASE = ClassName.get("android.database.sqlite",
             "SQLiteDatabase");

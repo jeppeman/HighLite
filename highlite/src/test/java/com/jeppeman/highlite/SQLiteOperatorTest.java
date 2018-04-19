@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import com.almworks.sqlite4java.SQLite;
 import com.jeppeman.highlite.test.table.TestDatabase;
 import com.jeppeman.highlite.test.table.TestEnum;
 import com.jeppeman.highlite.test.table.TestNonSerializable;
@@ -56,8 +55,17 @@ public class SQLiteOperatorTest {
 
     @After
     public void finishComponentTesting() throws ClassNotFoundException {
-        resetSingleton(Class.forName(TestDatabase.class.getCanonicalName() + "_OpenHelper"),
-                "sInstance");
+        resetSingleton(getHelperClass(), "sInstance");
+    }
+
+    private Class<?> getHelperClass() throws ClassNotFoundException {
+        final SQLiteDatabaseDescriptor descriptor =
+                TestDatabase.class.getAnnotation(SQLiteDatabaseDescriptor.class);
+        final String dbName = descriptor.dbName();
+        final String helperClassName = String.valueOf(dbName.charAt(0)).toUpperCase()
+                + dbName.substring(1);
+        return Class.forName(TestDatabase.class.getPackage().getName()
+                + "." + helperClassName + "_OpenHelper");
     }
 
     private void resetSingleton(Class clazz, String fieldName) {
@@ -73,8 +81,9 @@ public class SQLiteOperatorTest {
 
     private SQLiteOpenHelper getHelperInstance() throws ClassNotFoundException,
             NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        return (SQLiteOpenHelper) Class.forName(TestDatabase.class.getCanonicalName()
-                + "_OpenHelper").getMethod("getInstance", Context.class).invoke(null, getContext());
+        return (SQLiteOpenHelper) getHelperClass()
+                .getMethod("getInstance", Context.class)
+                .invoke(null, getContext());
     }
 
     @Test(expected = RuntimeException.class)
@@ -651,5 +660,14 @@ public class SQLiteOperatorTest {
         operator.save(t12).executeBlocking();
         TestTable12 t122 = operator.getSingle(1).executeBlocking();
         assertNotNull(t122);
+    }
+
+    @Test
+    public void testDeleteDatabase() throws Exception {
+        SQLiteOperator<TestTable> operator = SQLiteOperator.from(getContext(), TestTable.class);
+        operator.save(new TestTable()).executeBlocking();
+        assertNotNull(operator.getSingle(1));
+        SQLiteOperator.deleteDatabase(getContext(), TestDatabase.class);
+        assertNull(operator.getSingle(1).executeBlocking());
     }
 }

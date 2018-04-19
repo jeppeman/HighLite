@@ -785,6 +785,16 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
+    private MethodSpec buildDeleteDatabaseMethod() {
+        return MethodSpec.methodBuilder("deleteDatabase")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(AnnotationSpec.builder(Override.class).build())
+                .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addStatement("context.deleteDatabase($L)", "DATABASE_NAME")
+                .addStatement("sInstance = null")
+                .build();
+    }
+
     @Override
     public JavaFile writeJava() {
         final String className = String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
@@ -793,6 +803,7 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 className + "_OpenHelper")
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .superclass(SQLITE_OPEN_HELPER)
+                .addSuperinterface(HIGHLITE_OPEN_HELPER)
                 .addFields(Arrays.asList(
                         buildColNameIndexField(),
                         buildDbNameField(),
@@ -804,7 +815,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         buildGetInstanceMethod(),
                         buildOnOpenMethod(),
                         buildOnCreateMethod(),
-                        buildOnUpgradeMethod()
+                        buildOnUpgradeMethod(),
+                        buildDeleteDatabaseMethod()
                 ))
                 .addMethods(buildOnUpgradeSubMethods())
                 .build();
