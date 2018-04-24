@@ -427,6 +427,9 @@ public class SQLiteOperatorTest {
         t1 = operator.getSingle(1).executeBlocking();
         assertNotNull(t1);
         assertEquals(2, t1.table4Relation.size());
+        t1 = operator.getSingle(1).fetchForeignKeys(false).fetchRelationships(false).executeBlocking();
+        assertNotNull(t1);
+        assertNull(t1.table4Relation);
     }
 
     @Test(expected = SQLiteConstraintException.class)

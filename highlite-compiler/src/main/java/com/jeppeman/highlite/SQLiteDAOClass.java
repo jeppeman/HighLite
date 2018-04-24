@@ -485,8 +485,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .returns(getClassNameOfElement())
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(TypeName.OBJECT, "id", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchForeignKeys", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchRelationships", Modifier.FINAL)
                 .addStatement("return getSingle(\n$L, \n$S, "
-                                + "\nnew $T[] { $T.valueOf(id) }, \nnull, \nnull, \nnull, \nfalse)",
+                                + "\nnew $T[] { $T.valueOf(id) }, \nnull, \nnull, \nnull, "
+                                + "\nfetchForeignKeys, \nfetchRelationships, \nfalse)",
                         "context", pkFieldName + " = ?", STRING, STRING)
                 .build();
     }
@@ -500,6 +503,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(STRING, "rawQueryClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "rawQueryArgs", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchForeignKeys", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchRelationships", Modifier.FINAL)
                 .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final $T $L = getReadableDatabase($L)"
                                 + ".rawQuery(rawQueryClause, rawQueryArgs)",
@@ -508,7 +513,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("$T ret = instantiateObject(cursor, context, fromCache)",
+                .addStatement("$T ret = instantiateObject(cursor, context, "
+                                + "fetchForeignKeys, fetchRelationships, fromCache)",
                         getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -527,6 +533,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "groupBy", Modifier.FINAL)
                 .addParameter(STRING, "having", Modifier.FINAL)
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchForeignKeys", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchRelationships", Modifier.FINAL)
                 .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final String sql = $S \n"
                                 + "+ (whereClause != null ? $S + whereClause : $S)\n"
@@ -543,7 +551,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("$T ret = instantiateObject(cursor, context, fromCache)",
+                .addStatement("$T ret = instantiateObject(cursor, context, "
+                                + "fetchForeignKeys, fetchRelationships, fromCache)",
                         getClassNameOfElement())
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -559,6 +568,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
                 .addParameter(STRING, "rawQueryClause", Modifier.FINAL)
                 .addParameter(ArrayTypeName.of(STRING), "rawQueryArgs", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchForeignKeys", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchRelationships", Modifier.FINAL)
                 .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final $T<$T> ret = new $T<>()", LIST, getClassNameOfElement(),
                         ARRAY_LIST)
@@ -570,7 +581,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return ret")
                 .endControlFlow()
                 .beginControlFlow("do")
-                .addStatement("ret.add(instantiateObject(cursor, context, fromCache))")
+                .addStatement("ret.add(instantiateObject(cursor, context, "
+                        + "fetchForeignKeys, fetchRelationships, fromCache))")
                 .endControlFlow("while(cursor.moveToNext())")
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -619,6 +631,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addParameter(STRING, "having", Modifier.FINAL)
                 .addParameter(STRING, "orderBy", Modifier.FINAL)
                 .addParameter(STRING, "limit", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchForeignKeys", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchRelationships", Modifier.FINAL)
                 .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .addStatement("final String sql = $S \n"
                                 + "+ (whereClause != null ? $S + whereClause : $S)\n"
@@ -638,7 +652,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addStatement("return ret")
                 .endControlFlow()
                 .beginControlFlow("do")
-                .addStatement("ret.add(instantiateObject(cursor, context, fromCache))")
+                .addStatement("ret.add(instantiateObject(cursor, context, "
+                        + "fetchForeignKeys, fetchRelationships, fromCache))")
                 .endControlFlow("while(cursor.moveToNext())")
                 .addStatement("$L.close()", cursorVarName)
                 .addStatement("return ret")
@@ -747,7 +762,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                     final String dbFieldName = getDBFieldName(relatedForeignElem, null);
 
                     final CodeBlock.Builder relationshipBuilder = CodeBlock.builder()
-                            .addStatement("final $T dao$L = new $T(null)", tn, relCounter, tn);
+                            .addStatement("final $T dao$L = new $T(null)", tn, relCounter, tn)
+                            .beginControlFlow("if (fetchRelationships)");
 
                     if (mTypeUtils.isSameType(mTypeUtils.erasure(enclosed.asType()),
                             enclosed.asType())) {
@@ -755,6 +771,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 .addStatement("ret.$L = dao$L.getSingle(\ncontext, \n\"`$L` = \" + "
                                                 + "\n$T.valueOf(ret.$L), "
                                                 + "\nnull, \nnull, \nnull, \nnull, "
+                                                + "\nfetchForeignKeys, \nfetchRelationships,"
                                                 + "\ntrue)",
                                         enclosed.getSimpleName(), relCounter++, dbFieldName, STRING,
                                         f.foreignKey().fieldReference());
@@ -764,12 +781,13 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                 .addStatement("ret.$L = dao$L.getList(\ncontext, \n\"`$L` = \" + "
                                                 + "\n$T.valueOf(ret.$L), "
                                                 + "\nnull, \nnull, \nnull, \nnull, \nnull, "
+                                                + "\nfetchForeignKeys, \nfetchRelationships,"
                                                 + "\ntrue)",
                                         enclosed.getSimpleName(), relCounter++, dbFieldName, STRING,
                                         f.foreignKey().fieldReference());
                     }
 
-
+                    relationshipBuilder.endControlFlow();
                     relationshipsBuilder.add(relationshipBuilder.build());
 
                     continue;
@@ -802,9 +820,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                     .getSimpleName().toString() + "_DAO");
 
                     assignmentStatement = CodeBlock.builder()
+                            .beginControlFlow("if (fetchForeignKeys)")
                             .addStatement("final $T dao = new $T(null)", tn, tn)
                             .addStatement("ret.$L = dao.getSingle(context, $S, "
-                                            + "new $T[] { $T.valueOf($L) }, true)",
+                                            + "new $T[] { $T.valueOf($L) }, "
+                                            + "fetchForeignKeys, fetchRelationships, true)",
                                     fieldName, String.format("SELECT * FROM %s WHERE"
                                                     + " `%s` = ? LIMIT 1",
                                             findTableNameOfElement(
@@ -812,6 +832,7 @@ final class SQLiteDAOClass extends JavaWritableClass {
                                                     foreignKeyRefElement),
                                             dbFieldName),
                                     STRING, STRING, cursorBlock.toString())
+                            .endControlFlow()
                             .build();
                 } else if (typeName.equals(TypeName.BOOLEAN)
                         || typeName.equals(ClassName.get(Boolean.class))) {
@@ -903,6 +924,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(CURSOR, "cursor", Modifier.FINAL)
                 .addParameter(CONTEXT, "context", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchForeignKeys", Modifier.FINAL)
+                .addParameter(TypeName.BOOLEAN, "fetchRelationships", Modifier.FINAL)
                 .addParameter(TypeName.BOOLEAN, "fromCache", Modifier.FINAL)
                 .returns(elementCn)
                 .addCode(fetchFromCacheStatement.build())

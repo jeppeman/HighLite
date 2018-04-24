@@ -48,7 +48,7 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
     @Nullable
     public T executeBlocking() {
         if (mId != null) {
-            return mGenerated.getSingle(mContext, mId);
+            return mGenerated.getSingle(mContext, mId, mFetchForeignKeys, mFetchRelationShips);
         } else if (mQuery != null) {
             final String[] whereArgsAsStringArray;
             if (mQuery.mWhereArgs != null) {
@@ -62,7 +62,7 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
 
             return mGenerated.getSingle(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray, mQuery.mGroupByClause, mQuery.mHavingClause,
-                    mQuery.mOrderByClause, false);
+                    mQuery.mOrderByClause, mFetchForeignKeys, mFetchRelationShips, false);
         } else if (mRawQueryClause != null) {
             final String[] rawQueryArgsAsStringArray;
             if (mRawQueryArgs != null) {
@@ -75,7 +75,7 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
             }
 
             return mGenerated.getSingle(mContext, mRawQueryClause,
-                    rawQueryArgsAsStringArray, false);
+                    rawQueryArgsAsStringArray, mFetchForeignKeys, mFetchRelationShips, false);
         }
 
         throw new RuntimeException("No id or query provided to getSingle");

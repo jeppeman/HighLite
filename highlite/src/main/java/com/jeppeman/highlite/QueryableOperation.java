@@ -16,6 +16,8 @@ import java.util.List;
 public abstract class QueryableOperation<T extends QueryableOperation> {
 
     SQLiteQuery mQuery;
+    boolean mFetchForeignKeys = true;
+    boolean mFetchRelationShips = true;
 
     QueryableOperation() {
 
@@ -57,6 +59,16 @@ public abstract class QueryableOperation<T extends QueryableOperation> {
         if (mQuery.mWhereClause != null && mQuery.mWhereArgs != null) {
             fixNonStringParameters();
         }
+        return (T) this;
+    }
+
+    public T fetchForeignKeys(final boolean fetch) {
+        mFetchForeignKeys = fetch;
+        return (T) this;
+    }
+
+    public T fetchRelationships(final boolean fetch) {
+        mFetchRelationShips = fetch;
         return (T) this;
     }
 }

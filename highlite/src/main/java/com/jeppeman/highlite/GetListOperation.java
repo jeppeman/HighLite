@@ -59,7 +59,8 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
 
             return mGenerated.getList(mContext, mQuery.mWhereClause,
                     whereArgsAsStringArray, mQuery.mGroupByClause, mQuery.mHavingClause,
-                    mQuery.mOrderByClause, mQuery.mLimitClause, false);
+                    mQuery.mOrderByClause, mQuery.mLimitClause, mFetchForeignKeys,
+                    mFetchRelationShips, false);
         } else if (mRawQueryClause != null) {
             final String[] rawQueryArgsAsStringArray;
             if (mRawQueryArgs != null) {
@@ -72,9 +73,10 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
             }
 
             return mGenerated.getList(mContext, mRawQueryClause,
-                    rawQueryArgsAsStringArray, false);
+                    rawQueryArgsAsStringArray, mFetchForeignKeys, mFetchRelationShips, false);
         } else {
-            return mGenerated.getList(mContext, null, null, null, null, null, null, false);
+            return mGenerated.getList(mContext, null, null, null, null, null, null,
+                    mFetchForeignKeys, mFetchRelationShips, false);
         }
     }
 

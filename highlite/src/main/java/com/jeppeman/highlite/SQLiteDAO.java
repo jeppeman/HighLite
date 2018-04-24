@@ -19,10 +19,15 @@ public interface SQLiteDAO<T> {
                     String[] whereArgs);
     int delete(Context context);
     int deleteByQuery(Context context, String whereClause, String[] whereArgs);
-    T getSingle(Context context, Object id);
+    T getSingle(Context context,
+                Object id,
+                boolean fetchForeignKeys,
+                boolean fetchRelationShips);
     T getSingle(Context context,
                 String rawQueryClause,
                 String[] rawQueryArgs,
+                boolean fetchForeignKeys,
+                boolean fetchRelationShips,
                 boolean fromCache);
     T getSingle(Context context,
                 String whereClause,
@@ -30,10 +35,14 @@ public interface SQLiteDAO<T> {
                 String groupBy,
                 String having,
                 String orderBy,
+                boolean fetchForeignKeys,
+                boolean fetchRelationShips,
                 boolean fromCache);
     List<T> getList(Context context,
                     String rawQueryClause,
                     String[] rawQueryArgs,
+                    boolean fetchForeignKeys,
+                    boolean fetchRelationShips,
                     boolean fromCache);
     List<T> getList(Context context,
                     String whereClause,
@@ -42,5 +51,7 @@ public interface SQLiteDAO<T> {
                     String having,
                     String orderBy,
                     String limit,
+                    boolean fetchForeignKeys,
+                    boolean fetchRelationShips,
                     boolean fromCache);
 }
