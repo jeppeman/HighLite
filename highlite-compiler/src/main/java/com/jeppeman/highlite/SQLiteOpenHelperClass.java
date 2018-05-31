@@ -64,6 +64,20 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 : CodeBlock.of("");
     }
 
+    private FieldSpec buildHandlerField() {
+        return FieldSpec.builder(HANDLER, "sHandler", Modifier.STATIC, Modifier.FINAL)
+                .build();
+    }
+
+    private CodeBlock getStaticInitializer() {
+        return CodeBlock.builder()
+                .addStatement("final HandlerThread handlerThread = new $T($S)",
+                        HANDLER_THREAD, "highlite-worker")
+                .addStatement("handlerThread.start()")
+                .addStatement("sHandler = new $T(handlerThread.getLooper())", HANDLER)
+                .build();
+    }
+
     private CodeBlock getInitialRecreationBlock(final String tableName,
                                                 final Map<String, String> columnsMap,
                                                 final Map<String, String> foreignKeysMap) {
@@ -795,6 +809,14 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .build();
     }
 
+    private MethodSpec buildGetWorkerMethod() {
+        return MethodSpec.methodBuilder("getWorker")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(HANDLER)
+                .addStatement("return sHandler")
+                .build();
+    }
+
     @Override
     public JavaFile writeJava() {
         final String className = String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
@@ -804,11 +826,13 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .superclass(SQLITE_OPEN_HELPER)
                 .addSuperinterface(HIGHLITE_OPEN_HELPER)
+                .addStaticBlock(getStaticInitializer())
                 .addFields(Arrays.asList(
                         buildColNameIndexField(),
                         buildDbNameField(),
                         buildDbVersionField(),
-                        buildInstanceField()
+                        buildInstanceField(),
+                        buildHandlerField()
                 ))
                 .addMethods(Arrays.asList(
                         buildCtor(),
@@ -816,7 +840,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
                         buildOnOpenMethod(),
                         buildOnCreateMethod(),
                         buildOnUpgradeMethod(),
-                        buildDeleteDatabaseMethod()
+                        buildDeleteDatabaseMethod(),
+                        buildGetWorkerMethod()
                 ))
                 .addMethods(buildOnUpgradeSubMethods())
                 .build();

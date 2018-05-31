@@ -18,8 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -50,10 +48,11 @@ abstract class JavaWritableClass {
     static final ClassName LINKED_HASHMAP = ClassName.get(LinkedHashMap.class);
     static final ClassName CONCURRENT_MAP = ClassName.get(ConcurrentMap.class);
     static final ClassName CONCURRENT_HASHMAP = ClassName.get(ConcurrentHashMap.class);
-    static final ClassName TIMER = ClassName.get(Timer.class);
-    static final ClassName TIMER_TASK = ClassName.get(TimerTask.class);
+    static final ClassName RUNNABLE = ClassName.get(Runnable.class);
     static final ClassName ARRAY_LIST = ClassName.get(ArrayList.class);
     static final ClassName ARRAYS = ClassName.get(Arrays.class);
+    static final ClassName HANDLER = ClassName.get("android.os", "Handler");
+    static final ClassName HANDLER_THREAD = ClassName.get("android.os", "HandlerThread");
     static final ClassName CONTEXT = ClassName.get("android.content", "Context");
     static final ClassName CURSOR = ClassName.get("android.database", "Cursor");
     static final ClassName CONTENT_VALUES = ClassName.get("android.content",

@@ -884,12 +884,12 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             .add(assignmentStatement)
                             .addStatement("$L.put(ret.$L, ret)", INSTANCE_CACHE_VAR_NAME,
                                     fieldName)
-                            .addStatement("new $T().schedule(new $T() {\n"
-                                            + "  @Override\n"
-                                            + "  public void run() {\n"
-                                            + "      $L.remove(ret.$L);\n"
-                                            + "  }\n"
-                                            + "}, 30 * 1000)", TIMER, TIMER_TASK,
+                            .addStatement("$T.getWorker().postDelayed(new $T() {\n"
+                                    + "  @Override\n"
+                                    + "  public void run() {\n"
+                                    + "      $L.remove(ret.$L);\n"
+                                    + "  }\n"
+                                    + "}, 15 * 1000)", getHelperClassName(), RUNNABLE,
                                     INSTANCE_CACHE_VAR_NAME, fieldName)
                             .build();
                 }
