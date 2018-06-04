@@ -62,8 +62,8 @@ public class SQLiteOperatorTest {
         final SQLiteDatabaseDescriptor descriptor =
                 TestDatabase.class.getAnnotation(SQLiteDatabaseDescriptor.class);
         final String dbName = descriptor.dbName();
-        final String helperClassName = String.valueOf(dbName.charAt(0)).toUpperCase()
-                + dbName.substring(1);
+        final String helperClassName = (String.valueOf(dbName.charAt(0)).toUpperCase()
+                + dbName.substring(1)).replaceAll("\\.", "_");
         return Class.forName(TestDatabase.class.getPackage().getName()
                 + "." + helperClassName + "_OpenHelper");
     }

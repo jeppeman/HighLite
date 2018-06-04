@@ -81,8 +81,8 @@ public final class SQLiteOperator<T> {
             final SQLiteDatabaseDescriptor descriptor =
                     cls.getAnnotation(SQLiteDatabaseDescriptor.class);
             final String dbName = descriptor.dbName();
-            final String helperClassName = String.valueOf(dbName.charAt(0)).toUpperCase()
-                    + dbName.substring(1);
+            final String helperClassName = (String.valueOf(dbName.charAt(0)).toUpperCase()
+                    + dbName.substring(1)).replaceAll("\\.", "_");
 
             final Class<? extends SQLiteOpenHelper> clazz = (Class<? extends SQLiteOpenHelper>)
                     Class.forName(

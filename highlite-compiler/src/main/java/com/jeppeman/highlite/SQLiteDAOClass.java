@@ -74,8 +74,8 @@ final class SQLiteDAOClass extends JavaWritableClass {
 
     private ClassName getHelperClassName() {
         return ClassName.get(mHelperPackage,
-                String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
-                        + mDatabaseName.substring(1) + "_OpenHelper");
+                (String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
+                        + mDatabaseName.substring(1) + "_OpenHelper").replaceAll("\\.", "_"));
     }
 
     private Element getPrimaryKeyField(final Element enclosing) {
@@ -885,11 +885,11 @@ final class SQLiteDAOClass extends JavaWritableClass {
                             .addStatement("$L.put(ret.$L, ret)", INSTANCE_CACHE_VAR_NAME,
                                     fieldName)
                             .addStatement("$T.getWorker().postDelayed(new $T() {\n"
-                                    + "  @Override\n"
-                                    + "  public void run() {\n"
-                                    + "      $L.remove(ret.$L);\n"
-                                    + "  }\n"
-                                    + "}, 15 * 1000)", getHelperClassName(), RUNNABLE,
+                                            + "  @Override\n"
+                                            + "  public void run() {\n"
+                                            + "      $L.remove(ret.$L);\n"
+                                            + "  }\n"
+                                            + "}, 15 * 1000)", getHelperClassName(), RUNNABLE,
                                     INSTANCE_CACHE_VAR_NAME, fieldName)
                             .build();
                 }

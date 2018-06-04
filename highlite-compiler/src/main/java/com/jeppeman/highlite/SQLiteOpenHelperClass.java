@@ -54,8 +54,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
     private ClassName getHelperClassName() {
         return ClassName.get(mPackageName,
-                String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
-                        + mDatabaseName.substring(1) + "_OpenHelper");
+                (String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
+                        + mDatabaseName.substring(1) + "_OpenHelper").replaceAll("\\.", "_"));
     }
 
     private CodeBlock getCreateBlock(final Element element, final SQLiteTable table) {
@@ -819,8 +819,8 @@ final class SQLiteOpenHelperClass extends JavaWritableClass {
 
     @Override
     public JavaFile writeJava() {
-        final String className = String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
-                + mDatabaseName.substring(1);
+        final String className = (String.valueOf(mDatabaseName.charAt(0)).toUpperCase()
+                + mDatabaseName.substring(1)).replaceAll("\\.", "_");
         final TypeSpec typeSpec = TypeSpec.classBuilder(
                 className + "_OpenHelper")
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
