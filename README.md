@@ -29,8 +29,8 @@ Getting started
 ---
 ```groovy
 dependencies {
-    compile 'com.jeppeman:highlite:1.1.1'
-    annotationProcessor 'com.jeppeman:highlite-compiler:1.1.1'
+    compile 'com.jeppeman:highlite:1.1.2'
+    annotationProcessor 'com.jeppeman:highlite-compiler:1.1.2'
 }
 
 ```
