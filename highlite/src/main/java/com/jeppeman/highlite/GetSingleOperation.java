@@ -13,7 +13,6 @@ import io.reactivex.Flowable;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
 
 /**
  * This class fetches single rows from a table and maps them to objects of type {@link T}. The
@@ -98,7 +97,7 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
             public T call() throws Exception {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -113,10 +112,10 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
     public Observable<T> asObservable() {
         return Observable.fromCallable(new Callable<T>() {
             @Override
-            public T call() throws Exception {
+            public T call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -131,10 +130,10 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
     public Single<T> asSingle() {
         return Single.fromCallable(new Callable<T>() {
             @Override
-            public T call() throws Exception {
+            public T call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -149,10 +148,10 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
     public Maybe<T> asMaybe() {
         return Maybe.fromCallable(new Callable<T>() {
             @Override
-            public T call() throws Exception {
+            public T call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -165,9 +164,9 @@ public class GetSingleOperation<T> extends RawQueryableOperation<GetSingleOperat
     public Completable asCompletable() {
         return Completable.fromCallable(new Callable<T>() {
             @Override
-            public T call() throws Exception {
+            public T call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 }

@@ -17,7 +17,6 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
 
 /**
  * This class fetches one or more rows from a table and maps them to objects of type {@link T}. The
@@ -94,14 +93,14 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
     public Flowable<T> asFlowable(BackpressureStrategy strategy) {
         return Flowable.create(new FlowableOnSubscribe<T>() {
             @Override
-            public void subscribe(FlowableEmitter<T> e) throws Exception {
+            public void subscribe(FlowableEmitter<T> e) {
                 final List<T> items = executeBlocking();
                 for (final T item : items) {
                     e.onNext(item);
                 }
                 e.onComplete();
             }
-        }, strategy).subscribeOn(Schedulers.io());
+        }, strategy);
     }
 
     /**
@@ -116,14 +115,14 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
     public Observable<T> asObservable() {
         return Observable.create(new ObservableOnSubscribe<T>() {
             @Override
-            public void subscribe(ObservableEmitter<T> e) throws Exception {
+            public void subscribe(ObservableEmitter<T> e) {
                 final List<T> items = executeBlocking();
                 for (final T item : items) {
                     e.onNext(item);
                 }
                 e.onComplete();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -138,10 +137,10 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
     public Single<List<T>> asSingle() {
         return Single.fromCallable(new Callable<List<T>>() {
             @Override
-            public List<T> call() throws Exception {
+            public List<T> call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -156,10 +155,10 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
     public Maybe<List<T>> asMaybe() {
         return Maybe.fromCallable(new Callable<List<T>>() {
             @Override
-            public List<T> call() throws Exception {
+            public List<T> call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -172,9 +171,9 @@ public class GetListOperation<T> extends RawQueryableOperation<GetListOperation<
     public Completable asCompletable() {
         return Completable.fromCallable(new Callable<List<T>>() {
             @Override
-            public List<T> call() throws Exception {
+            public List<T> call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 }

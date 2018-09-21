@@ -13,7 +13,6 @@ import io.reactivex.Flowable;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
 
 /**
  * This class deletes one or more rows from a table. The deletion can be blocking or non-blocking
@@ -82,10 +81,10 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>>
     public Flowable<Integer> asFlowable(BackpressureStrategy strategy) {
         return Flowable.fromCallable(new Callable<Integer>() {
             @Override
-            public Integer call() throws Exception {
+            public Integer call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -98,10 +97,10 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>>
     public Observable<Integer> asObservable() {
         return Observable.fromCallable(new Callable<Integer>() {
             @Override
-            public Integer call() throws Exception {
+            public Integer call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -114,10 +113,10 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>>
     public Single<Integer> asSingle() {
         return Single.fromCallable(new Callable<Integer>() {
             @Override
-            public Integer call() throws Exception {
+            public Integer call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -130,10 +129,10 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>>
     public Maybe<Integer> asMaybe() {
         return Maybe.fromCallable(new Callable<Integer>() {
             @Override
-            public Integer call() throws Exception {
+            public Integer call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 
     /**
@@ -145,9 +144,9 @@ public class DeleteOperation<T> extends QueryableOperation<DeleteOperation<T>>
     public Completable asCompletable() {
         return Completable.fromCallable(new Callable<Integer>() {
             @Override
-            public Integer call() throws Exception {
+            public Integer call() {
                 return executeBlocking();
             }
-        }).subscribeOn(Schedulers.io());
+        });
     }
 }
